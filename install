@@ -1,5 +1,8 @@
 #! /bin/bash
 
+#OSX Command line tools
+xcode-select --install
+
 # Checkout dotfiles
 if [ ! -d ~/code/dotfiles ]
 then
@@ -44,6 +47,9 @@ fi
 echo
 echo "Installing wget"
 brew install wget
+echo
+echo "Installing git"
+brew install git
 echo
 echo "Installing vim"
 brew install vim
