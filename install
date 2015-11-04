@@ -1,0 +1,76 @@
+#! /bin/bash
+
+# Checkout dotfiles
+mkdir -p ~/code
+git clone git@github.com:samlawrencejones/dotfiles.git ~/code/dotfiles || echo "Generate/Upload SSH Key To Github: https://help.github.com/articles/generating-ssh-keys/"
+
+# Install Ruby Stuff
+curl -L https://get.rvm.io | bash -s stable --ruby
+gem install bundler
+gem install rails 
+
+# Install Homebrew
+ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+
+# Install Homebrew tools
+brew install wget
+brew install ruby
+brew install vim
+brew install zsh
+brew install caskroom/cask/brew-cask
+
+# Install Oh My Zsh
+sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
+
+# move dotfiles
+cd ~
+if [ -f .vimrc ]
+then
+	mv .vimrc .bk.vimrc.$(date +%s)
+fi
+ln -s ~/code/dotfiles/.vimrc .
+vim +PluginInstall +qall
+if [ -f .zshrc ]
+then
+	mv .zshrc .bk.zshrc.$(date +%s)
+fi
+ln -s ~/code/dotfiles/.zshrc .
+
+# Install applications
+brew cask install google-chrome
+brew cask install firefox
+brew cask install hipchat
+brew cask install gitter
+brew cask install slack
+brew cask install evernote
+brew cask install atom
+brew cask install lastpass
+brew cask install alfred
+brew cask install karabiner
+brew cask install seil
+brew cask install dropbox
+brew cask install bettertouchtool
+brew cask install iterm2
+brew cask install evernote
+brew cask install the-unarchiver
+brew cask install skitch
+
+# SSH setup
+mkdir -p .ssh
+cd .ssh
+if [ -f config ]
+then
+	mv config .bk.config.$(date +%s)
+fi
+ln -s ~/Dropbox/ssh/config .
+
+
+echo "Install Palua: https://itunes.apple.com/us/app/palua/id431494195?mt=12"
+
+# Setup Karabiner
+~/code/karabiner-import.sh
+
+echo "Import better touch tool settings from ~/Dropbox/btt.prefs"
+echo "Seil: Change caps lock key to keycode 53"
+echo "Alfred sync directory ~/Dropbox/alfred"
+
