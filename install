@@ -99,6 +99,16 @@ then
 fi
 ln -s ~/code/dotfiles/.zshrc .
 
+cd ~
+if [ -f .gitignore_global ]
+then
+	echo
+	echo "backing up .gitignore_global "
+	mv .gitignore_global .bk.gitignore_global.$(date +%s)
+fi
+ln -s ~/code/dotfiles/.gitignore_global .
+
+
 # Install applications
 echo
 read -p "Install brew cask applications? " -n 1 -r
