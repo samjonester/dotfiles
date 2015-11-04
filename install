@@ -37,23 +37,28 @@ fi
 ln -s ~/code/dotfiles/.zshrc .
 
 # Install applications
-brew cask install google-chrome
-brew cask install firefox
-brew cask install hipchat
-brew cask install gitter
-brew cask install slack
-brew cask install evernote
-brew cask install atom
-brew cask install lastpass
-brew cask install alfred
-brew cask install karabiner
-brew cask install seil
-brew cask install dropbox
-brew cask install bettertouchtool
-brew cask install iterm2
-brew cask install evernote
-brew cask install the-unarchiver
-brew cask install skitch
+read -p "Install brew cask applications? " -n 1 -r
+echo
+if [[ $REPLY =~ ^[Yy]$ ]]
+then
+  brew cask install google-chrome
+  brew cask install firefox
+  brew cask install hipchat
+  brew cask install gitter
+  brew cask install slack
+  brew cask install evernote
+  brew cask install atom
+  brew cask install lastpass
+  brew cask install alfred
+  brew cask install karabiner
+  brew cask install seil
+  brew cask install dropbox
+  brew cask install bettertouchtool
+  brew cask install iterm2
+  brew cask install evernote
+  brew cask install the-unarchiver
+  brew cask install skitch
+fi
 
 # SSH setup
 mkdir -p .ssh
