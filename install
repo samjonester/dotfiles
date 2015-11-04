@@ -1,42 +1,100 @@
 #! /bin/bash
 
 # Checkout dotfiles
-mkdir -p ~/code
-git clone git@github.com:samlawrencejones/dotfiles.git ~/code/dotfiles || echo "Generate/Upload SSH Key To Github: https://help.github.com/articles/generating-ssh-keys/"
+if [ ! -d ~/code/dotfiles ]
+then
+	echo
+	echo "Cloning dotfiles repository"
+  mkdir -p ~/code
+  git clone git@github.com:samlawrencejones/dotfiles.git ~/code/dotfiles || echo "Generate/Upload SSH Key To Github: https://help.github.com/articles/generating-ssh-keys/"
+else
+	echo
+	echo "Updating dotfiles repository"
+	cd ~/code/dotfiles
+	git pull
+fi
 
 # Install Ruby Stuff
-curl -L https://get.rvm.io | bash -s stable --ruby
-gem install bundler
-gem install rails 
+if ! which rvm >/dev/null
+then
+	echo
+	echo "Installing RVM"
+  curl -L https://get.rvm.io | bash -s stable --ruby
+	echo "Installing bundler"
+  gem install bundler
+	echo "Installing rails"
+  gem install rails 
+else
+	echo
+  echo "Skipping RVM install"
+fi
 
 # Install Homebrew
-ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+if ! which brew >/dev/null
+then
+	echo
+	echo "Installing Homebrew"
+  ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
+else
+	echo
+	echo "Skipping Homebrew install"
+fi
 
 # Install Homebrew tools
+echo
+echo "Installing wget"
 brew install wget
-brew install ruby
+echo
+echo "Installing vim"
 brew install vim
+echo
+echo "Installing zsh"
 brew install zsh
+echo
+echo "Installing brew-cask"
 brew install caskroom/cask/brew-cask
 
-# Install Oh My Zsh
-sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
 
-# move dotfiles
+# Install Oh My Zsh
+if [ ! -d ~/.oh-my-zsh ]
+then
+	echo
+	echo "Installing Oh My Zsh"
+  sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
+else
+	echo
+	echo "Skipping Oh My Zsh install"
+fi
+
 cd ~
 if [ -f .vimrc ]
 then
+	echo
+	echo "backing up .vimrc"
 	mv .vimrc .bk.vimrc.$(date +%s)
 fi
 ln -s ~/code/dotfiles/.vimrc .
+
+if [ ! -d  ~/.vim/bundle/Vundle.vim ]
+then
+	echo
+	echo "Installing Vundle"
+	git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
+else
+  echo "Skipping Vundle install"
+fi
 vim +PluginInstall +qall
+
 if [ -f .zshrc ]
 then
+	echo
+	echo "backing up .zshrc"
 	mv .zshrc .bk.zshrc.$(date +%s)
 fi
 ln -s ~/code/dotfiles/.zshrc .
 
 # Install applications
+echo
 read -p "Install brew cask applications? " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]
@@ -65,16 +123,22 @@ mkdir -p .ssh
 cd .ssh
 if [ -f config ]
 then
+	echo
+	echo "Backing up ssh config"
 	mv config .bk.config.$(date +%s)
 fi
 ln -s ~/Dropbox/ssh/config .
 
-
-echo "Install Palua: https://itunes.apple.com/us/app/palua/id431494195?mt=12"
-
 # Setup Karabiner
-~/code/karabiner-import.sh
+~/code/dotfiles/karabiner-import.sh
 
+echo
+echo
+echo "Install complete"
+echo
+echo "Final notes"
+echo
+echo "Install Palua: https://itunes.apple.com/us/app/palua/id431494195?mt=12"
 echo "Import better touch tool settings from ~/Dropbox/btt.prefs"
 echo "Seil: Change caps lock key to keycode 53"
 echo "Alfred sync directory ~/Dropbox/alfred"
