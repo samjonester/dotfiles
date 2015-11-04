@@ -39,17 +39,17 @@ Plugin 'flazz/vim-colorschemes'
 " Nerd Tree On The Left
 Plugin 'scrooloose/nerdtree'
 Plugin 'jistr/vim-nerdtree-tabs'
+Plugin 'Xuyuanp/nerdtree-git-plugin'
 " Git Conflict Resolution
 Plugin 'christoomey/vim-conflicted'
-" bash-support for writing bash scripts
+
 Plugin 'vim-scripts/bash-support.vim'
-" Selection.vim
 Plugin 'arecarn/selection.vim'
-
-" vim-ruby
 Plugin 'vim-ruby/vim-ruby'
-
+Plugin 'tpope/vim-rails'
 Plugin 'tpope/vim-cucumber'
+Plugin 'tfnico/vim-gradle'
+Plugin 'stephpy/vim-yaml'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
