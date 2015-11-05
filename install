@@ -27,6 +27,8 @@ then
   gem install bundler
 	echo "Installing rails"
   gem install rails 
+	echo "Installing travis"
+  gem install travis
 else
 	echo
   echo "Skipping RVM install"
@@ -56,6 +58,9 @@ brew install vim
 echo
 echo "Installing zsh"
 brew install zsh
+echo
+echo "Installing heroku toolbelt"
+brew install heroku-toolbelt
 echo
 echo "Installing brew-cask"
 brew install caskroom/cask/brew-cask
@@ -122,7 +127,6 @@ then
   brew cask install slack
   brew cask install evernote
   brew cask install atom
-  brew cask install lastpass
   brew cask install alfred
   brew cask install karabiner
   brew cask install seil
@@ -146,16 +150,9 @@ fi
 ln -s ~/Dropbox/ssh/config .
 
 # Setup Karabiner
+echo
+echo "Importing karabiner settings"
 ~/code/dotfiles/karabiner-import.sh
 
 echo
-echo
-echo "Install complete"
-echo
-echo "Final notes"
-echo
-echo "Install Palua: https://itunes.apple.com/us/app/palua/id431494195?mt=12"
-echo "Import better touch tool settings from ~/Dropbox/btt.prefs"
-echo "Seil: Change caps lock key to keycode 53"
-echo "Alfred sync directory ~/Dropbox/alfred"
-
+echo "Install Complete"
