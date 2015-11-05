@@ -1,3 +1,6 @@
 *~
 .DS_Store
 *.sw*
+*/build
+*.class
+*/war
