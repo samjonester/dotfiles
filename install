@@ -139,8 +139,8 @@ then
 fi
 
 # SSH setup
-mkdir -p .ssh
-cd .ssh
+mkdir -p ~/.ssh
+cd ~/.ssh
 if [ -f config ]
 then
 	echo
