@@ -1,12 +1,12 @@
-== Dotfiles
+## Dotfiles
 
 This project contains my dotfiles and an install script to setup a new computer.
 
-=== Installation
+### Installation
 
 ```curl -s https://raw.githubusercontent.com/samlawrencejones/dotfiles/master/install | sh```
 
-=== Things that can't be scripted
+### Things that can't be scripted
 
 - Disable caps lock. Disable Spotlight keyboard shortcut (CMD+Space)
 - Setup trackpad from screenshot
