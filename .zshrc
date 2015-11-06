@@ -77,30 +77,6 @@ TRAPALRM() {
     zle reset-prompt
 }
 
-alias up_sources='rsync -Pre ssh go-darth:/opt/local/var/go-clinical/annotations /opt/local/var/go-clinical'
-
-# Add devtools for genomoncology
-PATH=$PATH:$HOME/code/clinical_project/devtools/bin
-
-dtree() {
-  cd ~/repos/go-clinical
-  mvn dependency:tree
-  cd ~/repos/go-gwt-ext
-  mvn dependency:tree
-  cd ~/repos/go-spring
-  mvn dependency:tree
-  cd ~/repos/lis-app
-  mvn dependency:tree
-  cd ~/repos/clinical-app
-  mvn dependency:tree
-  cd ~/repos/clinical-refapp
-  mvn dependency:tree
-  cd ~/repos/go-admin
-  mvn dependency:tree
-  cd ~/repos/go-esb
-  mvn dependency:tree
-}
-
 [[ "$TERM" == "xterm" ]] && export TERM=xterm-256color
 
 export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
@@ -108,20 +84,6 @@ export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
 # added by travis gem
 [ -f /Users/samjones/.travis/travis.sh ] && source /Users/samjones/.travis/travis.sh
 
-
-function setjdk() {
-  if [ $# -ne 0 ]; then
-   removeFromPath '/System/Library/Frameworks/JavaVM.framework/Home/bin'
-   if [ -n "${JAVA_HOME+x}" ]; then
-    removeFromPath $JAVA_HOME
-   fi
-   export JAVA_HOME=`/usr/libexec/java_home -v $@`
-   export PATH=$JAVA_HOME/bin:$PATH
-  fi
- }
- function removeFromPath() {
-  export PATH=$(echo $PATH | sed -E -e "s;:$1;;" -e "s;$1:?;;")
- }
-setjdk 1.7
-
-alias goclin='open /opt/local/var/go-clinical/ -a MacVim'
+# JENV.be
+export PATH="$HOME/.jenv/bin:$PATH"
+eval "$(jenv init -)"
