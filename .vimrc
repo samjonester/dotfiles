@@ -103,3 +103,7 @@ set tabstop=2 shiftwidth=2 softtabstop=2
 set pastetoggle=<F2>
 
 set autoread
+
+" make backspace work like most other apps
+set backspace=2 
+
