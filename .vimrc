@@ -107,3 +107,4 @@ set autoread
 " make backspace work like most other apps
 set backspace=2 
 
+map <F7> mzgg=G`z
