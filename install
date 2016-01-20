@@ -3,6 +3,9 @@
 #OSX Command line tools
 xcode-select --install
 
+# JENV
+git clone https://github.com/gcuisinier/jenv.git ~/.jenv
+
 # Checkout dotfiles
 if [ ! -d ~/code/dotfiles ]
 then
