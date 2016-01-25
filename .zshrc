@@ -87,3 +87,5 @@ export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
 # JENV.be
 export PATH="$HOME/.jenv/bin:$PATH"
 eval "$(jenv init -)"
+
+[[ -s "$HOME/.kiex/scripts/kiex" ]] && source "$HOME/.kiex/scripts/kiex"
