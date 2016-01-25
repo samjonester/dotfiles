@@ -87,3 +87,5 @@ export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
 # JENV.be
 export PATH="$HOME/.jenv/bin:$PATH"
 eval "$(jenv init -)"
+
+export NODE_PATH=/usr/local/lib/node_modules
