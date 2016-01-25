@@ -50,6 +50,7 @@ Plugin 'tpope/vim-rails'
 Plugin 'tpope/vim-cucumber'
 Plugin 'tfnico/vim-gradle'
 Plugin 'stephpy/vim-yaml'
+Plugin 'elixir-lang/vim-elixir'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
