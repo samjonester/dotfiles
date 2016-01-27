@@ -20,22 +20,6 @@ else
 	git pull
 fi
 
-# Install Ruby Stuff
-if ! which rvm >/dev/null
-then
-	echo
-	echo "Installing RVM"
-  curl -L https://get.rvm.io | bash -s stable --ruby
-	echo "Installing bundler"
-  gem install bundler
-	echo "Installing rails"
-  gem install rails 
-	echo "Installing travis"
-  gem install travis
-else
-	echo
-  echo "Skipping RVM install"
-fi
 
 # Install Homebrew
 if ! which brew >/dev/null
@@ -116,6 +100,30 @@ then
 fi
 ln -s ~/code/dotfiles/.gitignore_global .
 
+
+# Install Ruby Stuff
+if ! which rvm >/dev/null
+then
+	echo
+	echo "Installing RVM"
+  curl -L https://get.rvm.io | bash -s stable --ruby
+	echo "Installing bundler"
+  gem install bundler
+	echo "Installing rails"
+  gem install rails 
+	echo "Installing travis"
+  gem install travis
+else
+	echo
+  echo "Skipping RVM install"
+fi
+
+# Install Elixir Stuff
+if ! which kiex >/dev/null
+then
+  curl -sSL https://raw.githubusercontent.com/taylor/kiex/master/install | bash -s
+  echo '[[ -s "$HOME/.kiex/scripts/kiex" ]] && source "$HOME/.kiex/scripts/kiex"' >> .zshrc
+fi
 
 # Install applications
 echo
