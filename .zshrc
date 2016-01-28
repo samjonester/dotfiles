@@ -88,8 +88,9 @@ export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
 export PATH="$HOME/.jenv/bin:$PATH"
 eval "$(jenv init -)"
 
-<<<<<<< HEAD
-export NODE_PATH=/usr/local/lib/node_modules
-=======
+# kiex elixir version manager
 [[ -s "$HOME/.kiex/scripts/kiex" ]] && source "$HOME/.kiex/scripts/kiex"
->>>>>>> 5091f6a781789826e89753cb2f78935a48be7a02
+
+# nvm node version manager
+export NVM_DIR="/Users/sam/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm

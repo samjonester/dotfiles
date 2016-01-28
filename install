@@ -125,6 +125,14 @@ then
   echo '[[ -s "$HOME/.kiex/scripts/kiex" ]] && source "$HOME/.kiex/scripts/kiex"' >> .zshrc
 fi
 
+# Install NPM Stuff
+if ! which nvm >/dev/null
+then
+	curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.30.2/install.sh | bash
+	source ~/.zshrc
+	nvm install stable
+fi
+
 # Install applications
 echo
 read -p "Install brew cask applications? " -n 1 -r
