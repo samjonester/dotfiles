@@ -73,6 +73,15 @@ then
 fi
 ln -s ~/code/dotfiles/.vimrc .
 
+if [ -f .tmux.conf ]
+then
+	echo
+	echo "backing up .tmux.conf"
+	mv .vimrc .bk.tmux.conf.$(date +%s)
+fi
+ln -s ~/code/dotfiles/.tmux.conf .
+
+
 if [ ! -d  ~/.vim/bundle/Vundle.vim ]
 then
 	echo
