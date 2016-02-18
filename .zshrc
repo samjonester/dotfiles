@@ -94,3 +94,6 @@ eval "$(jenv init -)"
 # nvm node version manager
 export NVM_DIR="/Users/sam/.nvm"
 [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
+
+# gvm go version manager
+[[ -s "/Users/sam/.gvm/scripts/gvm" ]] && source "/Users/sam/.gvm/scripts/gvm"
