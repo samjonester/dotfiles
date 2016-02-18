@@ -53,6 +53,9 @@ Plugin 'stephpy/vim-yaml'
 Plugin 'elixir-lang/vim-elixir'
 Plugin 'pangloss/vim-javascript'
 Plugin 'mxw/vim-jsx'
+Plugin 'kchmck/vim-coffee-script'
+Plugin 'rking/ag.vim'
+
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -115,3 +118,10 @@ autocmd FileType ruby,eruby let g:rubycomplete_classes_in_global = 1
 autocmd FileType ruby,eruby let g:rubycomplete_rails = 1
 
 map <F7> mzgg=G`z
+
+if executable('ag')
+	" Note we extract the column as well as the file and line number
+	set grepprg=ag\ --nogroup\ --nocolor\ --column
+	set grepformat=%f:%l:%c%m
+endif
+nnoremap K :Ag! "\b<C-R><C-W>\b"<CR>:cw<CR>
