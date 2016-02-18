@@ -97,3 +97,6 @@ export NVM_DIR="/Users/sam/.nvm"
 
 # gvm go version manager
 [[ -s "/Users/sam/.gvm/scripts/gvm" ]] && source "/Users/sam/.gvm/scripts/gvm"
+
+# rvm ruby version manager
+[[ -s "$HOME/.rvm/scripts/rvm" ]] && . "$HOME/.rvm/scripts/rvm"
