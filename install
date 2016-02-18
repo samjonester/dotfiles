@@ -51,6 +51,9 @@ brew install heroku-toolbelt
 echo
 echo "Installing brew-cask"
 brew install caskroom/cask/brew-cask
+echo
+echo "Installing silver searcher"
+brew install the_silver_searcher
 
 
 # Install Oh My Zsh
