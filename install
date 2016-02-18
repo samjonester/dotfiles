@@ -54,6 +54,9 @@ brew install caskroom/cask/brew-cask
 echo
 echo "Installing silver searcher"
 brew install the_silver_searcher
+echo
+echo "Installing tmux"
+brew install tmux
 
 
 # Install Oh My Zsh
