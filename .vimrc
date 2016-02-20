@@ -1,4 +1,3 @@
-set nocompatible              " be iMproved, required
 filetype off                  " required
 
 " set the runtime path to include Vundle and initialize
@@ -10,51 +9,49 @@ call vundle#begin()
 " let Vundle manage Vundle, required
 Plugin 'gmarik/Vundle.vim'
 
-" The following are examples of different formats supported.
-" Keep Plugin commands between vundle#begin/end.
-" plugin on GitHub repo
+" Git :Gblame, :Gdiff, :Gbrowse, :Gstatus
 Plugin 'tpope/vim-fugitive'
-" plugin from http://vim-scripts.org/vim/scripts.html
+" Plugin directory organization
 Plugin 'L9'
-" Git plugin not hosted on GitHub
-Plugin 'git://git.wincent.com/command-t.git'
-" git repos on your local machine (i.e. when working on your own plugin)
-Plugin 'file:///home/gmarik/path/to/plugin'
-" The sparkup vim script is in a subdirectory of this repo called vim.
-" Pass the path to set the runtimepath properly.
-Plugin 'rstacruz/sparkup', {'rtp': 'vim/'}
-" Avoid a name conflict with L9
-" Plugin 'user/L9', {'name': 'newL9'}
-
 " vim-arline tab and status bar
 Plugin 'bling/vim-airline'
-" JSON Syntax Highlighting
+" json syntax highlighting
 Plugin 'elzr/vim-json'
-" syntastic syntax checking
+" Syntax error highlighting
 Plugin 'scrooloose/syntastic'
-" vim-gitgutter highlight changes in a git repo
+" Git gutter to show git differences
 Plugin 'airblade/vim-gitgutter'
-" Color Scheme
+" Colorschemes
 Plugin 'flazz/vim-colorschemes'
-" Nerd Tree On The Left
+" NERDTree project file browser bar
 Plugin 'scrooloose/nerdtree'
+" NERDTree in all tabs
 Plugin 'jistr/vim-nerdtree-tabs'
+" Highlight git in nerdtree
 Plugin 'Xuyuanp/nerdtree-git-plugin'
-" Git Conflict Resolution
-Plugin 'christoomey/vim-conflicted'
-
+" Bash syntax
 Plugin 'vim-scripts/bash-support.vim'
-Plugin 'arecarn/selection.vim'
+" Ruby goodness
 Plugin 'vim-ruby/vim-ruby'
+" Rails goodness
 Plugin 'tpope/vim-rails'
+" Cucumber syntax highlighting <C-W><C-d> to find glue
 Plugin 'tpope/vim-cucumber'
+" Gradle syntax highlighting
 Plugin 'tfnico/vim-gradle'
+" Yaml syntax highlighting
 Plugin 'stephpy/vim-yaml'
+" Elixir syntax highlighting
 Plugin 'elixir-lang/vim-elixir'
+" JavaScript syntax highlighting
 Plugin 'pangloss/vim-javascript'
+" JavScript JSX Syntax highlighting
 Plugin 'mxw/vim-jsx'
+" CoffeeScript syntax highlighting
 Plugin 'kchmck/vim-coffee-script'
+" Silver searcher
 Plugin 'rking/ag.vim'
+" ctrlP File opener
 Plugin 'kien/ctrlp.vim'
 
 " All of your Plugins must be added before the following line
@@ -73,60 +70,92 @@ filetype plugin indent on    " required
 " Put your non-Plugin stuff after this line
 
 
-"Syntax Highlighting
-syntax on
 
-set number
-set relativenumber
-set ruler
-set smartindent
-set showcmd
-set visualbell
+" Behavior settings
+set nocompatible      " Vim behavior, not Vi.
+set encoding=utf-8   " Use UTF-8 encoding
+set nobackup         " Don't backup
+set nowritebackup    " Write file in place
+set noswapfile       " Don't use swap files (.swp)
+set autoread         " Autoreload buffers
+set autowrite        " Automatically save changes before switching buffers
+set shell=$SHELL     " Default shell is ZSH
+set showcmd          " Display incomplete commands
+set visualbell       " Use visual bell instead of audible bell
+set backspace=2      " Backspace works like other apps
+set timeoutlen=1000  " Timeout for key combos
+set mouse=a          " Use mouse
 
-" Git Gutter
-let g:gitgutter_eager = 1
-let g:gitgutter_realtime = 1
+" Tabs and spaces
+set tabstop=2         " Tabs are 2 spaces
+set shiftwidth=2      " 2 Spaces for << && >>
+set softtabstop=2     " Tabs are 2 spaces for editing operations
+set expandtab         " Always use spaces instead of tabs
+set smartindent       " Auto indent
+set nowrap            " Don't wrap lines
+map <F7> mzgg=G`z     " F7 to format file
+
+" Better Split Navigation
+nnoremap <C-J> <C-W><C-J>
+nnoremap <C-K> <C-W><C-K>
+nnoremap <C-L> <C-W><C-L>
+nnoremap <C-H> <C-W><C-H>
+
+" Code Completion
+set complete=.,b,u,]
+set wildmode=longest,list:longest
+set completeopt=menu,menuone,preview
+au FileType ruby,eruby setl ofu=rubycomplete#Complete
+au FileType html,xhtml setl ofu=htmlcomplete#CompleteTags
+au FileType css setl ofu=csscomplete#CompleteCSS
+
+" Display settings
+set number            " Show current line number
+set relativenumber    " Show other line numbers as relative
+set ruler             " Show curser position
+set cursorline        " Highlight current cursor line
+syntax on             " Syntax Highlighting
+set background=dark   " Dark background style
+colorscheme badwolf   " Color Scheme
+
+" JSON Don't hide quotes
+let g:vim_json_syntax_conceal = 0
+
+" JSX in .js files
+let g:jsx_ext_required = 0
+
+" highlight the 80th column
+if exists('+colorcolumn')
+  let &colorcolumn="80"
+  highlight ColorColumn ctermbg=236
+endif
 
 " Airline
-set laststatus=2
-set timeoutlen=50
-let g:airline_theme='wombat'
+set laststatus=2              " Always show status line
+let g:airline_theme='wombat'  " Airline theme
 
-" Color Scheme
-set background=dark
-colorscheme badwolf
+" Git Gutter
+let g:gitgutter_eager = 1     " Notice changes when switching buffer/tab/focus
+let g:gitgutter_realtime = 1  " Notice changes after typing has stopped
+set updatetime=250            " Faster update time for faster feedback
 
-" NERDTree
+" NERDTree - Open when vim is started
 autocmd vimenter * NERDTree
 autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif
 autocmd VimEnter * wincmd p
-let NERDTreeShowHidden=1
+let NERDTreeShowHidden=1                          " Show hidden files
+let g:nerdtree_tabs_open_on_console_startup = 1   " Show in all tabs
+map <C-n> :NERDTreeToggle<CR>                     " Toggle NERDTree
 
-" 2 spaces indent
-set tabstop=2 shiftwidth=2 softtabstop=2 expandtab
+" Syntastic Syntax Highlighting
+let g:syntastic_always_populate_loc_list = 1
+let g:syntastic_auto_loc_list = 1
+let g:syntastic_check_on_open = 1
+let g:syntastic_check_on_wq = 0
 
-" Toggle paste mode
-set pastetoggle=<F2>
-
-set autoread
-
-" make backspace work like most other apps
-set backspace=2 
-
-autocmd FileType ruby,eruby let g:rubycomplete_buffer_loading = 1 
-autocmd FileType ruby,eruby let g:rubycomplete_classes_in_global = 1
-autocmd FileType ruby,eruby let g:rubycomplete_rails = 1
-
-" F7 to format file
-map <F7> mzgg=G`z
+" Searching
+set ignorecase     " Case insensitive search
+set smartcase      " Smarter Case insensitive search
 
 " ctrlp find dotfiles
 let g:ctrlp_show_hidden = 1
-
-" Silver Searcher instead of grep
-if executable('ag')
-	" Note we extract the column as well as the file and line number
-	set grepprg=ag\ --nogroup\ --nocolor\ --column
-	set grepformat=%f:%l:%c%m
-endif
-nnoremap K :Ag! "\b<C-R><C-W>\b"<CR>:cw<CR>
