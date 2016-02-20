@@ -117,8 +117,13 @@ autocmd FileType ruby,eruby let g:rubycomplete_buffer_loading = 1
 autocmd FileType ruby,eruby let g:rubycomplete_classes_in_global = 1
 autocmd FileType ruby,eruby let g:rubycomplete_rails = 1
 
+" F7 to format file
 map <F7> mzgg=G`z
 
+" ctrlp find dotfiles
+let g:ctrlp_show_hidden = 1
+
+" Silver Searcher instead of grep
 if executable('ag')
 	" Note we extract the column as well as the file and line number
 	set grepprg=ag\ --nogroup\ --nocolor\ --column
