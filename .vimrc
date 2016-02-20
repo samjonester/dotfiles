@@ -55,6 +55,8 @@ Plugin 'kien/ctrlp.vim'
 Plugin 'rking/ag.vim'
 " Silver search * search
 Plugin 'Chun-Yang/vim-action-ag'
+" Run rspecs
+Plugin 'thoughtbot/vim-rspec'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -168,3 +170,9 @@ let g:ag_working_path_mode="r"    " Search from project root
 nmap * <Plug>AgActionWord
 " use * to search selected text in visual mode
 vmap * <Plug>AgActionVisual
+
+" RSpec.vim mappings
+map <Leader>rc :call RunCurrentSpecFile()<CR>
+map <Leader>rn :call RunNearestSpec()<CR>
+map <Leader>rl :call RunLastSpec()<CR>
+map <Leader>ra :call RunAllSpecs()<CR>
