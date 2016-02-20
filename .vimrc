@@ -103,7 +103,7 @@ autocmd VimEnter * wincmd p
 let NERDTreeShowHidden=1
 
 " 2 spaces indent
-set tabstop=2 shiftwidth=2 softtabstop=2
+set tabstop=2 shiftwidth=2 softtabstop=2 expandtab
 
 " Toggle paste mode
 set pastetoggle=<F2>
@@ -116,9 +116,6 @@ set backspace=2
 autocmd FileType ruby,eruby let g:rubycomplete_buffer_loading = 1 
 autocmd FileType ruby,eruby let g:rubycomplete_classes_in_global = 1
 autocmd FileType ruby,eruby let g:rubycomplete_rails = 1
-autocmd Filetype html setlocal ts=2 sts=2 sw=2
-autocmd Filetype ruby setlocal ts=2 sts=2 sw=2
-autocmd Filetype javascript setlocal ts=2 sts=2 sw=2
 
 map <F7> mzgg=G`z
 
