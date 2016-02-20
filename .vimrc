@@ -49,10 +49,12 @@ Plugin 'pangloss/vim-javascript'
 Plugin 'mxw/vim-jsx'
 " CoffeeScript syntax highlighting
 Plugin 'kchmck/vim-coffee-script'
-" Silver searcher
-Plugin 'rking/ag.vim'
 " ctrlP File opener
 Plugin 'kien/ctrlp.vim'
+" Silver searcher
+Plugin 'rking/ag.vim'
+" Silver search * search
+Plugin 'Chun-Yang/vim-action-ag'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -159,3 +161,10 @@ set smartcase      " Smarter Case insensitive search
 
 " ctrlp find dotfiles
 let g:ctrlp_show_hidden = 1
+
+" Silver Searcher
+let g:ag_working_path_mode="r"    " Search from project root
+" use * to search current word in normal mode
+nmap * <Plug>AgActionWord
+" use * to search selected text in visual mode
+vmap * <Plug>AgActionVisual
