@@ -87,7 +87,7 @@ set shell=$SHELL     " Default shell is ZSH
 set showcmd          " Display incomplete commands
 set visualbell       " Use visual bell instead of audible bell
 set backspace=2      " Backspace works like other apps
-set timeoutlen=1000  " Timeout for key combos
+set timeoutlen=500  " Timeout for key combos
 set mouse=a          " Use mouse
 
 " Tabs and spaces
@@ -150,6 +150,7 @@ autocmd VimEnter * wincmd p
 let NERDTreeShowHidden=1                          " Show hidden files
 let g:nerdtree_tabs_open_on_console_startup = 1   " Show in all tabs
 map <C-n> :NERDTreeToggle<CR>                     " Toggle NERDTree
+map <C-m> :NERDTreeFind<CR>                     " Toggle NERDTree
 
 " Syntastic Syntax Highlighting
 let g:syntastic_always_populate_loc_list = 1
