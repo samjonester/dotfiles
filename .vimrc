@@ -171,6 +171,7 @@ let g:ag_working_path_mode="r"    " Search from project root
 nmap * <Plug>AgActionWord
 " use * to search selected text in visual mode
 vmap * <Plug>AgActionVisual
+map <C-a> :noh<CR>
 
 " RSpec.vim mappings
 map <Leader>rc :call RunCurrentSpecFile()<CR>
