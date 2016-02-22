@@ -65,6 +65,7 @@ then
 	echo
 	echo "Installing Oh My Zsh"
   sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
+  zsh
 else
 	echo
 	echo "Skipping Oh My Zsh install"
@@ -105,7 +106,7 @@ then
 else
   echo "Skipping Vundle install"
 fi
-vim +PluginInstall +qall
+vim +PluginInstall +qall +PluginClean
 
 if [ -f .zshrc ]
 then
@@ -137,6 +138,8 @@ then
   gem install rails 
 	echo "Installing travis"
   gem install travis
+  echo "Isnstalling pry"
+  gem install pry pry-nav pry-debugger pry-stack_explorer
 else
 	echo
   echo "Skipping RVM install"
@@ -146,7 +149,6 @@ fi
 if ! which kiex >/dev/null
 then
   curl -sSL https://raw.githubusercontent.com/taylor/kiex/master/install | bash -s
-  echo '[[ -s "$HOME/.kiex/scripts/kiex" ]] && source "$HOME/.kiex/scripts/kiex"' >> .zshrc
 fi
 
 # Install NPM Stuff
@@ -179,9 +181,9 @@ then
   brew cask install evernote
   brew cask install atom
   brew cask install alfred
-  brew cask install karabiner
   brew cask install seil
   brew cask install dropbox
+  open -a Dropbox
   brew cask install bettertouchtool
   brew cask install iterm2
   brew cask install evernote
@@ -199,11 +201,6 @@ then
 	mv config .bk.config.$(date +%s)
 fi
 ln -s ~/Dropbox/ssh/config .
-
-# Setup Karabiner
-echo
-echo "Importing karabiner settings"
-~/code/dotfiles/karabiner-import.sh
 
 echo
 echo "Install Complete"

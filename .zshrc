@@ -46,7 +46,7 @@ ZSH_THEME="robbyrussell"
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(git gitignore autojump command-not-found zsh-syntax-highlighting macports osx textmate wd git-extras npm rails ruby brew gradle rvm tmux)
+plugins=(git gitignore command-not-found zsh-syntax-highlighting ruby rails git-extras npm brew tmux)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -68,18 +68,12 @@ source $ZSH/oh-my-zsh.sh
 # ssh
 # export SSH_KEY_PATH="~/.ssh/dsa_id"
 
-STR='[%D{%L:%M:%S %p}]'
-RPROMPT="%{$fg_bold[red]%}[$USER]%{$reset_color%}  %{$fg_bold[yellow]%}$STR%{$reset_color%} %{$fg_bold[green]%}[%!]%{$reset_color%}"
+# Show [$USER] [$COMMAND] on right
+RPROMPT="%{$fg_bold[red]%}[$USER]%{$reset_color%}  %{$fg_bold[green]%}[%!]%{$reset_color%}"
 
-TMOUT=1
-
-TRAPALRM() {
-    zle reset-prompt
-}
-
+# Make colors work
 [[ "$TERM" == "xterm" ]] && export TERM=xterm-256color
 
-export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
 
 # added by travis gem
 [ -f /Users/samjones/.travis/travis.sh ] && source /Users/samjones/.travis/travis.sh
@@ -99,4 +93,44 @@ export NVM_DIR="/Users/sam/.nvm"
 [[ -s "/Users/sam/.gvm/scripts/gvm" ]] && source "/Users/sam/.gvm/scripts/gvm"
 
 # rvm ruby version manager
+export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
 [[ -s "$HOME/.rvm/scripts/rvm" ]] && . "$HOME/.rvm/scripts/rvm"
+
+# t foobar
+# opens / creates a tmux session named foobar and navigates to ~/code
+t() {
+  local session_name  
+  session_name="$(pwd | rev | cut -d '/' -f1 | rev)"
+
+  if ! $(tmux has-session -t "$session_name" 2> /dev/null); then  
+    tmux new-session -d -s "$session_name"
+  fi
+
+  tmux attach-session -t "$session_name"  
+  export TMUX_SESSION="$session_name"
+}
+
+# td
+# Detach from current tmux
+td() {
+  if [ ! -z "$TMUX" ]; then
+    tmux detach
+  fi
+}
+
+# tk
+# Detach and kill current tmux session
+# tk foobar
+# Kill tmux session foobar
+tk() {
+  if [ -z "$TMUX" ]; then
+    tmux kill-session -t $1
+  else
+    tmux detach
+    tmux kill-session -t $(tmux display-message -p '#S')
+  fi
+}
+
+# tl
+# List tmux sessions
+alias tl="tmux ls 2> /dev/null"
