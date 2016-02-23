@@ -103,6 +103,10 @@ nnoremap <C-K> <C-W><C-K>
 nnoremap <C-L> <C-W><C-L>
 nnoremap <C-H> <C-W><C-H>
 
+" Open splits to the right and below
+set splitright
+set splitbelow
+
 " Code Completion
 set complete=.,b,u,]
 set wildmode=longest,list:longest
