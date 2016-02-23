@@ -55,6 +55,8 @@ Plugin 'rking/ag.vim'
 Plugin 'Chun-Yang/vim-action-ag'
 " Run rspecs
 Plugin 'thoughtbot/vim-rspec'
+" End blocks properly
+Plugin 'tpope/vim-endwise'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
