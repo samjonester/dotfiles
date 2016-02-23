@@ -33,6 +33,8 @@ Plugin 'vim-scripts/bash-support.vim'
 Plugin 'vim-ruby/vim-ruby'
 " Rails goodness
 Plugin 'tpope/vim-rails'
+" Bundler goodness
+Plugin 'tpope/vim-bundler'
 " Cucumber syntax highlighting <C-W><C-d> to find glue
 Plugin 'tpope/vim-cucumber'
 " Gradle syntax highlighting
@@ -57,6 +59,22 @@ Plugin 'Chun-Yang/vim-action-ag'
 Plugin 'thoughtbot/vim-rspec'
 " End blocks properly
 Plugin 'tpope/vim-endwise'
+" Unix commands
+Plugin 'tpope/vim-eunuch'
+" :Remove: Delete a buffer and the file on disk simultaneously.
+" :Unlink: Like :Remove, but keeps the now empty buffer.
+" :Move: Rename a buffer and the file on disk simultaneously.
+" :Rename: Like :Move, but relative to the current file's containing directory.
+" :Chmod: Change the permissions of the current file.
+" :Mkdir: Create a directory, defaulting to the parent of the current file.
+" :Find: Run find and load the results into the quickfix list.
+" :Locate: Run locate and load the results into the quickfix list.
+" :Wall: Write every open window. Handy for kicking off tools like guard.
+" :SudoWrite: Write a privileged file with sudo.
+" :SudoEdit: Edit a privileged file with sudo.
+
+" Change Surround
+Plugin 'tpope/vim-surround'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -150,7 +168,7 @@ set updatetime=250            " Faster update time for faster feedback
 " NERDTree
 let NERDTreeShowHidden=1                          " Show hidden files
 map <C-n> :NERDTreeToggle<CR>                     " Toggle NERDTree
-map <C-m> :NERDTreeFind<CR>                     " Toggle NERDTree
+map <Leader>n :NERDTreeFind<CR>                   " Toggle NERDTree
 
 " Syntastic Syntax Highlighting
 let g:syntastic_always_populate_loc_list = 1
