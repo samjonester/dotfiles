@@ -25,8 +25,6 @@ Plugin 'airblade/vim-gitgutter'
 Plugin 'flazz/vim-colorschemes'
 " NERDTree project file browser bar
 Plugin 'scrooloose/nerdtree'
-" NERDTree in all tabs
-Plugin 'jistr/vim-nerdtree-tabs'
 " Highlight git in nerdtree
 Plugin 'Xuyuanp/nerdtree-git-plugin'
 " Bash syntax
@@ -143,12 +141,8 @@ let g:gitgutter_eager = 1     " Notice changes when switching buffer/tab/focus
 let g:gitgutter_realtime = 1  " Notice changes after typing has stopped
 set updatetime=250            " Faster update time for faster feedback
 
-" NERDTree - Open when vim is started
-autocmd vimenter * NERDTree
-autocmd bufenter * if (winnr("$") == 1 && exists("b:NERDTreeType") && b:NERDTreeType == "primary") | q | endif
-autocmd VimEnter * wincmd p
+" NERDTree
 let NERDTreeShowHidden=1                          " Show hidden files
-let g:nerdtree_tabs_open_on_console_startup = 1   " Show in all tabs
 map <C-n> :NERDTreeToggle<CR>                     " Toggle NERDTree
 map <C-m> :NERDTreeFind<CR>                     " Toggle NERDTree
 
