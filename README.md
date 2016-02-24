@@ -17,3 +17,8 @@ This project contains my dotfiles and an install script to setup a new computer.
 - Install lastpass app https://lastpass.com/misc_download2.php
 - Install safari ad block plus extension
 - Install java versions and set up jenv https://github.com/gcuisinier/jenv
+- Add alt+left alt+right to iTerm
+  <A-Left> - escape b
+  <A-Right> - escape f
+  <A-Delete> - Hex 0x17
+  <A-Fn-Del> - escape d
