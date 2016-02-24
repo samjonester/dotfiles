@@ -61,20 +61,18 @@ Plugin 'thoughtbot/vim-rspec'
 Plugin 'tpope/vim-endwise'
 " Unix commands
 Plugin 'tpope/vim-eunuch'
-" :Remove: Delete a buffer and the file on disk simultaneously.
-" :Unlink: Like :Remove, but keeps the now empty buffer.
-" :Move: Rename a buffer and the file on disk simultaneously.
-" :Rename: Like :Move, but relative to the current file's containing directory.
-" :Chmod: Change the permissions of the current file.
-" :Mkdir: Create a directory, defaulting to the parent of the current file.
-" :Find: Run find and load the results into the quickfix list.
-" :Locate: Run locate and load the results into the quickfix list.
-" :Wall: Write every open window. Handy for kicking off tools like guard.
-" :SudoWrite: Write a privileged file with sudo.
-" :SudoEdit: Edit a privileged file with sudo.
-
+" Comment Toggle
+Plugin 'vim-scripts/tComment'
 " Change Surround
 Plugin 'tpope/vim-surround'
+" Supertab
+Plugin 'ervandew/supertab'
+" Better auto completion
+Plugin 'Valloric/YouCompleteMe'
+" UltiSnips
+Plugin 'SirVer/ultisnips'
+" Snipit Library
+Plugin 'honza/vim-snippets'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -167,8 +165,8 @@ set updatetime=250            " Faster update time for faster feedback
 
 " NERDTree
 let NERDTreeShowHidden=1                          " Show hidden files
-map <C-n> :NERDTreeToggle<CR>                     " Toggle NERDTree
-map <Leader>n :NERDTreeFind<CR>                   " Toggle NERDTree
+map <Leader>n :NERDTreeToggle<CR>                 " Toggle NERDTree
+map <Leader>m :NERDTreeFind<CR>                   " Toggle NERDTree
 
 " Syntastic Syntax Highlighting
 let g:syntastic_always_populate_loc_list = 1
@@ -196,3 +194,13 @@ map <Leader>rc :call RunCurrentSpecFile()<CR>
 map <Leader>rn :call RunNearestSpec()<CR>
 map <Leader>rl :call RunLastSpec()<CR>
 map <Leader>ra :call RunAllSpecs()<CR>
+
+" make YCM compatible with UltiSnips (using supertab)
+let g:ycm_key_list_select_completion = ['<C-n>', '<Down>']
+let g:ycm_key_list_previous_completion = ['<C-p>', '<Up>']
+let g:SuperTabDefaultCompletionType = '<C-n>'
+
+" better key bindings for UltiSnipsExpandTrigger
+let g:UltiSnipsExpandTrigger = "<tab>"
+let g:UltiSnipsJumpForwardTrigger = "<tab>"
+let g:UltiSnipsJumpBackwardTrigger = "<s-tab>"

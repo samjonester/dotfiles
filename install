@@ -57,9 +57,16 @@ brew install the_silver_searcher
 echo
 echo "Installing tmux"
 brew install tmux
+echo
+echo "Installing cmake"
+brew install cmake
+echo
+echo "Installing ctags"
+brew install ctags
 
 
 # Install Oh My Zsh
+cd ~
 if [ ! -d ~/.oh-my-zsh ]
 then
 	echo
@@ -70,16 +77,6 @@ else
 	echo
 	echo "Skipping Oh My Zsh install"
 fi
-
-cd ~
-if [ -f .vimrc ]
-then
-	echo
-	echo "backing up .vimrc"
-	mv .vimrc .bk.vimrc.$(date +%s)
-fi
-ln -s ~/code/dotfiles/.vimrc .
-
 if [ -f .tmux.conf ]
 then
 	echo
@@ -106,6 +103,15 @@ then
 else
   echo "Skipping Vundle install"
 fi
+vim +PluginInstall +qall +PluginClean
+
+if [ -f .vimrc ]
+then
+	echo
+	echo "backing up .vimrc"
+	mv .vimrc .bk.vimrc.$(date +%s)
+fi
+ln -s ~/code/dotfiles/.vimrc .
 vim +PluginInstall +qall +PluginClean
 
 if [ -f .zshrc ]
@@ -158,6 +164,9 @@ then
 	source ~/.zshrc
 	nvm install stable
 fi
+cd ~/.vim/bundle/YouCompleteMe
+./install.py --tern-completer
+cd ~
 
 # Install GVM Stuff
 if ! which gvm >/dev/null
