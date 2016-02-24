@@ -15,6 +15,7 @@ Plugin 'tpope/vim-fugitive'
 Plugin 'L9'
 " vim-arline tab and status bar
 Plugin 'bling/vim-airline'
+Plugin 'vim-airline/vim-airline-themes'
 " json syntax highlighting
 Plugin 'elzr/vim-json'
 " Syntax error highlighting
