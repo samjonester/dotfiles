@@ -14,7 +14,11 @@ CONTENTS                                                    *mytips-contents*
     3b.Spell Check..........................|mytips-spellcheck|
     3c.tComment.............................|mytips-tcomment|
   4.GIT.....................................|mytips-git|
-  4.SEARCH..................................|mytips-search|
+  5.SEARCH..................................|mytips-search|
+  6.RUBY REFACTORING........................|mytips-ruby|
+  7.RSPEC...................................|mytips-rspec|
+  8.SURROUND................................|mytips-surround|
+  9.UNIX....................................|mytips-unix|
 
 ==============================================================================
 1. NAVIGATION - Navigating Vim                            *mytips-navigation*
@@ -124,18 +128,29 @@ CONTENTS                                                    *mytips-contents*
   q......................Close the quickfix window
   <C-a>..................Highlighting
 
-6. RSpec                                                       *mytips-rspec*
+6. Ruby Refactoring                                            *mytips-ruby*
+  <Leader>rap............:RAddParameter
+  <Leader>rcpc...........:RConvertPostConditional
+  <Leader>rel............:RExtractLet
+  <Leader>rec............:RExtractConstant
+  <Leader>relv...........:RExtractLocalVariable
+  <Leader>rit............:RInlineTemp
+  <Leader>rrlv...........:RRenameLocalVariable
+  <Leader>rriv...........:RRenameInstanceVariable
+  <Leader>rem............:RExtractMethod
+
+7. RSpec                                                       *mytips-rspec*
   <Leader>ra.............Run all
   <Leader>rc.............Run current
   <Leader>rl.............Run last
 
-7. Surround                                                 *mytips-surround*
+8. Surround                                                 *mytips-surround*
   cs”<p>.................Surround from “ to <p>
   ds”....................Surrounding quotes
   yss)...................Surround with parens
   S<p>...................Surround entire line with <p>
 
-8. Unix                                                         *mytips-unix*
+9. Unix                                                         *mytips-unix*
   :Remove................Delete a buffer and the file on disk simultaneously.
   :Unlink................Like :Remove, but keeps the now empty buffer.
   :Move..................Rename a buffer and the file on disk simultaneously.

@@ -76,6 +76,9 @@ Plugin 'SirVer/ultisnips'
 Plugin 'honza/vim-snippets'
 " Better markdown
 Plugin 'gabrielelana/vim-markdown'
+" Ruby Refactoring
+Plugin 'tmhedberg/matchit'
+Plugin 'ecomba/vim-ruby-refactoring'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
