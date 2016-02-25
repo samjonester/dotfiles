@@ -51,7 +51,7 @@ Plugin 'mxw/vim-jsx'
 " CoffeeScript syntax highlighting
 Plugin 'kchmck/vim-coffee-script'
 " ctrlP File opener
-Plugin 'kien/ctrlp.vim'
+Plugin 'ctrlpvim/ctrlp.vim'
 " Silver searcher
 Plugin 'rking/ag.vim'
 " Silver search * search
@@ -74,6 +74,8 @@ Plugin 'Valloric/YouCompleteMe'
 Plugin 'SirVer/ultisnips'
 " Snipit Library
 Plugin 'honza/vim-snippets'
+" Better markdown
+Plugin 'gabrielelana/vim-markdown'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -127,12 +129,12 @@ set splitright
 set splitbelow
 
 " Code Completion
-set complete=.,b,u,]
-set wildmode=longest,list:longest
-set completeopt=menu,menuone,preview
-au FileType ruby,eruby setl ofu=rubycomplete#Complete
-au FileType html,xhtml setl ofu=htmlcomplete#CompleteTags
-au FileType css setl ofu=csscomplete#CompleteCSS
+" set complete=.,b,u,]
+" set wildmode=longest,list:longest
+" set completeopt=menu,menuone,preview
+" au FileType ruby,eruby setl ofu=rubycomplete#Complete
+" au FileType html,xhtml setl ofu=htmlcomplete#CompleteTags
+" au FileType css setl ofu=csscomplete#CompleteCSS
 
 " Display settings
 set number            " Show current line number
@@ -142,6 +144,7 @@ set cursorline        " Highlight current cursor line
 syntax on             " Syntax Highlighting
 set background=dark   " Dark background style
 colorscheme badwolf   " Color Scheme
+set spell             " Turn on spell checking
 
 " JSON Don't hide quotes
 let g:vim_json_syntax_conceal = 0
