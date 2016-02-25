@@ -208,3 +208,9 @@ let g:SuperTabDefaultCompletionType = '<C-n>'
 let g:UltiSnipsExpandTrigger = "<tab>"
 let g:UltiSnipsJumpForwardTrigger = "<tab>"
 let g:UltiSnipsJumpBackwardTrigger = "<s-tab>"
+
+" MyTips help file
+autocmd BufWrite mytips.txt             :helptags ~/.vim/doc/
+autocmd BufRead  mytips.txt             set filetype=help
+autocmd BufRead  mytips.txt             set noreadonly
+autocmd BufRead  mytips.txt             set modifiable

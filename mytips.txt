@@ -6,7 +6,6 @@ CONTENTS                                                    *mytips-contents*
     1a.Panes & Tabs.........................|mytips-panes-tabs|
     1b.History..............................|mytips-history|
     1c.Rails Projects.......................|mytips-rails|
-
   2.FILES...................................|mytips-files|
     2a.NERDTree.............................|mytips-NERDTree|
     2b.ctrlp................................|mytips-ctrlp|
@@ -14,7 +13,8 @@ CONTENTS                                                    *mytips-contents*
     3a.AutoComplete.........................|mytips-NERDTree|
     3b.Spell Check..........................|mytips-spellcheck|
     3c.tComment.............................|mytips-tcomment|
-
+  4.GIT.....................................|mytips-git|
+  4.SEARCH..................................|mytips-search|
 
 ==============================================================================
 1. NAVIGATION - Navigating Vim                            *mytips-navigation*
@@ -102,44 +102,48 @@ CONTENTS                                                    *mytips-contents*
   <Leader>hs.............Stage hunk
   <Leader>hp.............Preview changes hunk 
   :Gstatus...............Show Status
+     - ..................Stage file from status menu
+  :Gcommit...............Commit stages changes
+  :Gpush.................Push commitS
   :Gblame................Blame current file
+  :Glog..................Log all changes to current file
 
-Silver Searcher *search*
-e    to open file and close the quickfix window
-o    to open (same as enter)
-go   to preview file (open but maintain focus on ag.vim results)
-t    to open in new tab
-T    to open in new tab silently
-h    to open in horizontal split
-H    to open in horizontal split silently
-v    to open in vertical split
-gv   to open in vertical split silently
-q    to close the quickfix window
-<C-a> - clear highlighting
+5. Search                                                     *mytips-search*
+  Ag! [search term]......Perform search
+  *......................Search for word under curser
+  
+  e......................Open file and close the quickfix window
+  o......................Open (same as enter)
+  go.....................Open file silently
+  t......................Open in new tab
+  T......................Open in new tab silently
+  h......................Open in horizontal split
+  H......................Open in horizontal split silently
+  v......................Open in vertical split
+  gv.....................Open in vertical split silently
+  q......................Close the quickfix window
+  <C-a>..................Highlighting
 
-RSpec *rspec*
-<Leader>ra - Run all
-<Leader>rc - Run current
-<Leader>rl - Run last
+6. RSpec                                                       *mytips-rspec*
+  <Leader>ra.............Run all
+  <Leader>rc.............Run current
+  <Leader>rl.............Run last
 
-Surround *surround*
-cs”<p>  - change surround from “ to <p>
-ds”  - remove surrounding quotes
-yss)  - surround with parens
-S<p>  - surround entire line with <p>
+7. Surround                                                 *mytips-surround*
+  cs”<p>.................Surround from “ to <p>
+  ds”....................Surrounding quotes
+  yss)...................Surround with parens
+  S<p>...................Surround entire line with <p>
 
-Unix *unix*
-:Remove: Delete a buffer and the file on disk simultaneously.
-:Unlink: Like :Remove, but keeps the now empty buffer.
-:Move: Rename a buffer and the file on disk simultaneously.
-:Rename: Like :Move, but relative to the current file's containing directory.
-:Chmod: Change the permissions of the current file.
-:Mkdir: Create a directory, defaulting to the parent of the current file.
-:Find: Run find and load the results into the quickfix list.
-:Locate: Run locate and load the results into the quickfix list.
-:Wall: Write every open window. Handy for kicking off tools like guard.
-:SudoWrite: Write a privileged file with sudo.
-:SudoEdit: Edit a privileged file with sudo.
-
-tComment
-gcc to comment line
+8. Unix                                                         *mytips-unix*
+  :Remove................Delete a buffer and the file on disk simultaneously.
+  :Unlink................Like :Remove, but keeps the now empty buffer.
+  :Move..................Rename a buffer and the file on disk simultaneously.
+  :Rename................Like :Move, but relative to the current file's containing directory.
+  :Chmod.................Change the permissions of the current file.
+  :Mkdir.................Create a directory, defaulting to the parent of the current file.
+  :Find..................Run find and load the results into the quickfix list.
+  :Locate................Run locate and load the results into the quickfix list.
+  :Wall..................Write every open window. Handy for kicking off tools like guard.
+  :SudoWrite.............Write a privileged file with sudo.
+  :SudoEdit..............Edit a privileged file with sudo.

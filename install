@@ -122,7 +122,6 @@ then
 fi
 ln -s ~/code/dotfiles/.zshrc .
 
-cd ~
 if [ -f .gitignore_global ]
 then
 	echo
@@ -130,6 +129,15 @@ then
 	mv .gitignore_global .bk.gitignore_global.$(date +%s)
 fi
 ln -s ~/code/dotfiles/.gitignore_global .
+
+if [ ! -d ~/.vim/doc ]
+then
+  cd ~/.vim
+  mkdir doc
+  cd doc
+  ln -s ~/code/dotfiles/mytips.txt .
+  cd ~
+fi
 
 
 # Install Ruby Stuff
