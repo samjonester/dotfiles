@@ -171,9 +171,12 @@ then
 	curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.30.2/install.sh | bash
 	source ~/.zshrc
 	nvm install stable
+  npm install -g jshint typescript
 fi
 cd ~/.vim/bundle/YouCompleteMe
 ./install.py --tern-completer
+cd ~/.vim/bundle/vimproc.vim
+make
 cd ~
 
 # Install GVM Stuff

@@ -79,6 +79,18 @@ Plugin 'gabrielelana/vim-markdown'
 " Ruby Refactoring
 Plugin 'tmhedberg/matchit'
 Plugin 'ecomba/vim-ruby-refactoring'
+" Javascript library syntax
+Plugin 'othree/javascript-libraries-syntax.vim'
+" Angular snippets
+Plugin 'matthewsimo/angular-vim-snippets'
+" Jasmine JavaScript Testing
+Plugin 'claco/jasmine.vim'
+" Angular support
+Plugin 'burnettk/vim-angular'
+" HTML 5 syntax
+Plugin 'othree/html5-syntax.vim'
+" HTML5 snippets
+Plugin 'othree/html5.vim'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -180,6 +192,12 @@ let g:syntastic_always_populate_loc_list = 1
 let g:syntastic_auto_loc_list = 1
 let g:syntastic_check_on_open = 1
 let g:syntastic_check_on_wq = 0
+" use jshint
+let g:syntastic_javascript_checkers = ['jshint']
+" show any linting errors immediately
+let g:syntastic_check_on_open = 1
+" md- tags are valid (material design)
+let g:syntastic_html_tidy_ignore_errors=["<md-", "discarding unexpected </md-"]
 
 " Searching
 set ignorecase     " Case insensitive search
@@ -187,6 +205,7 @@ set smartcase      " Smarter Case insensitive search
 
 " ctrlp find dotfiles
 let g:ctrlp_show_hidden = 1
+let g:ctrlp_custom_ignore = 'node_modules\|DS_Store\|git'
 
 " Silver Searcher
 let g:ag_working_path_mode="r"    " Search from project root
