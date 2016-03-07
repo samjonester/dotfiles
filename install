@@ -63,6 +63,9 @@ brew install cmake
 echo
 echo "Installing ctags"
 brew install ctags
+echo
+echo "Installing tree"
+brew install tree
 
 
 # Install Oh My Zsh
