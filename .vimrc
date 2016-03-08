@@ -193,7 +193,7 @@ let g:syntastic_auto_loc_list = 1
 let g:syntastic_check_on_open = 1
 let g:syntastic_check_on_wq = 0
 " use jshint
-let g:syntastic_javascript_checkers = ['jshint']
+let g:syntastic_javascript_checkers = ['eslint']
 " show any linting errors immediately
 let g:syntastic_check_on_open = 1
 " md- tags are valid (material design)
