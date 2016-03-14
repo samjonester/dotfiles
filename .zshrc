@@ -136,8 +136,6 @@ tk() {
 alias tl="tmux ls 2> /dev/null"
 
 jsvim() {
-echo "{
-  \"esversion\": 6
-}" > .jshintrc
-touch .tern-project
+  cp ~/code/dotfiles/.eslintrc .
+  touch .tern-project
 }
