@@ -5,3 +5,5 @@
 *.class
 */war
 /.idea
+.tern-project
+/node_modules/
