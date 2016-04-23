@@ -139,3 +139,5 @@ jsvim() {
   cp ~/code/dotfiles/.eslintrc .
   touch .tern-project
 }
+
+alias vim=nvim

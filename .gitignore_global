@@ -7,3 +7,4 @@
 /.idea
 .tern-project
 /node_modules/
+\#*\#

@@ -78,6 +78,8 @@ Plugin 'claco/jasmine.vim'
 Plugin 'othree/html5-syntax.vim'
 " Ember HBS Syntax Highlighting
 Plugin 'joukevandermaas/vim-ember-hbs'
+" Haskell
+Plugin 'neovimhaskell/haskell-vim'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -124,7 +126,16 @@ map <F7> mzgg=G`z     " F7 to format file
 nnoremap <C-J> <C-W><C-J>
 nnoremap <C-K> <C-W><C-K>
 nnoremap <C-L> <C-W><C-L>
-nnoremap <C-H> <C-W><C-H>
+if has('nvim')
+  nnoremap <bs> <C-W><C-H>
+else
+  nnoremap <C-H> <C-W><C-H>
+endif
+
+" Neovim terminal stuff
+if has('nvim')
+  tnoremap <ESC> <C-\><C-n>
+endif
 
 " Open splits to the right and below
 set splitright
@@ -208,6 +219,9 @@ vmap K <Plug>AgActionVisual
 map <C-a> :noh<CR>
 
 " RSpec.vim mappings
+if has('nvim')
+  let g:rspec_command = "tabe | term rspec {spec}"
+endif
 map <Leader>rc :call RunCurrentSpecFile()<CR>
 map <Leader>rn :call RunNearestSpec()<CR>
 map <Leader>rl :call RunLastSpec()<CR>
