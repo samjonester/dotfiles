@@ -32,10 +32,6 @@ Plugin 'Xuyuanp/nerdtree-git-plugin'
 Plugin 'vim-scripts/bash-support.vim'
 " Ruby goodness
 Plugin 'vim-ruby/vim-ruby'
-" Rails goodness
-Plugin 'tpope/vim-rails'
-" Bundler goodness
-Plugin 'tpope/vim-bundler'
 " Cucumber syntax highlighting <C-W><C-d> to find glue
 Plugin 'tpope/vim-cucumber'
 " Gradle syntax highlighting
@@ -60,8 +56,6 @@ Plugin 'Chun-Yang/vim-action-ag'
 Plugin 'thoughtbot/vim-rspec'
 " End blocks properly
 Plugin 'tpope/vim-endwise'
-" Unix commands
-Plugin 'tpope/vim-eunuch'
 " Comment Toggle
 Plugin 'vim-scripts/tComment'
 " Change Surround
@@ -76,21 +70,14 @@ Plugin 'SirVer/ultisnips'
 Plugin 'honza/vim-snippets'
 " Better markdown
 Plugin 'gabrielelana/vim-markdown'
-" Ruby Refactoring
-Plugin 'tmhedberg/matchit'
-Plugin 'ecomba/vim-ruby-refactoring'
 " Javascript library syntax
 Plugin 'othree/javascript-libraries-syntax.vim'
-" Angular snippets
-Plugin 'matthewsimo/angular-vim-snippets'
 " Jasmine JavaScript Testing
 Plugin 'claco/jasmine.vim'
-" Angular support
-Plugin 'burnettk/vim-angular'
 " HTML 5 syntax
 Plugin 'othree/html5-syntax.vim'
-" HTML5 snippets
-Plugin 'othree/html5.vim'
+" Ember HBS Syntax Highlighting
+Plugin 'joukevandermaas/vim-ember-hbs'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -192,8 +179,13 @@ let g:syntastic_always_populate_loc_list = 1
 let g:syntastic_auto_loc_list = 1
 let g:syntastic_check_on_open = 1
 let g:syntastic_check_on_wq = 0
-" use jshint
-let g:syntastic_javascript_checkers = ['eslint']
+" use eslint / jshint
+if filereadable(".eslintrc")
+  let g:syntastic_javascript_checkers = ['eslint']
+endif
+if filereadable(".jshint")
+  let g:syntastic_javascript_checkers = ['jshint']
+endif
 " show any linting errors immediately
 let g:syntastic_check_on_open = 1
 " md- tags are valid (material design)
@@ -210,9 +202,9 @@ let g:ctrlp_custom_ignore = 'node_modules\|DS_Store\|git'
 " Silver Searcher
 let g:ag_working_path_mode="r"    " Search from project root
 " use * to search current word in normal mode
-nmap * <Plug>AgActionWord
+nmap K <Plug>AgActionWord
 " use * to search selected text in visual mode
-vmap * <Plug>AgActionVisual
+vmap K <Plug>AgActionVisual
 map <C-a> :noh<CR>
 
 " RSpec.vim mappings
@@ -221,6 +213,10 @@ map <Leader>rn :call RunNearestSpec()<CR>
 map <Leader>rl :call RunLastSpec()<CR>
 map <Leader>ra :call RunAllSpecs()<CR>
 
+let g:ycm_add_preview_to_completeopt=0
+let g:ycm_confirm_extra_conf=0
+set completeopt-=preview
+
 " make YCM compatible with UltiSnips (using supertab)
 let g:ycm_key_list_select_completion = ['<C-n>', '<Down>']
 let g:ycm_key_list_previous_completion = ['<C-p>', '<Up>']
@@ -228,8 +224,8 @@ let g:SuperTabDefaultCompletionType = '<C-n>'
 
 " better key bindings for UltiSnipsExpandTrigger
 let g:UltiSnipsExpandTrigger = "<tab>"
-let g:UltiSnipsJumpForwardTrigger = "<tab>"
-let g:UltiSnipsJumpBackwardTrigger = "<s-tab>"
+let g:UltiSnipsJumpForwardTrigger="<c-j>"
+let g:UltiSnipsJumpBackwardTrigger="<c-k>"
 
 " MyTips help file
 autocmd BufWrite mytips.txt             :helptags ~/.vim/doc/
