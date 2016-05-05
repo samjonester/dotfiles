@@ -6,7 +6,7 @@ ZSH=/Users/$USER/.oh-my-zsh
 # Look in ~/.oh-my-zsh/themes/
 # Optionally, if you set this to "random", it'll load a random theme each
 # time that oh-my-zsh is loaded.
-ZSH_THEME="robbyrussell"
+ZSH_THEME="avit"
 
 # Example aliases
 # alias zshconfig="mate ~/.zshrc"
@@ -99,14 +99,14 @@ export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
 # t foobar
 # opens / creates a tmux session named foobar and navigates to ~/code
 t() {
-  local session_name  
+  local session_name
   session_name="$(pwd | rev | cut -d '/' -f1 | rev)"
 
-  if ! $(tmux has-session -t "$session_name" 2> /dev/null); then  
+  if ! $(tmux has-session -t "$session_name" 2> /dev/null); then
     tmux new-session -d -s "$session_name"
   fi
 
-  tmux attach-session -t "$session_name"  
+  tmux attach-session -t "$session_name"
   export TMUX_SESSION="$session_name"
 }
 
@@ -140,4 +140,4 @@ jsvim() {
   touch .tern-project
 }
 
-alias vim=nvim
+alias vim=emacs
