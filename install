@@ -231,3 +231,8 @@ ln -s ~/Dropbox/ssh/config .
 
 echo
 echo "Install Complete"
+
+echo
+echo "Install haskell platform"
+echo "Install stack"
+echo "stack install ghc-mod"

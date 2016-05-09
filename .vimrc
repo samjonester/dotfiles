@@ -80,6 +80,7 @@ Plugin 'othree/html5-syntax.vim'
 Plugin 'joukevandermaas/vim-ember-hbs'
 " Haskell
 Plugin 'neovimhaskell/haskell-vim'
+Plugin 'laurilehmijoki/haskellmode-vim'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -100,7 +101,9 @@ filetype plugin indent on    " required
 
 " Behavior settings
 set nocompatible      " Vim behavior, not Vi.
-set encoding=utf-8   " Use UTF-8 encoding
+if !has('nvim')
+  set encoding=utf-8   " Use UTF-8 encoding
+endif
 set nobackup         " Don't backup
 set nowritebackup    " Write file in place
 set noswapfile       " Don't use swap files (.swp)
@@ -151,12 +154,11 @@ set splitbelow
 
 " Display settings
 set number            " Show current line number
-set relativenumber    " Show other line numbers as relative
 set ruler             " Show curser position
 set cursorline        " Highlight current cursor line
 syntax on             " Syntax Highlighting
 set background=dark   " Dark background style
-colorscheme badwolf   " Color Scheme
+colorscheme darth     " Color Scheme
 set spell             " Turn on spell checking
 
 " JSON Don't hide quotes
@@ -246,3 +248,10 @@ autocmd BufWrite mytips.txt             :helptags ~/.vim/doc/
 autocmd BufRead  mytips.txt             set filetype=help
 autocmd BufRead  mytips.txt             set noreadonly
 autocmd BufRead  mytips.txt             set modifiable
+
+" Haskell setup
+" use ghc functionality for haskell files
+au Bufenter *.hs compiler ghc
+" Configure browser for haskell_doc.vim
+let g:haddock_browser = "open"
+let g:haddock_browser_callformat = "%s %s"

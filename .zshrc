@@ -140,4 +140,4 @@ jsvim() {
   touch .tern-project
 }
 
-alias vim=emacs
+alias vim=nvim
