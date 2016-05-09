@@ -32,6 +32,8 @@ Plugin 'Xuyuanp/nerdtree-git-plugin'
 Plugin 'vim-scripts/bash-support.vim'
 " Ruby goodness
 Plugin 'vim-ruby/vim-ruby'
+" Rails goodness
+Plugin 'tpope/vim-rails'
 " Cucumber syntax highlighting <C-W><C-d> to find glue
 Plugin 'tpope/vim-cucumber'
 " Gradle syntax highlighting
@@ -48,6 +50,7 @@ Plugin 'mxw/vim-jsx'
 Plugin 'kchmck/vim-coffee-script'
 " ctrlP File opener
 Plugin 'ctrlpvim/ctrlp.vim'
+Plugin 'fisadev/vim-ctrlp-cmdpalette'
 " Silver searcher
 Plugin 'rking/ag.vim'
 " Silver search * search
@@ -211,6 +214,7 @@ set smartcase      " Smarter Case insensitive search
 " ctrlp find dotfiles
 let g:ctrlp_show_hidden = 1
 let g:ctrlp_custom_ignore = 'node_modules\|DS_Store\|git'
+map <M-Space> :CtrlPCmdPalette<CR>
 
 " Silver Searcher
 let g:ag_working_path_mode="r"    " Search from project root
