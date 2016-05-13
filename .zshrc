@@ -41,7 +41,7 @@ ZSH_THEME="avit"
 # Uncomment following line if you want to the command execution time stamp shown
 # in the history command output.
 # The optional three formats: "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
-# HIST_STAMPS="mm/dd/yyyy"
+HIST_STAMPS="mm/dd/yyyy"
 
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
@@ -52,18 +52,8 @@ source $ZSH/oh-my-zsh.sh
 
 # User configuration
 
-#export PATH="/usr/bin:/bin:/usr/sbin:/sbin:/usr/local/bin:/usr/local/git/bin"
-# export MANPATH="/usr/local/man:$MANPATH"
-
-# # Preferred editor for local and remote sessions
-# if [[ -n $SSH_CONNECTION ]]; then
-#   export EDITOR='vim'
-# else
-#   export EDITOR='mvim'
-# fi
-
-# Compilation flags
-# export ARCHFLAGS="-arch x86_64"
+export EDITOR='nvim'
+alias vim=nvim
 
 # ssh
 # export SSH_KEY_PATH="~/.ssh/dsa_id"
@@ -73,7 +63,6 @@ RPROMPT="%{$fg_bold[red]%}[$USER]%{$reset_color%}  %{$fg_bold[green]%}[%!]%{$res
 
 # Make colors work
 [[ "$TERM" == "xterm" ]] && export TERM=xterm-256color
-
 
 # added by travis gem
 [ -f /Users/samjones/.travis/travis.sh ] && source /Users/samjones/.travis/travis.sh
@@ -140,8 +129,8 @@ jsvim() {
   touch .tern-project
 }
 
-alias vim=nvim
 
+# Make directory then cd into it
 mcd() {
   mkdir -p $1
   cd $1
