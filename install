@@ -29,7 +29,8 @@ then
   ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 else
 	echo
-	echo "Skipping Homebrew install"
+	echo "Updating Homebrew"
+  brew update
 fi
 
 # Install Homebrew tools
@@ -70,129 +71,9 @@ brew install ctags
 echo
 echo "Installing tree"
 brew install tree
-
-
-# Install Oh My Zsh
-cd ~
-if [ ! -d ~/.oh-my-zsh ]
-then
-	echo
-	echo "Installing Oh My Zsh"
-  sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
-  zsh
-else
-	echo
-	echo "Skipping Oh My Zsh install"
-fi
-if [ -f .tmux.conf ]
-then
-	echo
-	echo "backing up .tmux.conf"
-	mv .vimrc .bk.tmux.conf.$(date +%s)
-fi
-ln -s ~/code/dotfiles/.tmux.conf .
-
-if [ -f .pryrc ]
-then
-	echo
-	echo "backing up .tmux.conf"
-	mv .vimrc .bk.pryrc.$(date +%s)
-fi
-ln -s ~/code/dotfiles/.pryrc .
-
-
-
-if [ ! -d  ~/.vim/bundle/Vundle.vim ]
-then
-	echo
-	echo "Installing Vundle"
-	git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
-else
-  echo "Skipping Vundle install"
-fi
-vim +PluginInstall +qall +PluginClean
-
-if [ -f .vimrc ]
-then
-	echo
-	echo "backing up .vimrc"
-	mv .vimrc .bk.vimrc.$(date +%s)
-fi
-ln -s ~/code/dotfiles/.vimrc .
-vim +PluginInstall +qall +PluginClean
-
-if [ -f .zshrc ]
-then
-	echo
-	echo "backing up .zshrc"
-	mv .zshrc .bk.zshrc.$(date +%s)
-fi
-ln -s ~/code/dotfiles/.zshrc .
-
-if [ -f .gitignore_global ]
-then
-	echo
-	echo "backing up .gitignore_global "
-	mv .gitignore_global .bk.gitignore_global.$(date +%s)
-fi
-ln -s ~/code/dotfiles/.gitignore_global .
-
-if [ ! -d ~/.vim/doc ]
-then
-  cd ~/.vim
-  mkdir doc
-  cd doc
-  ln -s ~/code/dotfiles/mytips.txt .
-  cd ~
-fi
-
-
-# Install Ruby Stuff
-if ! which rvm >/dev/null
-then
-	echo
-	echo "Installing RVM"
-  curl -L https://get.rvm.io | bash -s stable --ruby
-	echo "Installing bundler"
-  gem install bundler
-	echo "Installing rails"
-  gem install rails 
-	echo "Installing travis"
-  gem install travis
-  echo "Isnstalling pry"
-  gem install pry pry-nav pry-debugger pry-stack_explorer
-else
-	echo
-  echo "Skipping RVM install"
-fi
-
-# Install Elixir Stuff
-if ! which kiex >/dev/null
-then
-  curl -sSL https://raw.githubusercontent.com/taylor/kiex/master/install | bash -s
-fi
-
-# Install NPM Stuff
-if ! which nvm >/dev/null
-then
-	curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.30.2/install.sh | bash
-	source ~/.zshrc
-	nvm install stable
-  npm install -g eslint jshint
-fi
-cd ~/.vim/bundle/YouCompleteMe
-./install.py --tern-completer
-cd ~/.vim/bundle/vimproc.vim
-make
-cd ~
-
-# Install GVM Stuff
-if ! which gvm >/dev/null
-then
-	zsh < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
-	gvm install go1.4
-	gvm use go1.4 [--default]
-fi
+echo
+echo "Installing emacs"
+brew install tree
 
 # Install applications
 echo
@@ -209,30 +90,189 @@ then
   brew cask install atom
   brew cask install alfred
   brew cask install seil
-  brew cask install dropbox
-  open -a Dropbox
   brew cask install bettertouchtool
   brew cask install iterm2
   brew cask install evernote
   brew cask install the-unarchiver
   brew cask install skitch
+  brew cask install dropbox
+  open -a Dropbox
 fi
 
-# SSH setup
-mkdir -p ~/.ssh
-cd ~/.ssh
-if [ -f config ]
+
+# Install Oh My Zsh
+cd ~
+if [ ! -d ~/.oh-my-zsh ]
 then
 	echo
-	echo "Backing up ssh config"
-	mv config .bk.config.$(date +%s)
+	echo "Installing Oh My Zsh"
+  sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
+  zsh
+else
+	echo
+	echo "Skipping Oh My Zsh install"
 fi
-ln -s ~/Dropbox/ssh/config .
+
+
+# Update tmux conf
+cd ~
+if [ -f .tmux.conf ]
+then
+	echo
+	echo "backing up .tmux.conf"
+	mv .vimrc .bk.tmux.conf.$(date +%s)
+fi
+ln -s ~/code/dotfiles/.tmux.conf .
+
+# Update .pryrc
+cd ~
+if [ -f .pryrc ]
+then
+	echo
+	echo "backing up .pryrc"
+	mv .vimrc .bk.pryrc.$(date +%s)
+fi
+ln -s ~/code/dotfiles/.pryrc .
+
+
+# Install vundle
+if [ ! -d  ~/.vim/bundle/Vundle.vim ]
+then
+	echo
+	echo "Installing Vundle"
+	git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
+else
+  echo "Skipping Vundle install"
+fi
+vim +PluginInstall +qall +PluginClean
+
+# Update vimrc
+cd ~
+if [ -f .vimrc ]
+then
+	echo
+	echo "backing up .vimrc"
+	mv .vimrc .bk.vimrc.$(date +%s)
+fi
+ln -s ~/code/dotfiles/.vimrc .
+vim +PluginInstall +qall +PluginClean
+
+# Install vim plugin extras
+~/.vim/bundle/YouCompleteMe/install.py --tern-completer
+
+# Update global git ignore
+cd ~
+if [ -f .gitignore_global ]
+then
+	echo
+	echo "backing up .gitignore_global "
+	mv .gitignore_global .bk.gitignore_global.$(date +%s)
+fi
+ln -s ~/code/dotfiles/.gitignore_global .
+
+# Updating custom vim docs
+cd ~
+if [ ! -d ~/.vim/doc ]
+then
+  cd ~/.vim
+  mkdir doc
+  cd doc
+  ln -s ~/code/dotfiles/mytips.txt .
+  cd ~
+fi
+
+# Update emacs
+cd ~
+if [ -f .emacs ]
+then
+	echo
+	echo "backing up .emacs"
+	mv .emacs .bk.emacs.$(date +%s)
+fi
+ln -s ~/code/dotfiles/.emacs .
+
+# Update ctags
+cd ~
+if [ -f .ctags ]
+then
+	echo
+	echo "backing up .ctags"
+	mv .ctags .bk.ctags.$(date +%s)
+fi
+ln -s ~/code/dotfiles/.ctags .
+
+# Install RVM
+if ! which rvm >/dev/null
+then
+	echo
+	echo "Installing RVM"
+  curl -L https://get.rvm.io | bash -s stable --ruby
+  source ~/.zshrc
+  rvm install 2.3
+  rvm use 2.3 --default
+  gem install pry pry-nav pry-stack_explorer pro-doc bundler
+else
+	echo
+  echo "Skipping RVM install"
+fi
+
+# Install Elixir Stuff
+if ! which kiex >/dev/null
+then
+  curl -sSL https://raw.githubusercontent.com/taylor/kiex/master/install | bash -s
+  source ~/.zshrc
+  kiex install 1.2.5
+  kiex use 1.2.5 --default
+fi
+
+# Install NPM
+if ! which nvm >/dev/null
+then
+	curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.30.2/install.sh | bash
+	source ~/.zshrc
+	nvm install stable
+  nvm use stable
+  npm install -g eslint jshint
+fi
+
+# Install GVM
+if ! which gvm >/dev/null
+then
+	zsh < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
+	gvm install go1.6
+	gvm use go1.6 --default
+fi
+
+# Install Haskell stuff
+echo
+echo "Install haskell platform"
+brew cask install haskell-platform
+echo
+echo "Install haskell stack"
+brew install haskell-stack
+
+# Update .zshrc
+cd ~
+if [ -f .zshrc ]
+then
+	echo
+	echo "backing up .zshrc"
+	mv .zshrc .bk.zshrc.$(date +%s)
+fi
+ln -s ~/code/dotfiles/.zshrc .
+
+# # SSH setup
+# mkdir -p ~/.ssh
+# cd ~/.ssh
+# if [ -f config ]
+# then
+# 	echo
+# 	echo "Backing up ssh config"
+# 	mv config .bk.config.$(date +%s)
+# fi
+# ln -s ~/Dropbox/ssh/config .
+
 
 echo
 echo "Install Complete"
 
-echo
-echo "Install haskell platform"
-echo "Install stack"
-echo "stack install ghc-mod"
