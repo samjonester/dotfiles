@@ -84,6 +84,8 @@ Plugin 'joukevandermaas/vim-ember-hbs'
 " Haskell
 Plugin 'neovimhaskell/haskell-vim'
 Plugin 'laurilehmijoki/haskellmode-vim'
+" Repeat plugin actions
+Plugin 'tpope/vim-repeat'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
