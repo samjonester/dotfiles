@@ -1,0 +1,44 @@
+[user]
+  name = Sam Jones
+  email = sam@samljones.com
+[core]
+  excludesfile = ~/.gitignore_global
+  autocrlf = input
+  editor = nvim
+[alias]
+  s = status
+  aa = add .
+  a = add
+  d = diff --color
+  dc = !git d --cached
+  f = fetch
+  co = checkout
+  c = commit --verbose
+  ca = !git add -A && git commit
+  pm = pull
+  p = pull -r
+  pu = push -u origin -all
+  r = rebase
+  rmaster = !git fetch && git rebase origin/master
+  ri = rebase -i
+  unstage = reset HEAD
+  fix = !sh -c 'REV=$(git rev-parse $1) && git commit --fixup $@ && git rebase -i --autosquash $REV^' -
+  l = log --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative
+  m = merge
+  mt = mergetool
+  rl = reflog --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative
+  com = checkout master
+  cob = checkout -b
+  up = !git pull --rebase --prune $@ && git submodule update --init --recursive
+  wip = !git add -A && git commit -m '!SAVEPOINT'
+  undo = reset HEAD~1 --mixed
+  ammend = commit --amend
+  fuckit = !git clean -d -x -f && git reset --hard
+  origin = !git reset --hard $(git symbolic-ref --short -q  HEAD)
+  delete-merged-branches = "!git co master && git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
+  unpublish = "!git push origin :$(git branch-name)"
+
+[merge]
+  tool = vimdiff
+[mergetool]
+  prompt = false

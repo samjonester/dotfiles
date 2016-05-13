@@ -160,7 +160,15 @@ vim +PluginInstall +qall +PluginClean
 # Install vim plugin extras
 ~/.vim/bundle/YouCompleteMe/install.py --tern-completer
 
-# Update global git ignore
+# Update git files
+cd ~
+if [ -f .gitconfig ]
+then
+	echo
+	echo "backing up .gitconfig "
+	mv .gitconfig .bk.gitconfig$(date +%s)
+fi
+ln -s ~/code/dotfiles/.gitconfig .
 cd ~
 if [ -f .gitignore_global ]
 then
