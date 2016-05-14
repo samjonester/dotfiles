@@ -86,6 +86,10 @@ Plugin 'neovimhaskell/haskell-vim'
 Plugin 'laurilehmijoki/haskellmode-vim'
 " Repeat plugin actions
 Plugin 'tpope/vim-repeat'
+" RVM
+Plugin 'tpope/vim-rvm'
+" Bundler (bundle commands and gem tags)
+Plugin 'tpope/vim-bundler'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -254,6 +258,9 @@ autocmd BufWrite mytips.txt             :helptags ~/.vim/doc/
 autocmd BufRead  mytips.txt             set filetype=help
 autocmd BufRead  mytips.txt             set noreadonly
 autocmd BufRead  mytips.txt             set modifiable
+
+" tags
+au BufWritePost * silent! !eval 'ctags -R -o newtags; mv newtags tags' &
 
 " Haskell setup
 " use ghc functionality for haskell files
