@@ -46,7 +46,7 @@ HIST_STAMPS="mm/dd/yyyy"
 # Which plugins would you like to load? (plugins can be found in ~/.oh-my-zsh/plugins/*)
 # Custom plugins may be added to ~/.oh-my-zsh/custom/plugins/
 # Example format: plugins=(rails git textmate ruby lighthouse)
-plugins=(git gitignore command-not-found zsh-syntax-highlighting ruby rails git-extras npm brew tmux rvm)
+plugins=(git gitignore command-not-found zsh-syntax-highlighting ruby rails git-extras brew tmux)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -71,19 +71,11 @@ RPROMPT="%{$fg_bold[red]%}[$USER]%{$reset_color%}  %{$fg_bold[green]%}[%!]%{$res
 export PATH="$HOME/.jenv/bin:$PATH"
 eval "$(jenv init -)"
 
-# kiex elixir version manager
-[[ -s "$HOME/.kiex/scripts/kiex" ]] && source "$HOME/.kiex/scripts/kiex"
-
-# nvm node version manager
-export NVM_DIR="/Users/sam/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
+# RB Env
+eval "$(rbenv init -)"
 
 # gvm go version manager
 [[ -s "/Users/sam/.gvm/scripts/gvm" ]] && source "/Users/sam/.gvm/scripts/gvm"
-
-# rvm ruby version manager
-export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
-[[ -s "$HOME/.rvm/scripts/rvm" ]] && . "$HOME/.rvm/scripts/rvm"
 
 # t foobar
 # opens / creates a tmux session named foobar and navigates to ~/code

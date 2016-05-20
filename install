@@ -209,46 +209,30 @@ then
 fi
 ln -s ~/code/dotfiles/.ctags .
 
-# Install RVM
-if ! which rvm >/dev/null
-then
-	echo
-	echo "Installing RVM"
-  curl -L https://get.rvm.io | bash -s stable --ruby
-  source ~/.zshrc
-  rvm install 2.3
-  rvm use 2.3 --default
-  gem install pry pry-nav pry-stack_explorer pro-doc bundler
-else
-	echo
-  echo "Skipping RVM install"
-fi
+# Install rbenv
+brew install rbenv
+rbenv install 2.3.0
+rbenv global 2.3.0
+eval "$(rbenv init -)"
 
-# Install Elixir Stuff
-if ! which kiex >/dev/null
-then
-  curl -sSL https://raw.githubusercontent.com/taylor/kiex/master/install | bash -s
-  source ~/.zshrc
-  kiex install 1.2.5
-  kiex use 1.2.5 --default
-fi
+" Install ctags file for ruby
+gem install gem-ctags
+gem ctags
 
-# Install NPM
-if ! which nvm >/dev/null
-then
-	curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.30.2/install.sh | bash
-	source ~/.zshrc
-	nvm install stable
-  nvm use stable
-  npm install -g eslint jshint
-fi
+# Install node
+brew install nodenv
+nodenv install 5.10.0
+nodenv global 5.10.0
 
 # Install GVM
 if ! which gvm >/dev/null
 then
 	zsh < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
-	gvm install go1.6
-	gvm use go1.6 --default
+	gvm install go1.4 -B
+  gvm use go1.4
+  export GOROOT_BOOTSTRAP=$GOROOT
+  gvm install go1.6
+  gvm use go1.6 --default
 fi
 
 # Install Haskell stuff
