@@ -19,7 +19,7 @@ Plugin 'vim-airline/vim-airline-themes'
 " json syntax highlighting
 Plugin 'elzr/vim-json'
 " Syntax error highlighting
-Plugin 'scrooloose/syntastic'
+Plugin 'benekastah/neomake'
 " Git gutter to show git differences
 Plugin 'airblade/vim-gitgutter'
 " Colorschemes
@@ -90,6 +90,8 @@ Plugin 'tpope/vim-repeat'
 Plugin 'tpope/vim-rvm'
 " Bundler (bundle commands and gem tags)
 Plugin 'tpope/vim-bundler'
+" Easy motion for navigation
+Plugin 'easymotion/vim-easymotion'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -194,24 +196,24 @@ set updatetime=250            " Faster update time for faster feedback
 " NERDTree
 let NERDTreeShowHidden=1                          " Show hidden files
 map <Leader>n :NERDTreeToggle<CR>                 " Toggle NERDTree
-map <Leader>m :NERDTreeFind<CR>                   " Toggle NERDTree
 
-" Syntastic Syntax Highlighting
-let g:syntastic_always_populate_loc_list = 1
-let g:syntastic_auto_loc_list = 1
-let g:syntastic_check_on_open = 1
-let g:syntastic_check_on_wq = 0
-" use eslint / jshint
+" Neomake syntax checker
+autocmd! BufWritePost * Neomake
+autocmd! BufRead * Neomake
+let g:neomake_echo_current_error=1
+let g:neomake_open_list=1
+let g:neomake_javascript_enabled_makers=['standard']
 if filereadable(".eslintrc")
-  let g:syntastic_javascript_checkers = ['eslint']
+  let g:neomake_javascript_enabled_makers=['eslint']
 endif
 if filereadable(".jshint")
-  let g:syntastic_javascript_checkers = ['jshint']
+  let g:neomake_javascript_enabled_makers=['jshint']
 endif
-" show any linting errors immediately
-let g:syntastic_check_on_open = 1
-" md- tags are valid (material design)
-let g:syntastic_html_tidy_ignore_errors=["<md-", "discarding unexpected </md-"]
+nmap <Leader>mc :lclose<CR>
+nmap <Leader>mo :lopen<CR>
+nmap <Leader>mn :lnext<CR>
+nmap <Leader>mp :lprev<CR>
+
 
 " Searching
 set ignorecase     " Case insensitive search

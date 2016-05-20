@@ -32,7 +32,7 @@
   up = !git pull --rebase --prune $@ && git submodule update --init --recursive
   wip = !git add -A && git commit -m '!SAVEPOINT'
   undo = reset HEAD~1 --mixed
-  ammend = commit --amend
+  amend = commit --amend
   fuckit = !git clean -d -x -f && git reset --hard
   origin = !git reset --hard $(git symbolic-ref --short -q  HEAD)
   delete-merged-branches = "!git co master && git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
