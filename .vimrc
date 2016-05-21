@@ -92,6 +92,9 @@ Plugin 'tpope/vim-rvm'
 Plugin 'tpope/vim-bundler'
 " Easy motion for navigation
 Plugin 'easymotion/vim-easymotion'
+" Docs
+Plugin 'rizzatti/dash.vim'
+
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required

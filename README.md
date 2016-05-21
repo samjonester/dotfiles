@@ -24,3 +24,4 @@ This project contains my dotfiles and an install script to setup a new computer.
   <A-Delete> - Hex 0x17
   <A-Fn-Del> - escape d
 - Install gem [ctags](https://github.com/tpope/gem-ctags)
+- Install Dash document sets

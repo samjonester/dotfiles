@@ -95,6 +95,8 @@ then
   brew cask install evernote
   brew cask install the-unarchiver
   brew cask install skitch
+  brew cask install dash
+  open -a Dash
   brew cask install dropbox
   open -a Dropbox
 fi
