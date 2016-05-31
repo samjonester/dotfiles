@@ -74,6 +74,9 @@ eval "$(jenv init -)"
 # RB Env
 eval "$(rbenv init -)"
 
+# Node Env
+eval "$(nodenv init -)"
+
 # gvm go version manager
 [[ -s "/Users/sam/.gvm/scripts/gvm" ]] && source "/Users/sam/.gvm/scripts/gvm"
 

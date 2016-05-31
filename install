@@ -45,8 +45,8 @@ echo "Installing vim"
 brew install vim
 echo
 echo "Installing neo vim"
-brew insatll nvim
-sudo pip2 install neovim
+brew install neovim
+sudo pip install neovim
 echo
 echo "Installing zsh"
 brew install zsh
@@ -74,6 +74,12 @@ brew install tree
 echo
 echo "Installing emacs"
 brew install tree
+echo
+echo "Installing python"
+brew install python
+echo
+echo "Installing pip"
+sudo easy_install pip
 
 # Install applications
 echo
@@ -217,7 +223,7 @@ rbenv install 2.3.0
 rbenv global 2.3.0
 eval "$(rbenv init -)"
 
-" Install ctags file for ruby
+# Install ctags file for ruby
 gem install gem-ctags
 gem ctags
 
@@ -230,6 +236,7 @@ nodenv global 5.10.0
 if ! which gvm >/dev/null
 then
 	zsh < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
+  source /Users/sam/.gvm/scripts/gvm
 	gvm install go1.4 -B
   gvm use go1.4
   export GOROOT_BOOTSTRAP=$GOROOT

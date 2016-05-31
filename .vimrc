@@ -193,7 +193,7 @@ set laststatus=2              " Always show status line
 let g:airline_theme='wombat'  " Airline theme
 
 " Git Gutter
-let g:gitgutter_eager = 1     " Notice changes when switching buffer/tab/focus
+let g:gitgutter_eager = 4     " Notice changes when switching buffer/tab/focus
 let g:gitgutter_realtime = 1  " Notice changes after typing has stopped
 set updatetime=250            " Faster update time for faster feedback
 
@@ -266,7 +266,7 @@ autocmd BufRead  mytips.txt             set noreadonly
 autocmd BufRead  mytips.txt             set modifiable
 
 " tags
-au BufWritePost * silent! !eval 'ctags -R -o newtags; mv newtags tags' &
+au BufWritePost *.rb,*.js,*.hs silent! !eval 'ctags -R -o newtags; mv newtags tags' &
 
 " Haskell setup
 " use ghc functionality for haskell files
