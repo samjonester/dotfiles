@@ -74,6 +74,8 @@ eval "$(jenv init -)"
 # RB Env
 eval "$(rbenv init -)"
 
+alias rbe="rbenv exec bundle exec"
+
 # Node Env
 eval "$(nodenv init -)"
 
@@ -130,3 +132,5 @@ mcd() {
   mkdir -p $1
   cd $1
 }
+
+alias pair="ssh root@107.170.115.65 -R 1337:127.0.0.1:22"

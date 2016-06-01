@@ -142,6 +142,16 @@ then
 fi
 ln -s ~/code/dotfiles/.pryrc .
 
+# Update .rspec
+cd ~
+if [ -f .rspec ]
+then
+	echo
+	echo "backing up .rspec"
+	mv .rspec .bk.rspec.$(date +%s)
+fi
+ln -s ~/code/dotfiles/.rspec .
+
 
 # Install vundle
 if [ ! -d  ~/.vim/bundle/Vundle.vim ]
