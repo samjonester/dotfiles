@@ -15,6 +15,7 @@
   co = checkout
   c = commit --verbose
   ca = !git add -A && git commit
+  ac = !git ca
   pm = pull
   p = pull -r
   pu = push -u origin -all
