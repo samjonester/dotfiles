@@ -238,7 +238,7 @@ map <C-a> :noh<CR>
 
 " RSpec.vim mappings
 if has('nvim')
-  let g:rspec_command = "tabe | term rspec {spec}"
+  let g:rspec_command = "tabe | term rbenv exec bundle exec rspec {spec}"
 endif
 map <Leader>rc :call RunCurrentSpecFile()<CR>
 map <Leader>rn :call RunNearestSpec()<CR>
