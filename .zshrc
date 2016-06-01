@@ -133,4 +133,16 @@ mcd() {
   cd $1
 }
 
-alias pair="ssh root@107.170.115.65 -R 1337:127.0.0.1:22"
+PAIR_IP=107.170.115.65
+pair() {
+  ssh -f -N -R 1337:127.0.0.1:22 root@$PAIR_IP
+  echo
+  echo
+  echo "Pair session started"
+  echo
+  echo "To connect, execute the following command (copied to clipboard):"
+  echo "ssh -p 1337 pair@$PAIR_IP"
+  echo "ssh -p 1337 pair@$PAIR_IP" | pbcopy
+  sleep 5
+  wemux start
+}
