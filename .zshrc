@@ -52,6 +52,9 @@ source $ZSH/oh-my-zsh.sh
 
 # User configuration
 
+# Local Environment Variables
+[[ -s "/Users/sam/.localrc" ]] && source "/Users/sam/.localrc"
+
 export EDITOR='nvim'
 alias vim=nvim
 
