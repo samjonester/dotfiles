@@ -11,3 +11,5 @@
 tags
 newtags
 npm-debug.log
+*.iml
+node_modules
