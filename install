@@ -72,8 +72,14 @@ echo
 echo "Installing tree"
 brew install tree
 echo
+echo "Installing keybase"
+brew install keybase
+echo
+echo "Installing gpg"
+brew install gpg
+echo
 echo "Installing emacs"
-brew install tree
+brew install emacs
 echo
 echo "Installing python"
 brew install python
