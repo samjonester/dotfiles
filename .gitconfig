@@ -1,6 +1,7 @@
 [user]
   name = Sam Jones
   email = sam@samljones.com
+	signingkey = DBBADFA8
 [core]
   excludesfile = ~/.gitignore_global
   autocrlf = input
@@ -44,3 +45,5 @@
   tool = vimdiff
 [mergetool]
   prompt = false
+[commit]
+	gpgsign = true
