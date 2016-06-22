@@ -24,6 +24,7 @@ Plugin 'benekastah/neomake'
 Plugin 'airblade/vim-gitgutter'
 " Colorschemes
 Plugin 'flazz/vim-colorschemes'
+Plugin 'altercation/vim-colors-solarized'
 " NERDTree project file browser bar
 Plugin 'scrooloose/nerdtree'
 " Highlight git in nerdtree
@@ -173,7 +174,9 @@ set ruler             " Show curser position
 set cursorline        " Highlight current cursor line
 syntax on             " Syntax Highlighting
 set background=dark   " Dark background style
-colorscheme darth     " Color Scheme
+" colorscheme darth     " Color Scheme
+set background=dark
+colorscheme solarized
 set spell             " Turn on spell checking
 
 " JSON Don't hide quotes
@@ -190,7 +193,8 @@ endif
 
 " Airline
 set laststatus=2              " Always show status line
-let g:airline_theme='wombat'  " Airline theme
+let g:airline_theme='solarized'  " Airline theme
+let g:airline_powerline_fonts = 1
 
 " Git Gutter
 let g:gitgutter_eager = 4     " Notice changes when switching buffer/tab/focus
