@@ -85,6 +85,9 @@ eval "$(nodenv init -)"
 # gvm go version manager
 [[ -s "/Users/sam/.gvm/scripts/gvm" ]] && source "/Users/sam/.gvm/scripts/gvm"
 
+# git magic
+eval "$(hub alias -s)"
+
 # t foobar
 # opens / creates a tmux session named foobar and navigates to ~/code
 t() {

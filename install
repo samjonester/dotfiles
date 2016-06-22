@@ -78,6 +78,9 @@ echo
 echo "Installing gpg"
 brew install gpg
 echo
+echo "Installing hub"
+brew install hub
+echo
 echo "Installing emacs"
 brew install emacs
 echo
