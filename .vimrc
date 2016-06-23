@@ -84,7 +84,8 @@ Plugin 'othree/html5-syntax.vim'
 Plugin 'joukevandermaas/vim-ember-hbs'
 " Haskell
 Plugin 'neovimhaskell/haskell-vim'
-Plugin 'laurilehmijoki/haskellmode-vim'
+Plugin 'eagletmt/ghcmod-vim'
+Plugin 'eagletmt/neco-ghc'
 " Repeat plugin actions
 Plugin 'tpope/vim-repeat'
 " RVM
@@ -97,6 +98,10 @@ Plugin 'easymotion/vim-easymotion'
 Plugin 'rizzatti/dash.vim'
 " ruby refactoring
 Plugin 'ecomba/vim-ruby-refactoring'
+" Tabular
+Plugin 'godlygeek/tabular'
+" Vim Proc
+Plugin 'Shougo/vimproc.vim'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -256,8 +261,11 @@ map <A-\> :split <CR>:exec("tag ".expand("<cword>"))<CR>
 map <A-]> :vsp <CR>:exec("tag ".expand("<cword>"))<CR>
 
 " Haskell setup
-" use ghc functionality for haskell files
-au Bufenter *.hs compiler ghc
-" Configure browser for haskell_doc.vim
-let g:haddock_browser = "open"
-let g:haddock_browser_callformat = "%s %s"
+" let g:necoghc_debug = 1  " Enable to debug plugin
+let g:haskellmode_completion_ghc = 1
+autocmd FileType haskell setlocal omnifunc=necoghc#omnifunc
+let g:necoghc_enable_detailed_browse = 1
+let g:haskell_tabular = 1
+vmap a= :Tabularize /=<CR>
+vmap a; :Tabularize /::<CR>
+vmap a- :Tabularize /-><CR>

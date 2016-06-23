@@ -61,6 +61,8 @@ alias vim=nvim
 # ssh
 # export SSH_KEY_PATH="~/.ssh/dsa_id"
 
+export PATH="$HOME/.local/bin:$PATH"
+
 # Show [$USER] [$COMMAND] on right
 RPROMPT="%{$fg_bold[red]%}[$USER]%{$reset_color%}  %{$fg_bold[green]%}[%!]%{$reset_color%}"
 

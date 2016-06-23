@@ -47,6 +47,7 @@ echo
 echo "Installing neo vim"
 brew install neovim
 sudo pip install neovim
+sudo pip3 install neovim
 echo
 echo "Installing zsh"
 brew install zsh
@@ -86,9 +87,8 @@ brew install emacs
 echo
 echo "Installing python"
 brew install python
-echo
-echo "Installing pip"
 sudo easy_install pip
+brew install python3
 
 # Install applications
 echo
@@ -185,7 +185,8 @@ ln -s ~/code/dotfiles/.vimrc .
 vim +PluginInstall +qall +PluginClean
 
 # Install vim plugin extras
-~/.vim/bundle/YouCompleteMe/install.py --tern-completer
+cd ~/.vim/bundle/vimproc.vim
+make
 
 # Update git files
 cd ~
@@ -270,6 +271,7 @@ brew cask install haskell-platform
 echo
 echo "Install haskell stack"
 brew install haskell-stack
+stack install hlint ghc-mod
 
 # Update .zshrc
 cd ~
