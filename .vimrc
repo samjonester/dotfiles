@@ -64,14 +64,14 @@ Plugin 'tpope/vim-endwise'
 Plugin 'vim-scripts/tComment'
 " Change Surround
 Plugin 'tpope/vim-surround'
-" Supertab
-Plugin 'ervandew/supertab'
 " Better auto completion
-Plugin 'Valloric/YouCompleteMe'
+Plugin 'Shougo/deoplete.nvim'
 " UltiSnips
 Plugin 'SirVer/ultisnips'
 " Snipit Library
 Plugin 'honza/vim-snippets'
+" Rspec Snippets
+Plugin 'Trevoke/ultisnips-rspec'
 " Better markdown
 Plugin 'gabrielelana/vim-markdown'
 " Javascript library syntax
@@ -117,9 +117,6 @@ filetype plugin indent on    " required
 
 " Behavior settings
 set nocompatible      " Vim behavior, not Vi.
-if !has('nvim')
-  set encoding=utf-8   " Use UTF-8 encoding
-endif
 set nobackup         " Don't backup
 set nowritebackup    " Write file in place
 set noswapfile       " Don't use swap files (.swp)
@@ -145,28 +142,15 @@ map <F7> mzgg=G`z     " F7 to format file
 nnoremap <C-J> <C-W><C-J>
 nnoremap <C-K> <C-W><C-K>
 nnoremap <C-L> <C-W><C-L>
-if has('nvim')
-  nnoremap <bs> <C-W><C-H>
-else
-  nnoremap <C-H> <C-W><C-H>
-endif
+nnoremap <bs> <C-W><C-H> " Fix <C-H> in neovim
+nnoremap <C-H> <C-W><C-H>
 
 " Neovim terminal stuff
-if has('nvim')
-  tnoremap <ESC> <C-\><C-n>
-endif
+tnoremap <ESC> <C-\><C-n>
 
 " Open splits to the right and below
 set splitright
 set splitbelow
-
-" Code Completion
-" set complete=.,b,u,]
-" set wildmode=longest,list:longest
-" set completeopt=menu,menuone,preview
-" au FileType ruby,eruby setl ofu=rubycomplete#Complete
-" au FileType html,xhtml setl ofu=htmlcomplete#CompleteTags
-" au FileType css setl ofu=csscomplete#CompleteCSS
 
 " Display settings
 set number            " Show current line number
@@ -241,27 +225,23 @@ vmap K <Plug>AgActionVisual
 map <C-a> :noh<CR>
 
 " RSpec.vim mappings
-if has('nvim')
-  let g:rspec_command = "tabe | term rbenv exec bundle exec rspec {spec}"
-endif
+let g:rspec_command = "tabe | term rbenv exec bundle exec rspec {spec}" " Fix rspec to run in neovim tab
 map <Leader>rc :call RunCurrentSpecFile()<CR>
 map <Leader>rn :call RunNearestSpec()<CR>
 map <Leader>rl :call RunLastSpec()<CR>
 map <Leader>ra :call RunAllSpecs()<CR>
 
-let g:ycm_add_preview_to_completeopt=0
-let g:ycm_confirm_extra_conf=0
-set completeopt-=preview
-
-" make YCM compatible with UltiSnips (using supertab)
-let g:ycm_key_list_select_completion = ['<C-n>', '<Down>']
-let g:ycm_key_list_previous_completion = ['<C-p>', '<Up>']
-let g:SuperTabDefaultCompletionType = '<C-n>'
+" Auto Completion
+let g:deoplete#enable_at_startup = 1
+let g:deoplete#auto_completion_start_length = 2
+let g:deoplete#enable_smart_case = 1
+set completeopt=menu,preview,noinsert
 
 " better key bindings for UltiSnipsExpandTrigger
 let g:UltiSnipsExpandTrigger = "<tab>"
 let g:UltiSnipsJumpForwardTrigger="<c-j>"
 let g:UltiSnipsJumpBackwardTrigger="<c-k>"
+
 
 " MyTips help file
 autocmd BufWrite mytips.txt             :helptags ~/.vim/doc/
@@ -271,6 +251,9 @@ autocmd BufRead  mytips.txt             set modifiable
 
 " tags
 au BufWritePost *.rb,*.js,*.hs silent! !eval 'ctags -R -o newtags; mv newtags tags' &
+map <C-\> :tab split<CR>:exec("tag ".expand("<cword>"))<CR>
+map <A-\> :split <CR>:exec("tag ".expand("<cword>"))<CR>
+map <A-]> :vsp <CR>:exec("tag ".expand("<cword>"))<CR>
 
 " Haskell setup
 " use ghc functionality for haskell files
