@@ -249,25 +249,12 @@ then
 fi
 ln -s ~/code/dotfiles/.ctags .
 
-# Install rbenv
-# brew install rbenv
-# rbenv install 2.3.0
-# rbenv global 2.3.0
-# eval "$(rbenv init -)"
-
-Install RVM
+# Install Ruby
 gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3
 curl -sSL https://get.rvm.io | bash -s stable --ruby
-gem install bundler pry pry-nav pry-stack_explorer pro-doc ruby_parser rubocop
-
-# Install ctags file for ruby
-gem install gem-ctags
-gem ctags
+gem install bundler pry pry-nav pry-stack_explorer pro-doc ruby_parser rubocop gem-ctags
 
 # Install node
-# brew install nodenv
-# nodenv install 5.10.0
-# nodenv global 5.10.0
 curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.4/install.sh | bash
 
 # Install GVM
@@ -300,18 +287,6 @@ then
 	mv .zshrc .bk.zshrc.$(date +%s)
 fi
 ln -s ~/code/dotfiles/.zshrc .
-
-# # SSH setup
-# mkdir -p ~/.ssh
-# cd ~/.ssh
-# if [ -f config ]
-# then
-# 	echo
-# 	echo "Backing up ssh config"
-# 	mv config .bk.config.$(date +%s)
-# fi
-# ln -s ~/Dropbox/ssh/config .
-
 
 echo
 echo "Install Complete"

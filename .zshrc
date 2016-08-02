@@ -6,16 +6,55 @@ plugins=(command-not-found zsh-syntax-highlighting emoji rsync brew tmux git git
 
 source $ZSH/oh-my-zsh.sh
 
+# Show [$USER] [$COMMAND] on right
+RPROMPT="%{$fg_bold[red]%}[$USER]%{$reset_color%}  %{$fg_bold[green]%}[%!]%{$reset_color%}"
+
 # in the history command output.
 # The optional three formats: "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
 HIST_STAMPS="mm/dd/yyyy"
-
 
 # Terminal Settings
 export LANG=en_US.UTF-8
 export LC_ALL=en_US.UTF-8
 [[ "$TERM" == "xterm" ]] && export TERM=xterm-256color
 
+# When trimming history, lose oldest duplicates first
+setopt hist_expire_dups_first
+# Remove subsequent duplicate entries in history
+setopt histignoredups
+# When searching history don't display results already cycled through twice
+setopt hist_find_no_dups
+# Show completion item type when listing
+setopt listtypes
+# Remove annoying beep when autocompleting
+setopt nolistbeep
+# Auto expand eported named paths as named directories
+setopt autonamedirs
+# Search named dirs when expanding paths
+setopt cdablevars
+# Better glob expansions
+setopt extendedglob
+# Add comamnds as they are typed, don't wait until shell exit
+setopt inc_append_history
+# Allow completion from within a word/phrase
+setopt complete_in_word
+# When completing from the middle of a word, move the cursor to the end of the word
+setopt always_to_end
+
+
+
+
+
+
+# Inline alias for grep.
+# ls G foo    ==>   ls | grep foo
+alias -g G='| grep '
+
+# cd by .. or ... or ... or mv file ..../.
+alias '..'='cd ..'
+alias -g ...='../..'
+alias -g ....='../../..'
+alias -g .....='../../../..'
 
 # Use Neovim instead of vim
 alias vim=nvim
@@ -25,11 +64,10 @@ export EDITOR='nvim'
 [[ -s "/Users/sam/.localrc" ]] && source "/Users/sam/.localrc"
 
 
+
+
 # Add stack executables to PATH
 export PATH="$HOME/.local/bin:$PATH"
-
-# Show [$USER] [$COMMAND] on right
-RPROMPT="%{$fg_bold[red]%}[$USER]%{$reset_color%}  %{$fg_bold[green]%}[%!]%{$reset_color%}"
 
 # added by travis gem
 [ -f /Users/samjones/.travis/travis.sh ] && source /Users/samjones/.travis/travis.sh
@@ -51,6 +89,15 @@ export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
 
 # git magic
 eval "$(hub alias -s)"
+
+
+
+
+# Make directory then cd into it
+mcd() {
+    mkdir -p $1
+    cd $1
+}
 
 
 
@@ -96,14 +143,6 @@ tk() {
 alias tl="tmux ls 2> /dev/null"
 
 
-
-
-
-# Make directory then cd into it
-mcd() {
-  mkdir -p $1
-  cd $1
-}
 
 
 
