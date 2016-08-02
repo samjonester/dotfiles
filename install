@@ -13,11 +13,6 @@ then
 	echo "Cloning dotfiles repository"
   mkdir -p ~/code
   git clone git@github.com:samlawrencejones/dotfiles.git ~/code/dotfiles || echo "Generate/Upload SSH Key To Github: https://help.github.com/articles/generating-ssh-keys/"
-else
-	echo
-	echo "Updating dotfiles repository"
-	cd ~/code/dotfiles
-	git pull
 fi
 
 
@@ -27,68 +22,20 @@ then
 	echo
 	echo "Installing Homebrew"
   ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
-else
-	echo
-	echo "Updating Homebrew"
-  brew update
 fi
 
 # Install Homebrew tools
-echo
-echo "Installing wget"
-brew install wget
-echo
-echo "Installing git"
-brew install git
-echo
-echo "Installing vim"
-brew install vim
-echo
-echo "Installing neo vim"
-brew install neovim
-sudo pip install neovim
-sudo pip3 install neovim
-echo
-echo "Installing zsh"
-brew install zsh
-echo
-echo "Installing heroku toolbelt"
-brew install heroku-toolbelt
-echo
-echo "Installing brew-cask"
-brew install caskroom/cask/brew-cask
-echo
-echo "Installing silver searcher"
-brew install the_silver_searcher
-echo
-echo "Installing tmux"
-brew install tmux
-echo
-echo "Installing cmake"
-brew install cmake
-echo
-echo "Installing ctags"
-brew install ctags
-echo
-echo "Installing tree"
-brew install tree
-echo
-echo "Installing keybase"
-brew install keybase
-echo
-echo "Installing gpg"
-brew install gpg
-echo
-echo "Installing hub"
-brew install hub
-echo
-echo "Installing emacs"
-brew install emacs
+brew install wget git vim zsh heroku-toolbelt the_silver_searcher tmux wemux cmake ctags tree keybase gpg hub emacs editorconfig
 echo
 echo "Installing python"
 brew install python
 sudo easy_install pip
 brew install python3
+echo
+echo "Installing neo vim"
+brew install neovim
+sudo pip install neovim
+sudo pip3 install neovim
 
 # Install applications
 echo
@@ -96,26 +43,10 @@ read -p "Install brew cask applications? " -n 1 -r
 echo
 if [[ $REPLY =~ ^[Yy]$ ]]
 then
-  brew cask install google-chrome
-  brew cask install firefox
-  brew cask install hipchat
-  brew cask install gitter
-  brew cask install slack
-  brew cask install evernote
-  brew cask install atom
-  brew cask install alfred
-  brew cask install seil
-  brew cask install bettertouchtool
-  brew cask install iterm2
-  brew cask install evernote
-  brew cask install the-unarchiver
-  brew cask install skitch
-  brew cask install dash
+  brew cask install google-chrome firefox gitter slack evernote atom alfred seil bettertouchtool iterm2 the-unarchiver skitch dash dropbox docker-compose
   open -a Dash
-  brew cask install dropbox
   open -a Dropbox
 fi
-
 
 # Install Oh My Zsh
 cd ~
@@ -125,129 +56,40 @@ then
 	echo "Installing Oh My Zsh"
   sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
   zsh
-else
-	echo
-	echo "Skipping Oh My Zsh install"
 fi
-
-
-# Update tmux conf
-cd ~
-if [ -f .tmux.conf ]
-then
-	echo
-	echo "backing up .tmux.conf"
-	mv .vimrc .bk.tmux.conf.$(date +%s)
-fi
-ln -s ~/code/dotfiles/.tmux.conf .
-
-# Update .pryrc
-cd ~
-if [ -f .pryrc ]
-then
-	echo
-	echo "backing up .pryrc"
-	mv .vimrc .bk.pryrc.$(date +%s)
-fi
-ln -s ~/code/dotfiles/.pryrc .
-
-# Update .rspec
-cd ~
-if [ -f .rspec ]
-then
-	echo
-	echo "backing up .rspec"
-	mv .rspec .bk.rspec.$(date +%s)
-fi
-ln -s ~/code/dotfiles/.rspec .
-
 
 # Install vundle
 if [ ! -d  ~/.vim/bundle/Vundle.vim ]
 then
-	echo
-	echo "Installing Vundle"
-	git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
-else
-  echo "Skipping Vundle install"
+    echo
+    echo "Installing Vundle"
+    git clone https://github.com/VundleVim/Vundle.vim.git ~/.vim/bundle/Vundle.vim
 fi
 vim +PluginInstall +qall +PluginClean
 
-# Update vimrc
-cd ~
-if [ -f .vimrc ]
-then
-	echo
-	echo "backing up .vimrc"
-	mv .vimrc .bk.vimrc.$(date +%s)
-fi
-ln -s ~/code/dotfiles/.vimrc .
-vim +PluginInstall +qall +PluginClean
+link() {
+    ln -fs ~/code/dotfiles/$1 ~
+}
 
-# Install vim plugin extras
+# Link files
+link(.tmux.conf)
+link(.pryrc)
+link(.rspec)
+link(.vimrc)
+vim +PluginInstall +qall +PluginClean
 cd ~/.vim/bundle/vimproc.vim
 make
+link(.gitconfig)
+link(.gitignore_global)
+link(.ctags)
 
-# Update git files
-cd ~
-if [ -f .gitconfig ]
-then
-	echo
-	echo "backing up .gitconfig "
-	mv .gitconfig .bk.gitconfig$(date +%s)
-fi
-ln -s ~/code/dotfiles/.gitconfig .
-cd ~
-if [ -f .gitignore_global ]
-then
-	echo
-	echo "backing up .gitignore_global "
-	mv .gitignore_global .bk.gitignore_global.$(date +%s)
-fi
-ln -s ~/code/dotfiles/.gitignore_global .
-
-# Updating custom vim docs
-cd ~
-if [ ! -d ~/.vim/doc ]
-then
-  cd ~/.vim
-  mkdir doc
-  cd doc
-  ln -s ~/code/dotfiles/mytips.txt .
-  cd ~
-fi
-
-# Update emacs
-# Using spacemacs now
-# cd ~
-# if [ -f .emacs ]
-# then
-# 	echo
-# 	echo "backing up .emacs"
-# 	mv .emacs .bk.emacs.$(date +%s)
-# fi
-# ln -s ~/code/dotfiles/.emacs .
+mkdir ~/.vim/doc
+cd ~/.vim/doc
+ln -s ~/code/dotfiles/mytips.txt .
 
 # Install spacemacs
 git clone https://github.com/syl20bnr/spacemacs ~/.emacs.d
-cd ~
-if [ -f .spacemacs ]
-then
-	echo
-	echo "backing up .ctags"
-	mv .spacemacs .bk.spacemacs.$(date +%s)
-fi
-ln -s ~/code/dotfiles/.spacemacs .
-
-# Update ctags
-cd ~
-if [ -f .ctags ]
-then
-	echo
-	echo "backing up .ctags"
-	mv .ctags .bk.ctags.$(date +%s)
-fi
-ln -s ~/code/dotfiles/.ctags .
+link(.spacemacs)
 
 # Install Ruby
 gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3
@@ -269,6 +111,8 @@ then
   gvm use go1.6 --default
 fi
 
+link(.zshrc)
+
 # Install Haskell stuff
 echo
 echo "Install haskell platform"
@@ -277,17 +121,6 @@ echo
 echo "Install haskell stack"
 brew install haskell-stack
 stack install hlint ghc-mod
-
-# Update .zshrc
-cd ~
-if [ -f .zshrc ]
-then
-	echo
-	echo "backing up .zshrc"
-	mv .zshrc .bk.zshrc.$(date +%s)
-fi
-ln -s ~/code/dotfiles/.zshrc .
-
 echo
 echo "Install Complete"
 
