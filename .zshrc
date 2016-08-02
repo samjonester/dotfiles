@@ -55,6 +55,10 @@ source $ZSH/oh-my-zsh.sh
 # Local Environment Variables
 [[ -s "/Users/sam/.localrc" ]] && source "/Users/sam/.localrc"
 
+export LANG=en_US.UTF-8
+export LC_ALL=en_US.UTF-8
+export TERM=xterm-256color
+
 export EDITOR='nvim'
 alias vim=nvim
 
@@ -76,16 +80,16 @@ RPROMPT="%{$fg_bold[red]%}[$USER]%{$reset_color%}  %{$fg_bold[green]%}[%!]%{$res
 export PATH="$HOME/.jenv/bin:$PATH"
 eval "$(jenv init -)"
 
-# RB Env
-eval "$(rbenv init -)"
-
-alias rbe="rbenv exec bundle exec"
-
-# Node Env
-eval "$(nodenv init -)"
-
 # gvm go version manager
 [[ -s "/Users/sam/.gvm/scripts/gvm" ]] && source "/Users/sam/.gvm/scripts/gvm"
+
+# nvm node version manager
+export NVM_DIR="/Users/sam/.nvm"
+[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
+
+# rvm ruby version manager
+export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
+[[ -s "$HOME/.rvm/scripts/rvm" ]] && . "$HOME/.rvm/scripts/rvm" 
 
 # git magic
 eval "$(hub alias -s)"

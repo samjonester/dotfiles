@@ -8,6 +8,7 @@
 .tern-project
 /node_modules/
 \#*\#
+.\#*
 tags
 newtags
 npm-debug.log
