@@ -30,6 +30,7 @@ values."
      github
      markdown
      org
+     yaml
      (ruby :variables
            ruby-version-manager 'rvm
            ruby-test-runner 'rspec)
@@ -279,7 +280,17 @@ you should place your code here."
       (haskell-process-path-ghci . "stack")
       (haskell-process-type . stack-ghci))))
 
-  (editorconfig-mode))
+  (setq-default git-magit-status-fullscreen)
+  (setq js2-include-node-externs t)
+
+  (editorconfig-mode)
+
+  (require 'yasnippet)
+  (add-to-list 'yas-snippet-dirs "~/.my-snippets")
+  (add-hook 'web-mode-hook #'(lambda () (yas-activate-extra-mode 'html-mode)))
+  (yas-global-mode 1)
+  (yas-reload-all))
+
 
 
 ;; Do not write anything past this comment. This is where Emacs will
