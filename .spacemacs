@@ -31,6 +31,7 @@ values."
      markdown
      org
      yaml
+     elm
      (ruby :variables
            ruby-version-manager 'rvm
            ruby-test-runner 'rspec)
