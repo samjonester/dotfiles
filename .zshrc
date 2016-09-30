@@ -41,6 +41,13 @@ setopt complete_in_word
 # When completing from the middle of a word, move the cursor to the end of the word
 setopt always_to_end
 
+# Enable Ctrl-x-e to edit command line
+autoload -U edit-command-line
+# Emacs style
+zle -N edit-command-line
+bindkey '^xe' edit-command-line
+bindkey '^x^e' edit-command-line
+
 
 
 
