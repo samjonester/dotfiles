@@ -19,7 +19,8 @@
   ac = !git ca
   pm = pull
   p = pull -r
-  pu = push -u origin -all
+  pu = push -u origin HEAD
+  pf = push -f
   r = rebase
   rmaster = !git fetch && git rebase origin/master
   ri = rebase -i
