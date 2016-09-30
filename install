@@ -124,3 +124,8 @@ stack install hlint ghc-mod
 echo
 echo "Install Complete"
 
+# Install Elm stuff
+echo
+echo "Install haskell platform"
+brew cask install elm-platform
+npm install -g elm elm-oracle
