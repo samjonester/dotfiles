@@ -22,6 +22,7 @@
   pu = push -u origin HEAD
   pf = push -f
   r = rebase
+  rs = rebase -i --autosquash
   rmaster = !git fetch && git rebase origin/master
   ri = rebase -i
   unstage = reset HEAD
