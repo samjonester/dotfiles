@@ -65,7 +65,9 @@ alias -g .....='../../../..'
 
 # Use Neovim instead of vim
 alias vim=nvim
-export EDITOR='nvim'
+alias e="emacsclient -nw -c"
+export EDITOR='emacsclient'
+
 
 # Local Environment Variables
 [[ -s "/Users/sam/.localrc" ]] && source "/Users/sam/.localrc"
