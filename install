@@ -113,6 +113,7 @@ then
 fi
 
 link(.zshrc)
+link(.myzshrc)
 
 # Install Haskell stuff
 echo
