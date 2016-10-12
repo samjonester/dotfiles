@@ -10,6 +10,7 @@
   s = status
   aa = add .
   a = add
+	ap = add -p
   d = diff --color --compaction-heuristic
   dc = !git d --cached
   f = fetch
