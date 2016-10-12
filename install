@@ -97,7 +97,8 @@ curl -sSL https://get.rvm.io | bash -s stable --ruby
 gem install bundler pry pry-nav pry-stack_explorer pro-doc ruby_parser rubocop gem-ctags
 
 # Install node
-curl -o- https://raw.githubusercontent.com/creationix/nvm/v0.31.4/install.sh | bash
+brew tap nodenv/nodenv
+brew install nodenv node-build nodenv-package-json-engine
 
 # Install GVM
 if ! which gvm >/dev/null

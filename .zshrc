@@ -93,8 +93,8 @@ export PATH="$HOME/.local/bin:$PATH"
 [[ -s "/Users/sam/.gvm/scripts/gvm" ]] && source "/Users/sam/.gvm/scripts/gvm"
 
 # node version manager
-# export NVM_DIR="/Users/sam/.nvm"
-# [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
+export PATH="$HOME/.nodenv/bin:$PATH"
+eval "$(nodenv init -)"
 
 # ruby version manager
 export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
