@@ -48,16 +48,6 @@ then
   open -a Dropbox
 fi
 
-# Install Oh My Zsh
-cd ~
-if [ ! -d ~/.oh-my-zsh ]
-then
-	echo
-	echo "Installing Oh My Zsh"
-  sh -c "$(wget https://raw.github.com/robbyrussell/oh-my-zsh/master/tools/install.sh -O -)"
-  zsh
-fi
-
 # Install vundle
 if [ ! -d  ~/.vim/bundle/Vundle.vim ]
 then
@@ -112,8 +102,14 @@ then
   gvm use go1.6 --default
 fi
 
+# Install prezto
+git clone --recursive https://github.com/sorin-ionescu/prezto.git "${ZDOTDIR:-$HOME}/.zprezto"
+link(.zshenv)
+link(.zshprofile)
 link(.zshrc)
-link(.myzshrc)
+link(.zpreztorc)
+link(.zshlogin)
+link(.zshlogout)
 
 # Install Haskell stuff
 echo
