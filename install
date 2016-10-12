@@ -25,7 +25,7 @@ then
 fi
 
 # Install Homebrew tools
-brew install wget git vim zsh heroku-toolbelt the_silver_searcher tmux wemux cmake ctags tree keybase gpg hub emacs editorconfig
+brew install wget git vim zsh heroku-toolbelt the_silver_searcher tmux wemux cmake ctags tree keybase gpg hub editorconfig
 echo
 echo "Installing python"
 brew install python
@@ -78,6 +78,7 @@ cd ~/.vim/doc
 ln -s ~/code/dotfiles/mytips.txt .
 
 # Install spacemacs
+brew install emacs
 git clone https://github.com/syl20bnr/spacemacs ~/.emacs.d
 link(.spacemacs)
 

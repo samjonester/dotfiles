@@ -6,9 +6,8 @@
   <string>my.emacsdaemon</string>
   <key>ProgramArguments</key>
   <array>
-    <string>/Applications/Emacs.app/Contents/MacOS/Emacs</string>
+    <string>/usr/local/bin/emacs</string>
     <string>--daemon</string>
-    <string>-nw</string>
   </array>
   <key>RunAtLoad</key>
   <true/>
