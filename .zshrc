@@ -7,7 +7,8 @@ plugins=(zsh-syntax-highlighting rsync brew git gitignore docker docker-compose 
 source $ZSH/oh-my-zsh.sh
 
 # Show [$USER] [$COMMAND] on right
-RPROMPT="%{$fg_bold[red]%}[$USER]%{$reset_color%}  %{$fg_bold[green]%}[%!]%{$reset_color%}"
+# RPROMPT="%{$fg_bold[red]%}[$USER]%{$reset_color%}  %{$fg_bold[green]%}[%!]%{$reset_color%}"
+RPROMPT=""
 
 # in the history command output.
 # The optional three formats: "mm/dd/yyyy"|"dd.mm.yyyy"|"yyyy-mm-dd"
@@ -65,9 +66,12 @@ alias -g .....='../../../..'
 
 # Use Neovim instead of vim
 alias vim=nvim
+alias v=vim
 alias e="emacsclient -nw -c"
 export EDITOR='emacsclient'
 
+alias fixcam='sudo killall VDCAssistant'
+alias n=npm
 
 # Local Environment Variables
 [[ -s "/Users/sam/.localrc" ]] && source "/Users/sam/.localrc"
