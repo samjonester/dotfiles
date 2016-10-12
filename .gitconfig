@@ -23,6 +23,8 @@
   pf = push -f
   r = rebase
   rs = rebase -i --autosquash
+	sh = stash --all
+	sp = stash pop
   rmaster = !git fetch && git rebase origin/master
   ri = rebase -i
   unstage = reset HEAD
