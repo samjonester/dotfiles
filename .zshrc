@@ -2,7 +2,7 @@ USER=$(whoami)
 ZSH=/Users/$USER/.oh-my-zsh
 ZSH_THEME="avit"
 
-plugins=(command-not-found zsh-syntax-highlighting emoji rsync brew tmux git gitignore git-extras github docker docker-compose mvn gradle ruby rvm gem bundler rake rails node npm nvm grunt)
+plugins=(zsh-syntax-highlighting rsync brew git gitignore docker docker-compose mvn gem bundler rails)
 
 source $ZSH/oh-my-zsh.sh
 
@@ -82,19 +82,19 @@ export PATH="$HOME/.local/bin:$PATH"
 [ -f /Users/samjones/.travis/travis.sh ] && source /Users/samjones/.travis/travis.sh
 
 # JENV.be
-export PATH="$HOME/.jenv/bin:$PATH"
-eval "$(jenv init -)"
+# export PATH="$HOME/.jenv/bin:$PATH"
+# eval "$(jenv init -)"
 
 # go version manager
 [[ -s "/Users/sam/.gvm/scripts/gvm" ]] && source "/Users/sam/.gvm/scripts/gvm"
 
 # node version manager
-export NVM_DIR="/Users/sam/.nvm"
-[ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
+# export NVM_DIR="/Users/sam/.nvm"
+# [ -s "$NVM_DIR/nvm.sh" ] && . "$NVM_DIR/nvm.sh"  # This loads nvm
 
 # ruby version manager
 export PATH="$PATH:$HOME/.rvm/bin" # Add RVM to PATH for scripting
-[[ -s "$HOME/.rvm/scripts/rvm" ]] && . "$HOME/.rvm/scripts/rvm" 
+[[ -s "$HOME/.rvm/scripts/rvm" ]] && . "$HOME/.rvm/scripts/rvm"
 
 # git magic
 eval "$(hub alias -s)"
