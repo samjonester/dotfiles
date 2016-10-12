@@ -73,19 +73,14 @@ link(.gitconfig)
 link(.gitignore_global)
 link(.ctags)
 
-mkdir ~/.vim/doc
-cd ~/.vim/doc
-ln -s ~/code/dotfiles/mytips.txt .
-
 # Install spacemacs
 brew install emacs
 git clone https://github.com/syl20bnr/spacemacs ~/.emacs.d
 link(.spacemacs)
 
 # Install Ruby
-gpg --keyserver hkp://keys.gnupg.net --recv-keys 409B6B1796C275462A1703113804BB82D39DC0E3
-curl -sSL https://get.rvm.io | bash -s stable --ruby
-gem install bundler pry pry-nav pry-stack_explorer pro-doc ruby_parser rubocop gem-ctags
+brew install rbenv ruby-build rbenv-default-gems rbenv-ctags rbenv-bundler-ruby-version rbenv-gemset rbenv-binstubs
+ln -s default-gems $(rbenv root)/default-gems
 
 # Install node
 brew tap nodenv/nodenv

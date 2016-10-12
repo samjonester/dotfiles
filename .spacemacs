@@ -33,7 +33,7 @@ values."
      yaml
      elm
      (ruby :variables
-           ruby-version-manager 'rvm
+           ruby-version-manager 'rbenv
            ruby-test-runner 'rspec)
      ruby-on-rails
      (haskell :variables

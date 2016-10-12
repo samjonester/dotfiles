@@ -1,0 +1,7 @@
+bundler
+rails
+pry
+pry-doc
+pry-nav
+pry-stack_explorer
+gem-ctags
