@@ -5,7 +5,6 @@
 [core]
   excludesfile = ~/.gitignore_global
   autocrlf = input
-  editor = "emacsclient -nw -c"
 [alias]
   s = status
   aa = add .
@@ -47,7 +46,7 @@
   unpublish = "!git push origin :$(git branch-name)"
 
 [merge]
-  tool = "emacsclient -nw -c -Q"
+  tool = "nvim -d"
 [mergetool]
   prompt = false
 [commit]
