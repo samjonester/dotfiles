@@ -127,7 +127,7 @@ set nowritebackup    " Write file in place
 set noswapfile       " Don't use swap files (.swp)
 set autoread         " Autoreload buffers
 set autowrite        " Automatically save changes before switching buffers
-set shell=$SHELL     " Default shell is ZSH
+set shell=bash       " Bash is faster, and I don't need nice things when running tests
 set showcmd          " Display incomplete commands
 set visualbell       " Use visual bell instead of audible bell
 set backspace=2      " Backspace works like other apps
