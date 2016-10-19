@@ -11,7 +11,7 @@ This project contains my dotfiles and an install script to setup a new computer.
 - Disable caps lock. Disable Spotlight keyboard shortcut (CMD+Space)
 - Setup trackpad from screenshot
 - Import better touch tool settings from ~/Dropbox/btt.prefs
-- Seil: Change caps lock key to keycode 53
+- https://til.hashrocket.com/posts/511f0d7a3c-map-caps-lock-to-escape-in-macos-sierra-seil
 - Mail set CMD+E to archive
 - Alfred sync directory ~/Dropbox/alfred
 - Install lastpass app https://lastpass.com/misc_download2.php
