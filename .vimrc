@@ -102,6 +102,8 @@ Plugin 'ecomba/vim-ruby-refactoring'
 Plugin 'godlygeek/tabular'
 " Vim Proc
 Plugin 'Shougo/vimproc.vim'
+" Open Close Parens & Brackets
+Plugin 'jiangmiao/auto-pairs'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -127,7 +129,7 @@ set nowritebackup    " Write file in place
 set noswapfile       " Don't use swap files (.swp)
 set autoread         " Autoreload buffers
 set autowrite        " Automatically save changes before switching buffers
-set shell=bash       " Bash is faster, and I don't need nice things when running tests
+set shell=zsh        " Same shell I normally use
 set showcmd          " Display incomplete commands
 set visualbell       " Use visual bell instead of audible bell
 set backspace=2      " Backspace works like other apps
@@ -161,6 +163,7 @@ set splitbelow
 set number            " Show current line number
 set ruler             " Show curser position
 set cursorline        " Highlight current cursor line
+set cuc cul"          " Highlight active column
 syntax on             " Syntax Highlighting
 set background=dark   " Dark background style
 " colorscheme darth     " Color Scheme
