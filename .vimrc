@@ -104,6 +104,8 @@ Plugin 'godlygeek/tabular'
 Plugin 'Shougo/vimproc.vim'
 " Open Close Parens & Brackets
 Plugin 'jiangmiao/auto-pairs'
+" Change project root
+Plugin 'airblade/vim-rooter'
 
 " All of your Plugins must be added before the following line
 call vundle#end()            " required
@@ -272,3 +274,6 @@ let g:haskell_tabular = 1
 vmap a= :Tabularize /=<CR>
 vmap a; :Tabularize /::<CR>
 vmap a- :Tabularize /-><CR>
+
+" vim rooter project
+let g:rooter_change_directory_for_non_project_files = 'current'
