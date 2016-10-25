@@ -279,8 +279,10 @@ vmap a- :Tabularize /-><CR>
 let g:rooter_change_directory_for_non_project_files = 'current'
 
 " NPM Test
-map <Leader>ni :vsp <Bar>terminal npm install <CR>
-map <Leader>nt :vsp <Bar> terminal  npm test <CR>
+map <Leader>ni :tabe <Bar>terminal npm install <CR>
+map <Leader>nt :tabe <Bar> terminal npm test <CR>
+map <Leader>nw :tabe <Bar> terminal npm test -- --watch <CR>
+map <Leader>ns :tabe <Bar> terminal npm start <CR>
 
 " Find Replace
 nnoremap <Leader>s :%s/\<<C-r><C-w>\>/
