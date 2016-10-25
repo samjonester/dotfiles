@@ -281,3 +281,6 @@ let g:rooter_change_directory_for_non_project_files = 'current'
 " NPM Test
 map <Leader>ni :vsp <Bar>terminal npm install <CR>
 map <Leader>nt :vsp <Bar> terminal  npm test <CR>
+
+" Find Replace
+nnoremap <Leader>s :%s/\<<C-r><C-w>\>/
