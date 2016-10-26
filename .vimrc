@@ -73,7 +73,7 @@ Plugin 'honza/vim-snippets'
 " Rspec Snippets
 Plugin 'Trevoke/ultisnips-rspec'
 " Better markdown
-Plugin 'gabrielelana/vim-markdown'
+" Plugin 'gabrielelana/vim-markdown'
 " Javascript library syntax
 Plugin 'othree/javascript-libraries-syntax.vim'
 " Jasmine JavaScript Testing
@@ -135,8 +135,9 @@ set shell=zsh        " Same shell I normally use
 set showcmd          " Display incomplete commands
 set visualbell       " Use visual bell instead of audible bell
 set backspace=2      " Backspace works like other apps
-set timeoutlen=500  " Timeout for key combos
+set timeoutlen=500   " Timeout for key combos
 set mouse=a          " Use mouse
+set showmatch        " Show matching parens
 
 " Tabs and spaces
 set tabstop=2         " Tabs are 2 spaces
@@ -146,6 +147,11 @@ set expandtab         " Always use spaces instead of tabs
 set smartindent       " Auto indent
 set nowrap            " Don't wrap lines
 map <F7> mzgg=G`z     " F7 to format file
+
+" Show whitespaces
+set list
+set listchars=tab:>.,trail:.,extends:#,nbsp:.
+autocmd filetype html,xml,java set listchars-=tab:>.
 
 " Better Split Navigation
 nnoremap <C-J> <C-W><C-J>
@@ -229,9 +235,9 @@ map <M-Space> :CtrlPCmdPalette<CR>
 " Silver Searcher
 let g:ag_working_path_mode="r"    " Search from project root
 " use * to search current word in normal mode
-nmap K <Plug>AgActionWord
+nmap * <Plug>AgActionWord
 " use * to search selected text in visual mode
-vmap K <Plug>AgActionVisual
+vmap * <Plug>AgActionVisual
 map <C-a> :noh<CR>
 
 " RSpec.vim mappings
@@ -286,3 +292,16 @@ map <Leader>ns :tabe <Bar> terminal npm start <CR>
 
 " Find Replace
 nnoremap <Leader>s :%s/\<<C-r><C-w>\>/
+
+" Don't bother with shift
+nnoremap ; :
+
+" Navigate wraped lines with capitals
+nnoremap J gj
+nnoremap K gk
+
+" , to remove hightlighting
+nmap <silent> , :nohlsearch<CR>
+
+" Save file with sudo trick
+cmap w!! w !sudo tee % >/dev/null
