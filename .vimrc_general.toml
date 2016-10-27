@@ -1,0 +1,100 @@
+[[plugins]]
+repo = 'benekastah/neomake'
+hook_add = '''
+autocmd! BufWritePost * Neomake
+autocmd! BufRead * Neomake
+let g:neomake_echo_current_error=1
+let g:neomake_open_list=1
+
+nmap <Leader>mc :lclose<CR>
+nmap <Leader>mo :lopen<CR>
+nmap <Leader>mn :lnext<CR>
+nmap <Leader>mp :lprev<CR>
+'''
+
+[[plugins]]
+repo = 'fntlnz/atags.vim'
+hook_add = '''
+" Skip tagging files ignored by ag and git
+let g:atags_build_commands_list = [
+    \ 'ag -g "" | ctags -L - --fields=+l -f tags.tmp',
+    \ 'awk "length($0) < 400" tags.tmp > tags',
+    \ 'rm tags.tmp'
+    \ ]
+" Tag when writing files
+autocmd BufWritePost * call atags#generate()
+map <Leader>t :call atags#generate()<cr>
+
+" tags
+map <C-\> :tab split<CR>:exec("tag ".expand("<cword>"))<CR>
+map <A-\> :split <CR>:exec("tag ".expand("<cword>"))<CR>
+map <A-]> :vsp <CR>:exec("tag ".expand("<cword>"))<CR>
+'''
+
+[[plugins]]
+repo = 'Shougo/deoplete.nvim'
+hook_add = '''
+let g:deoplete#enable_at_startup = 1
+let g:deoplete#auto_complete_start_length = 3
+let g:deoplete#enable_smart_case = 1
+set completeopt=preview,noselect
+'''
+
+[[plugins]]
+repo = 'ctrlpvim/ctrlp.vim'
+hook_add = '''
+let g:ctrlp_show_hidden = 1
+let g:ctrlp_custom_ignore = 'node_modules\|DS_Store\|git'
+'''
+
+[[plugins]]
+repo = 'fisadev/vim-ctrlp-cmdpalette'
+depends = 'ctrlpvim/ctrlp.vim'
+hook_add = '''
+map <M-Space> :CtrlPCmdPalette<CR>
+'''
+
+[[plugins]]
+repo = 'rking/ag.vim'
+hook_add = '''
+let g:ag_working_path_mode="r"    " Search from project root
+'''
+
+[[plugins]]
+repo = 'Chun-Yang/vim-action-ag'
+depends = 'rking/ag.vim'
+hook_add = '''
+" use * to search current word in normal mode
+nmap * <Plug>AgActionWord
+" use * to search selected text in visual mode
+vmap * <Plug>AgActionVisual
+'''
+
+[[plugins]]
+repo = 'airblade/vim-rooter'
+hook_add = '''
+let g:rooter_change_directory_for_non_project_files = 'current'
+'''
+
+[[plugins]]
+repo = 'godlygeek/tabular'
+hook_add = '''
+vmap a= :Tabularize /=<CR>
+vmap a; :Tabularize /::<CR>
+vmap a- :Tabularize /-><CR>
+'''
+
+[[plugins]]
+repo = 'cohama/lexima.vim'
+
+[[plugins]]
+repo = 'vim-scripts/tComment'
+
+[[plugins]]
+repo = 'tpope/vim-surround'
+
+[[plugins]]
+repo = 'tpope/vim-repeat'
+
+[[plugins]]
+repo = 'easymotion/vim-easymotion'

@@ -1,0 +1,28 @@
+hook_add = '''
+map <Leader>ni :tabe <Bar>terminal npm install <CR>
+map <Leader>nt :tabe <Bar> terminal npm test <CR>
+map <Leader>nw :tabe <Bar> terminal npm test -- --watch <CR>
+map <Leader>ns :tabe <Bar> terminal npm start <CR>
+
+" Neomake syntax checker
+let g:neomake_javascript_enabled_makers=['standard']
+if filereadable(".eslintrc")
+  let g:neomake_javascript_enabled_makers=['eslint']
+endif
+if filereadable(".jshint")
+  let g:neomake_javascript_enabled_makers=['jshint']
+endif
+'''
+
+[[plugins]]
+repo = 'kchmck/vim-coffee-script'
+
+[[plugins]]
+repo = 'othree/javascript-libraries-syntax.vim'
+
+[[plugins]]
+repo = 'joukevandermaas/vim-ember-hbs'
+
+
+
+

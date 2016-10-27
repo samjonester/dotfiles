@@ -1,0 +1,67 @@
+hook_add = '''
+" Display settings
+set number            " Show current line number
+set ruler             " Show curser position
+set cursorline        " Highlight current cursor line
+set cuc cul"          " Highlight active column
+syntax on             " Syntax Highlighting
+
+" highlight the 80th column
+if exists('+colorcolumn')
+  let &colorcolumn="80"
+  highlight ColorColumn ctermbg=236
+endif
+'''
+
+[[plugins]]
+repo = 'Shougo/vimproc.vim'
+build = 'make'
+
+[[plugins]]
+repo = 'L9'
+
+[[plugins]]
+repo = 'altercation/vim-colors-solarized'
+hook_add = '''
+colorscheme solarized
+set background=dark   " Dark background style
+set spell
+'''
+
+[[plugins]]
+repo = 'vim-airline/vim-airline'
+hook_add = '''
+set laststatus=2                  " Always show status line
+let g:airline_powerline_fonts = 1 " Use powerline fonts in airline
+'''
+
+[[plugins]]
+repo = 'vim-airline/vim-airline-themes'
+depends = 'vim-airline/vim-airline'
+hook_add = '''
+let g:airline_theme='solarized'
+'''
+
+[[plugins]]
+repo = 'airblade/vim-gitgutter'
+hook_add = '''
+let g:gitgutter_max_signs = 1000
+let g:gitgutter_highlight_lines = 1
+'''
+
+hook_add = '''
+" Add mappings first, since they will trigger loading NERDTree plugin
+map <Leader>n :NERDTreeToggle<CR>
+map <Leader>f :NERDTreeFind<CR>
+'''
+
+[[plugins]]
+repo = 'scrooloose/nerdtree'
+on_cmd = ['NERDTreeToggle', 'NERDTreeFind']
+hook_source = '''
+  let g:NERDTreeShowHidden = 1
+'''
+
+[[plugins]]
+repo = 'Xuyuanp/nerdtree-git-plugin'
+depends = 'scrooloose/nerdtree'

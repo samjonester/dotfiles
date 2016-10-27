@@ -1,0 +1,22 @@
+hook_add = '''
+map <Leader>b :tabe <Bar>terminal bundle install <CR>
+'''
+
+[[plugins]]
+repo = 'tpope/vim-rails'
+on_ft = 'ruby'
+
+[[plugins]]
+repo = 'tpope/vim-cucumber'
+on_ft = 'ruby'
+
+[[plugins]]
+repo = 'thoughtbot/vim-rspec'
+on_ft = 'ruby'
+hook_source = '''
+let g:rspec_command = "tabe | term rbenv exec bundle exec rspec {spec}" " Fix rspec to run in neovim tab
+map <Leader>rf :call RunCurrentSpecFile()<CR>
+map <Leader>rs :call RunNearestSpec()<CR>
+map <Leader>rl :call RunLastSpec()<CR>
+map <Leader>rt :call RunAllSpecs()<CR>
+'''
