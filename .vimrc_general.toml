@@ -26,9 +26,12 @@ autocmd BufWritePost * call atags#generate()
 map <Leader>t :call atags#generate()<cr>
 
 " tags
-map <C-\> :tab split<CR>:exec("tag ".expand("<cword>"))<CR>
-map <A-\> :split <CR>:exec("tag ".expand("<cword>"))<CR>
+" Show tags in vertical split
 map <A-]> :vsp <CR>:exec("tag ".expand("<cword>"))<CR>
+" Show tags in tab
+map <C-\> :tab split<CR>:exec("tag ".expand("<cword>"))<CR>
+" Show tags in horizontal split
+map <A-\> :split <CR>:exec("tag ".expand("<cword>"))<CR>
 '''
 
 [[plugins]]
@@ -83,6 +86,9 @@ vmap a= :Tabularize /=<CR>
 vmap a; :Tabularize /::<CR>
 vmap a- :Tabularize /-><CR>
 '''
+
+[[plugins]]
+repo = 'MarcWeber/vim-addon-local-vimrc'
 
 [[plugins]]
 repo = 'cohama/lexima.vim'

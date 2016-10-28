@@ -10,9 +10,9 @@ set shell=zsh        " Same shell I normally use
 set showcmd          " Display incomplete commands
 set visualbell       " Use visual bell instead of audible bell
 set backspace=2      " Backspace works like other apps
-set timeoutlen=150   " Timeout for key combos
+set timeoutlen=350   " Timeout for key combos
 set mouse=a          " Use mouse
-set updatetime=750   " Time before plugins do stuff
+set updatetime=250   " Time before plugins do stuff
 
 " Tabs and spaces
 set tabstop=2         " Tabs are 2 spaces
@@ -61,4 +61,17 @@ nmap <silent> , :nohlsearch<CR>
 " Save file with sudo trick
 cmap w!! w !sudo tee % >/dev/null
 set smartcase      " Smarter Case insensitive search
+
+" Skip the colon shortcuts
+nnoremap <Leader>w :w<CR>
+nnoremap <Leader>q :q<CR>
+nnoremap <Leader>z <C-z>
+nnoremap <Leader>e :e .<CR>
+
+" Make dot work in visual mode
+vnoremap . :norm.<CR>
+
+" Have the indent commands re-highlight the last visual selection to make multiple indentations easier
+vnoremap > >gv
+vnoremap < <gv
 '''

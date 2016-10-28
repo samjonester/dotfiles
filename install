@@ -88,7 +88,8 @@ ln -s default-gems $(rbenv root)/default-gems
 
 # Install node
 brew tap nodenv/nodenv
-brew install nodenv node-build nodenv-package-json-engine
+brew install nodenv node-build nodenv-package-json-engine nodenv-default-packages
+ln -s default-packages $(nodenv root)/default-packages
 
 # Install GVM
 if ! which gvm >/dev/null
