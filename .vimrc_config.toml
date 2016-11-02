@@ -65,6 +65,7 @@ set smartcase      " Smarter Case insensitive search
 " Skip the colon shortcuts
 nnoremap <Leader>w :w<CR>
 nnoremap <Leader>q :q<CR>
+nnoremap <Leader>wq :wq<CR>
 nnoremap <Leader>z <C-z>
 nnoremap <Leader>e :e .<CR>
 
@@ -74,4 +75,7 @@ vnoremap . :norm.<CR>
 " Have the indent commands re-highlight the last visual selection to make multiple indentations easier
 vnoremap > >gv
 vnoremap < <gv
+
+" Manual folding with zf, za
+set foldmethod=manual
 '''

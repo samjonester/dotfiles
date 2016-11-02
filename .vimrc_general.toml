@@ -68,9 +68,9 @@ repo = 'Chun-Yang/vim-action-ag'
 depends = 'rking/ag.vim'
 hook_add = '''
 " use * to search current word in normal mode
-nmap * <Plug>AgActionWord
+nmap <Leader>* <Plug>AgActionWord
 " use * to search selected text in visual mode
-vmap * <Plug>AgActionVisual
+vmap <Leader>* <Plug>AgActionVisual
 '''
 
 [[plugins]]
