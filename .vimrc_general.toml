@@ -91,7 +91,7 @@ vmap a- :Tabularize /-><CR>
 repo = 'MarcWeber/vim-addon-local-vimrc'
 
 [[plugins]]
-repo = 'cohama/lexima.vim'
+repo = 'jiangmiao/auto-pairs'
 
 [[plugins]]
 repo = 'vim-scripts/tComment'
