@@ -66,6 +66,7 @@ set smartcase      " Smarter Case insensitive search
 nnoremap <Leader>w :w<CR>
 nnoremap <Leader>q :q<CR>
 nnoremap <Leader>wq :wq<CR>
+nnoremap <Leader>qa :qa<CR>
 nnoremap <Leader>z <C-z>
 nnoremap <Leader>e :e .<CR>
 
