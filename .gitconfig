@@ -21,6 +21,7 @@
   p = pull -r
   pu = push -u origin HEAD
   pf = push -f
+  pt = push --tags
   r = rebase
   rs = rebase -i --autosquash
   sh = stash save --all
