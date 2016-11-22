@@ -48,3 +48,6 @@ on_ft = ['javascript', 'javascript.jxs']
 [[plugins]]
 repo = 'kchmck/vim-coffee-script'
 on_ft = 'coffee'
+
+[[plugins]]
+repo = 'digitaltoad/vim-pug'
