@@ -65,3 +65,9 @@ hook_source = '''
 [[plugins]]
 repo = 'Xuyuanp/nerdtree-git-plugin'
 depends = 'scrooloose/nerdtree'
+
+[[plugins]]
+repo = 'tpope/vim-vinegar'
+hook_add = '''
+map _ :e .<CR>
+'''
