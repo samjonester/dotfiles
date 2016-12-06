@@ -1,0 +1,39 @@
+hook_add = '''
+set expandtab         " Always use spaces instead of tabs
+set smartindent       " Auto indent
+set nowrap            " Don't wrap lines
+map <F7> mzgg=G`z     " F7 to format file
+
+" Tabs and spaces
+set tabstop=2         " Tabs are 2 spaces
+set shiftwidth=2      " 2 Spaces for << && >>
+set softtabstop=2     " Tabs are 2 spaces for editing operations
+
+" Show whitespaces
+set list
+set listchars=tab:>.,trail:.,extends:#,nbsp:.
+
+" Navigate wraped lines
+nnoremap J j
+nnoremap K k
+nnoremap j gj
+nnoremap k gk
+
+" Have the indent commands re-highlight the last visual selection to make multiple indentations easier
+vnoremap > >gv
+vnoremap < <gv
+
+" Manual folding with zf, za
+set foldmethod=manual
+set wrap
+'''
+
+[[plugins]]
+repo = 'godlygeek/tabular'
+
+[[plugins]]
+repo = 'plasticboy/vim-markdown'
+on_ft = 'markdown'
+hook_source = '''
+let g:vim_markdown_folding_disabled = 1
+'''

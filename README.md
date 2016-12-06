@@ -4,15 +4,16 @@ This project contains my dotfiles and an install script to setup a new computer.
 
 ### Installation
 
-```curl -s https://raw.githubusercontent.com/samlawrencejones/dotfiles/master/install | sh```
+``` sh
+curl -s https://raw.githubusercontent.com/samlawrencejones/dotfiles/master/install | sh
+```
 
 ### Things that can't be scripted
 
-- Disable caps lock. Disable Spotlight keyboard shortcut (CMD+Space)
+- Disable caps lock
+- Disable Spotlight keyboard shortcut (CMD+Space)
 - Setup trackpad from screenshot
 - Import better touch tool settings from ~/Dropbox/btt.prefs
-- https://til.hashrocket.com/posts/511f0d7a3c-map-caps-lock-to-escape-in-macos-sierra-seil
-- Mail set CMD+E to archive
 - Alfred sync directory ~/Dropbox/alfred
 - Install lastpass app https://lastpass.com/misc_download2.php
 - Install safari ad block plus extension
@@ -23,7 +24,5 @@ This project contains my dotfiles and an install script to setup a new computer.
   <A-Right> - escape f
   <A-Delete> - Hex 0x17
   <A-Fn-Del> - escape d
-- Install gem [ctags](https://github.com/tpope/gem-ctags)
-- Install Dash document sets
 - Install solarized http://ethanschoonover.com/solarized
 - Install source code pro https://github.com/adobe-fonts/source-code-pro
