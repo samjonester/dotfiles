@@ -1,6 +1,6 @@
 [[plugins]]
 repo = 'pangloss/vim-javascript'
-on_ft = ['javascript', 'javascript.jxs']
+on_ft = ['javascript', 'javascript.jxs', 'coffee']
 hook_source = '''
 nnoremap <Leader>ni :tabe <Bar>terminal npm install <CR>
 nnoremap <Leader>nt :tabe <Bar> terminal npm test <CR>
