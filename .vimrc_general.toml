@@ -46,8 +46,10 @@ set completeopt=preview,noselect
 [[plugins]]
 repo = 'ctrlpvim/ctrlp.vim'
 hook_add = '''
-let g:ctrlp_show_hidden = 1
+let g:ctrlp_user_command = 'rg --files --hidden  %s'
 let g:ctrlp_custom_ignore = 'node_modules\|DS_Store\|git'
+let g:ctrlp_use_caching = 0
+let g:ctrlp_show_hidden = 1
 '''
 
 [[plugins]]
@@ -61,6 +63,7 @@ map <M-Space> :CtrlPCmdPalette<CR>
 repo = 'rking/ag.vim'
 hook_add = '''
 let g:ag_working_path_mode="r"    " Search from project root
+let g:ag_prg="rg --vimgrep"
 '''
 
 [[plugins]]
