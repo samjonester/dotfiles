@@ -23,7 +23,7 @@ let g:atags_build_commands_list = [
     \ ]
 " Tag when writing files
 autocmd BufWritePost * call atags#generate()
-map <Leader>t :call atags#generate()<cr>
+map <Leader>g :call atags#generate()<cr>
 
 " tags
 " Show tags in vertical split

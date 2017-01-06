@@ -54,4 +54,9 @@ nnoremap <Leader>e :e<CR>
 
 " Make dot work in visual mode
 vnoremap . :norm.<CR>
+
+" Run command in a new tab / split / vsplit
+nnoremap <Leader>tt :tabedit <Bar> term 
+nnoremap <Leader>ts :split <Bar> term 
+nnoremap <Leader>tv :vsplit <Bar> term 
 '''
