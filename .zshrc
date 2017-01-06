@@ -30,6 +30,7 @@ alias -g G='| grep '
 alias fixcam='sudo killall VDCAssistant'
 alias n=npm
 alias tab='open . -a iTerm'
+alias g=hub
 
 
 
