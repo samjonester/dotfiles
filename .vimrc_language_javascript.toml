@@ -25,9 +25,6 @@ let g:jsx_ext_required = 0
 '''
 
 [[plugins]]
-repo = 'moll/vim-node'
-
-[[plugins]]
 repo = 'carlitux/deoplete-ternjs'
 on_ft = ['javascript', 'javascript.jxs']
 build = 'npm install -g tern'
