@@ -9,11 +9,12 @@
   s = status
   aa = add .
   a = add
-	ap = add -p
+  ap = add -p
   d = diff --color --compaction-heuristic
   dc = !git d --cached
   f = fetch
   co = checkout
+  cop = !git checkout $1 && git pull -r
   c = commit --verbose
   ca = !git add -A && git commit
   ac = !git ca
@@ -46,6 +47,7 @@
   delete-merged-branches = "!git co master && git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
   unpublish = "!git push origin :$(git branch-name)"
   exclude = "!echo >> .git/info/exclude"
+  pr = pull-request
 
 [merge]
   tool = "nvim -d"
@@ -55,3 +57,5 @@
 	gpgsign = true
 [gpg]
 	program = /usr/local/bin/gpg
+[rerere]
+	enabled = true
