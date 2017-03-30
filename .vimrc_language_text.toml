@@ -14,8 +14,6 @@ set list
 set listchars=tab:>.,trail:.,extends:#,nbsp:.
 
 " Navigate wraped lines
-nnoremap J j
-nnoremap K k
 nnoremap j gj
 nnoremap k gk
 
