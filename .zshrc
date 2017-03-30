@@ -50,7 +50,7 @@ export PATH="$HOME/.local/bin:$PATH"
 # eval "$(jenv init -)"
 
 # go version manager
-[[ -s "/Users/sam/.gvm/scripts/gvm" ]] && source "/Users/sam/.gvm/scripts/gvm"
+#eval "$(goenv init -)"
 
 # node version manager
 export PATH="$HOME/.nodenv/bin:$PATH"
@@ -59,6 +59,9 @@ eval "$(nodenv init -)"
 # ruby version manager
 export PATH="$HOME/.rbenv/bin:$PATH"
 eval "$(rbenv init -)"
+
+# elixir version manager
+# eval "$(exenv init -)"
 
 # git magic
 eval "$(hub alias -s)"
@@ -136,3 +139,4 @@ pair() {
   sleep 5
   wemux start
 }
+eval $(/usr/libexec/path_helper -s)
