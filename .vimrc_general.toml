@@ -113,3 +113,9 @@ repo = 'tpope/vim-repeat'
 
 [[plugins]]
 repo = 'easymotion/vim-easymotion'
+
+[[plugins]]
+repo = 'Shougo/vimproc.vim'
+build = '''
+make
+'''
