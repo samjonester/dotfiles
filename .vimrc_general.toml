@@ -112,7 +112,46 @@ repo = 'tpope/vim-surround'
 repo = 'tpope/vim-repeat'
 
 [[plugins]]
+repo = 'tpope/vim-fugitive'
+hook_add = '''
+nnoremap <Leader>gb :Gblame <CR>
+nnoremap <Leader>gd :Gdiff <CR>
+nnoremap <Leader>gs :Gstatus <CR>
+nnoremap <Leader>gh :Gstatus <CR>
+'''
+
+[[plugins]]
+repo = 'airblade/vim-gitgutter'
+hook_add = '''
+let g:gitgutter_max_signs = 1000
+let g:gitgutter_highlight_lines = 0
+nnoremap <Leader>gha :GitGutterStageHunk <CR>
+nnoremap <Leader>ghr :GitGutterUndoHunk <CR>
+nnoremap <Leader>ghp :GitGutterPreviewHunk <CR>
+nnoremap <Leader>ghh :GitGutterLineHighlightsToggle <CR>
+'''
+
+[[plugins]]
+repo = 'tpope/vim-rhubarb'
+
+[[plugins]]
+repo = 'tpope/vim-eunuch'
+
+[[plugins]]
+repo = 'editorconfig/editorconfig-vim'
+
+[[plugins]]
+repo = 'tpope/vim-obsession'
+
+[[plugins]]
 repo = 'easymotion/vim-easymotion'
+
+[[plugins]]
+repo = 'sjl/gundo.vim'
+hook_add = '''
+nnoremap <Leader>us :GundoShow <CR>
+nnoremap <Leader>uh :GundoHide <CR>
+'''
 
 [[plugins]]
 repo = 'Shougo/vimproc.vim'

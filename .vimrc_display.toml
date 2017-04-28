@@ -42,13 +42,6 @@ hook_add = '''
 let g:airline_theme='solarized'
 '''
 
-[[plugins]]
-repo = 'airblade/vim-gitgutter'
-hook_add = '''
-let g:gitgutter_max_signs = 1000
-let g:gitgutter_highlight_lines = 1
-'''
-
 hook_add = '''
 " Add mappings first, since they will trigger loading NERDTree plugin
 map <Leader>n :NERDTreeToggle<CR>
