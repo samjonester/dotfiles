@@ -1,5 +1,5 @@
 hook_add = '''
-function JSONFormat()
+function! JSONFormat()
   execute "%!python -m json.tool"
 endfunction
 '''
