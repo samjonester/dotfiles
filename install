@@ -33,9 +33,10 @@ sudo easy_install pip
 brew install python3
 echo
 echo "Installing neo vim"
-brew install neovim
-sudo pip install neovim
-sudo pip3 install neovim
+brew install neovim languagetool
+pip install neovim
+pip3 install neovim
+gem install neovim
 
 # Install applications
 echo

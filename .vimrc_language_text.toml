@@ -30,6 +30,15 @@ set wrap
 repo = 'godlygeek/tabular'
 
 [[plugins]]
+repo = 'kana/vim-operator-user'
+
+[[plugins]]
+repo = 'rhysd/vim-grammarous'
+hook_source = '''
+let g:grammarous#languagetool_cmd = 'languagetool'
+'''
+
+[[plugins]]
 repo = 'plasticboy/vim-markdown'
 on_ft = 'markdown'
 hook_source = '''
