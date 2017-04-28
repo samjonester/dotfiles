@@ -84,8 +84,13 @@ git clone https://github.com/syl20bnr/spacemacs ~/.emacs.d
 link(.spacemacs)
 
 # Install Ruby
-brew install rbenv ruby-build rbenv-default-gems rbenv-ctags rbenv-bundler-ruby-version rbenv-gemset rbenv-binstubs
-ln -s default-gems $(rbenv root)/default-gems
+brew install rbenv ruby-build rbenv-default-gems rbenv-ctags rbenv-bundler-ruby-version rbenv-gemset rbenv-binstubs brew-gem
+brew gem install bundler
+brew gem install pry
+brew gem install pry-doc
+brew gem install pry-nav
+brew gem install pry-stack_explorer
+brew gem install gem-ctags
 
 # Install node
 brew tap nodenv/nodenv
