@@ -1,3 +1,4 @@
+eval $(/usr/libexec/path_helper -s)
 #
 # Loads & Customizes Prezto
 #
@@ -28,6 +29,7 @@ alias -g G='| grep '
 
 # Other aliases
 alias fixcam='sudo killall VDCAssistant'
+alias npm=yarn
 alias n=npm
 alias tab='open . -a iTerm'
 alias g=hub
@@ -53,11 +55,10 @@ export PATH="$HOME/.local/bin:$PATH"
 #eval "$(goenv init -)"
 
 # node version manager
-export PATH="$HOME/.nodenv/bin:$PATH"
 eval "$(nodenv init -)"
+export PATH="$HOME/.nodenv/shims:$PATH"
 
 # ruby version manager
-export PATH="$HOME/.rbenv/bin:$PATH"
 eval "$(rbenv init -)"
 
 # elixir version manager
@@ -139,4 +140,3 @@ pair() {
   sleep 5
   wemux start
 }
-eval $(/usr/libexec/path_helper -s)
