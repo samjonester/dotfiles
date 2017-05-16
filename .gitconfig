@@ -48,6 +48,8 @@
   unpublish = "!git push origin :$(git branch-name)"
   exclude = "!echo >> .git/info/exclude"
   pr = pull-request
+  in = !git f && git l $(git rev-parse --abbrev-ref --symbolic-full-name @{u})
+  noindex = update-index --assume-unchanged
 
 [merge]
   tool = "nvim -d"
