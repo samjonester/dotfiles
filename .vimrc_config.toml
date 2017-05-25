@@ -10,7 +10,7 @@ set shell=zsh        " Same shell I normally use
 set showcmd          " Display incomplete commands
 set visualbell       " Use visual bell instead of audible bell
 set backspace=2      " Backspace works like other apps
-set timeoutlen=350   " Timeout for key combos
+set timeoutlen=400   " Timeout for key combos
 set mouse=a          " Use mouse
 set updatetime=250   " Time before plugins do stuff
 
@@ -33,9 +33,6 @@ nnoremap <Leader>s :%s/\<<C-r><C-w>\>/
 
 " Searching
 set ignorecase     " Case insensitive search
-
-" Don't bother with shift
-nnoremap ; :
 
 " , to remove hightlighting
 nmap <silent> , :nohlsearch<CR>
