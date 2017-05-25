@@ -2,6 +2,9 @@
 repo = 'eagletmt/ghcmod-vim'
 on_ft = 'haskell'
 hook_source = '''
+set expandtab
+set tabstop=2
+
 nnoremap <Leader>hb :tabe <Bar>terminal stack build <CR>
 nnoremap <Leader>hg :tabe <Bar>terminal stack ghci <CR>
 nnoremap <Leader>ht :tabe <Bar>terminal stack test <CR>
