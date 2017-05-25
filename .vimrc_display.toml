@@ -18,7 +18,7 @@ repo = 'Shougo/vimproc.vim'
 build = 'make'
 
 [[plugins]]
-repo = 'L9'
+repo = 'vim-scripts/L9'
 
 [[plugins]]
 repo = 'altercation/vim-colors-solarized'
