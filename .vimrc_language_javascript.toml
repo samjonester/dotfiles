@@ -9,7 +9,7 @@ nnoremap <Leader>ns :tabe <Bar> terminal npm start <CR>
 
 if filereadable(".eslintrc")
   let g:neomake_javascript_enabled_makers=['eslint']
-elseif filereadable(".jshint")
+elseif filereadable(".jshint") || filereadable(".jshintrc")
   let g:neomake_javascript_enabled_makers=['jshint']
 else
   let g:neomake_javascript_enabled_makers=['standard']
