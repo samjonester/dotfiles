@@ -29,7 +29,7 @@ alias -g G='| grep '
 
 # Other aliases
 alias fixcam='sudo killall VDCAssistant'
-alias npm=yarn
+# alias npm=yarn
 alias n=npm
 alias tab='open . -a iTerm'
 alias g=hub
