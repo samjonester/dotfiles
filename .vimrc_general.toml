@@ -167,3 +167,9 @@ repo = 'romainl/vim-qf'
 hook_source = '''
 let g:qf_loclist_window_bottom=0
 '''
+
+[[plugins]]
+repo = 'tpope/vim-dispatch'
+hook_source = '''
+let g:dispatch_tmux_height=20
+'''
