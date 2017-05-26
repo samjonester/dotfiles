@@ -161,3 +161,9 @@ make
 
 [[plugins]]
 repo = 'Shougo/denite.nvim'
+
+[[plugins]]
+repo = 'romainl/vim-qf'
+hook_source = '''
+let g:qf_loclist_window_bottom=0
+'''

@@ -1,0 +1,3 @@
+[[plugins]]
+repo = 'mattn/emmet-vim'
+on_ft = ['javascript', 'javascript.jsx', 'html', 'html.eruby']

@@ -1,11 +1,12 @@
 hook_add = '''
 map <Leader>b :tabe <Bar>terminal bundle install <CR>
 let g:neomake_ruby_enabled_makers=['mri', 'reek', 'rubylint']
+autocmd BufNewFile,BufRead *.html.erb set filetype=html.eruby
 '''
 
 [[plugins]]
 repo = 'tpope/vim-rails'
-on_ft = 'ruby'
+on_ft = ['ruby', 'html.eruby']
 
 [[plugins]]
 repo = 'tpope/vim-cucumber'
