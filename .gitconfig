@@ -50,6 +50,7 @@
   pr = pull-request
   in = !git f && git l $(git rev-parse --abbrev-ref --symbolic-full-name @{u})
   noindex = update-index --assume-unchanged
+	first-commit = rev-list --max-parents=0 HEAD
 
 [merge]
   tool = "nvim -d"
