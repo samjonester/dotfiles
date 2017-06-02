@@ -2,6 +2,8 @@ hook_add = '''
 function! JSONFormat()
   execute "%!python -m json.tool"
 endfunction
+
+set clipboard=unnamed
 '''
 
 [[plugins]]

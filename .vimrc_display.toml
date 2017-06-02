@@ -8,7 +8,7 @@ syntax on             " Syntax Highlighting
 
 " highlight the 80th column
 if exists('+colorcolumn')
-  let &colorcolumn="80"
+  let &colorcolumn="180"
   highlight ColorColumn ctermbg=236
 endif
 '''

@@ -136,4 +136,4 @@ brew cask install elm-platform
 npm install -g elm elm-oracle
 
 # Tmux
-brew install tmux tmate
+brew install tmux tmate reattach-to-user-namespace
