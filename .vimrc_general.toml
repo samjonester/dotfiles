@@ -174,4 +174,7 @@ let g:qf_loclist_window_bottom=0
 repo = 'tpope/vim-dispatch'
 hook_source = '''
 let g:dispatch_tmux_height=20
+nnoremap <Leader>dd :Dispatch <CR>
+nnoremap <Leader>dD :Dispatch 
+nnoremap <Leader>df :FocusDispatch 
 '''

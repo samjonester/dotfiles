@@ -5,9 +5,9 @@ hook_source = '''
 set expandtab
 set tabstop=2
 
-nnoremap <Leader>hb :tabe <Bar>terminal stack build <CR>
-nnoremap <Leader>hg :tabe <Bar>terminal stack ghci <CR>
-nnoremap <Leader>ht :tabe <Bar>terminal stack test <CR>
+nnoremap <Leader>hb :Dispatch terminal stack build <CR>
+nnoremap <Leader>hg :Dispatch terminal stack ghci <CR>
+nnoremap <Leader>ht :Dispatch terminal stack test <CR>
 nnoremap <Leader>hi :GhcModInfo <CR>
 nnoremap <Leader>hy :GhcModType <CR>
 '''

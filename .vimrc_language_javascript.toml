@@ -2,10 +2,10 @@
 repo = 'pangloss/vim-javascript'
 on_ft = ['javascript', 'javascript.jsx', 'coffee']
 hook_source = '''
-nnoremap <Leader>ni :tabe <Bar>terminal npm install <CR>
-nnoremap <Leader>nt :tabe <Bar> terminal npm test <CR>
-nnoremap <Leader>nw :tabe <Bar> terminal npm test -- --watch <CR>
-nnoremap <Leader>ns :tabe <Bar> terminal npm start <CR>
+nnoremap <Leader>ni :Dispatch terminal npm install <CR>
+nnoremap <Leader>nt :Dispatch terminal npm test <CR>
+nnoremap <Leader>nw :Dispatch terminal npm test -- --watch <CR>
+nnoremap <Leader>ns :Dispatch terminal npm start <CR>
 
 if filereadable(".eslintrc") || filereadable(".eslintrc.yml")
   let g:neomake_javascript_enabled_makers=['eslint']
