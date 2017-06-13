@@ -10,7 +10,8 @@ set shell=zsh        " Same shell I normally use
 set showcmd          " Display incomplete commands
 set visualbell       " Use visual bell instead of audible bell
 set backspace=2      " Backspace works like other apps
-set timeoutlen=400   " Timeout for key combos
+set timeoutlen=1000  " Timeout for key mapping combos
+set ttimeoutlen=1000 " Timeout for key code combos
 set mouse=a          " Use mouse
 set updatetime=250   " Time before plugins do stuff
 
