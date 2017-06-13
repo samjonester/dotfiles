@@ -168,6 +168,7 @@ repo = 'Shougo/denite.nvim'
 repo = 'romainl/vim-qf'
 hook_source = '''
 let g:qf_loclist_window_bottom=0
+let g:qf_auto_open_quickfix=0
 '''
 
 [[plugins]]
