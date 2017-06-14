@@ -55,6 +55,8 @@ nnoremap <Leader>e :e<CR>
 " Quick Fix and Location Shortcuts
 nnoremap <Leader>co :copen <CR>
 nnoremap <Leader>cc :cclose <CR>
+nnoremap <Leader>cs :copen <Bar> :SaveList current_quickfix <CR>
+nnoremap <Leader>cl :copen <Bar> :LoadList current_quickfix <CR>
 nnoremap <Leader>lo :lopen <CR>
 nnoremap <Leader>lc :lclose <CR>
 
