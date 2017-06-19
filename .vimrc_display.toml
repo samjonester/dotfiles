@@ -22,17 +22,25 @@ repo = 'vim-scripts/L9'
 
 [[plugins]]
 repo = 'altercation/vim-colors-solarized'
-hook_add = '''
+hook_source = '''
 colorscheme solarized
 set background=dark   " Dark background style
 set spell
 '''
 
 [[plugins]]
+repo = 'majutsushi/tagbar'
+
+[[plugins]]
 repo = 'vim-airline/vim-airline'
 hook_add = '''
 set laststatus=2                  " Always show status line
 let g:airline_powerline_fonts = 1 " Use powerline fonts in airline
+set noshowmode                    " Don't show mode in command bar
+let g:airline_detect_spell = 0    " Don't show spell
+let g:airline#extensions#default#layout = [ [ 'a', 'b', 'c' ], [ 'z', 'error', 'warning' ] ]
+let g:airline_section_b='%{airline#util#wrap(airline#extensions#branch#get_head(),0)}'
+let g:airline_section_z = airline#section#create(['col %3v'])
 '''
 
 [[plugins]]

@@ -22,8 +22,8 @@ call dein#add('Shougo/dein.vim')
 
 let s:vimconfigs = "~/code/dotfiles/"
 call dein#load_toml(s:vimconfigs . ".vimrc_config.toml")
-call dein#load_toml(s:vimconfigs . ".vimrc_display.toml")
 call dein#load_toml(s:vimconfigs . ".vimrc_general.toml")
+call dein#load_toml(s:vimconfigs . ".vimrc_display.toml")
 call dein#load_toml(s:vimconfigs . ".vimrc_language_text.toml")
 call dein#load_toml(s:vimconfigs . ".vimrc_language_ruby.toml")
 call dein#load_toml(s:vimconfigs . ".vimrc_language_javascript.toml")
