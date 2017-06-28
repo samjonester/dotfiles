@@ -25,13 +25,14 @@
   pt = push --tags
   r = rebase
   rs = rebase -i --autosquash
-  sh = stash save --all
-  sp = stash pop
+  stashall = stash save --all
+  pop = stash pop
   rmaster = !git fetch && git rebase origin/master
   ri = rebase -i
   unstage = reset HEAD
   fix = !sh -c 'REV=$(git rev-parse $1) && git commit --fixup $@ && git rebase -i --autosquash $REV^' -
   l = log --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative
+  ln = !git l -n
   m = merge
   mt = mergetool
   rl = reflog --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative
