@@ -4,6 +4,13 @@ function! JSONFormat()
 endfunction
 
 set clipboard=unnamed
+
+" execute a command and show it's output in a split window
+command! -nargs=* -complete=shellcmd Rsplit execute "new | r! <args>"
+command! -nargs=* -complete=shellcmd Rvsplit execute "vnew | r! <args>"
+
+" execute a command and show it's output in a new tab
+command! -nargs=* -complete=shellcmd Rtab execute "tabnew | r! <args>"
 '''
 
 [[plugins]]
