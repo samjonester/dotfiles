@@ -23,9 +23,10 @@ repo = 'vim-scripts/L9'
 [[plugins]]
 repo = 'altercation/vim-colors-solarized'
 hook_source = '''
-colorscheme solarized
 set background=dark   " Dark background style
+let g:solarized_termtrans = 1
 set spell
+colorscheme solarized
 '''
 
 [[plugins]]
