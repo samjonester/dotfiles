@@ -25,7 +25,7 @@ then
 fi
 
 # Install Homebrew tools
-brew install wget git vim zsh heroku-toolbelt ripgrep cmake tree keybase gpg hub editorconfig
+brew install wget git vim zsh heroku-toolbelt ripgrep cmake tree keybase gpg hub editorconfig git-imerge
 echo
 echo "Installing python"
 brew install python
@@ -63,25 +63,25 @@ link() {
 }
 
 # Link files
-link(.tmux.conf)
-link(.pryrc)
-link(.rspec)
-link(.vimrc)
+link ".tmux.conf"
+link ".pryrc"
+link ".rspec"
+link ".vimrc"
 vim +PluginInstall +qall +PluginClean
 cd ~/.vim/bundle/vimproc.vim
 make
-link(.gitconfig)
-link(.gitignore_global)
+link ".gitconfig"
+link ".gitignore_global"
 
 # ctags
 brew tap universal-ctags/universal-ctags
 brew install --HEAD universal-ctags
-link(.ctags)
+link ".ctags"
 
 # Install spacemacs
 brew install emacs
 git clone https://github.com/syl20bnr/spacemacs ~/.emacs.d
-link(.spacemacs)
+link ".spacemacs"
 
 # Install Ruby
 brew install rbenv ruby-build rbenv-default-gems rbenv-ctags rbenv-bundler-ruby-version rbenv-gemset rbenv-binstubs brew-gem
@@ -111,12 +111,12 @@ fi
 
 # Install prezto
 git clone --recursive https://github.com/sorin-ionescu/prezto.git "${ZDOTDIR:-$HOME}/.zprezto"
-link(.zshenv)
-link(.zshprofile)
-link(.zshrc)
-link(.zpreztorc)
-link(.zshlogin)
-link(.zshlogout)
+link ".zshenv"
+link ".zshprofile"
+link ".zshrc"
+link ".zpreztorc"
+link ".zshlogin"
+link ".zshlogout"
 
 # Install Haskell stuff
 echo
