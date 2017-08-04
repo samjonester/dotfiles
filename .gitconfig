@@ -20,6 +20,7 @@
   ac = !git ca
   pm = pull
   p = pull -r
+  ps = !git stash && git pull -r && git stash pop
   pu = push -u origin HEAD
   pf = push -f
   pt = push --tags
