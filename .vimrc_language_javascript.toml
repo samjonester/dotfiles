@@ -21,6 +21,13 @@ endif
 
 
 [[plugins]]
+repo = 'HerringtonDarkholme/yats.vim'
+
+[[plugins]]
+repo = 'mhartington/nvim-typescript'
+on_ft = ['typescript']
+
+[[plugins]]
 repo = 'mxw/vim-jsx'
 depends = 'pangloss/vim-javascript'
 hook_source = '''
