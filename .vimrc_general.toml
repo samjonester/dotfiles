@@ -186,3 +186,6 @@ nnoremap <Leader>dd :Dispatch <CR>
 nnoremap <Leader>dD :Dispatch 
 nnoremap <Leader>df :FocusDispatch 
 '''
+
+[[plugins]]
+repo = 'terryma/vim-multiple-cursors'
