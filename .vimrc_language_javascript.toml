@@ -12,7 +12,7 @@ nnoremap <Leader>ns :Dispatch npm start <CR>
 repo = 'HerringtonDarkholme/yats.vim'
 
 [[plugins]]
-repo = 'mhartington/nvim-typescript'
+repo = 'leafgarland/typescript-vim'
 on_ft = ['typescript']
 
 [[plugins]]
