@@ -58,6 +58,8 @@ nnoremap <Leader>cs :copen <Bar> :SaveList current_quickfix <CR>
 nnoremap <Leader>cl :copen <Bar> :LoadList current_quickfix <CR>
 nnoremap <Leader>lo :lopen <CR>
 nnoremap <Leader>lc :lclose <CR>
+nnoremap <Leader>ln :lnext<CR>
+nnoremap <Leader>lp :lprev<CR>
 
 " Make dot work in visual mode
 vnoremap . :norm.<CR>
