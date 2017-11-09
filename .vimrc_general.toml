@@ -89,6 +89,9 @@ repo = 'MarcWeber/vim-addon-local-vimrc'
 repo = 'jiangmiao/auto-pairs'
 
 [[plugins]]
+repo = 'tpope/vim-endwise'
+
+[[plugins]]
 repo = 'vim-scripts/tComment'
 
 [[plugins]]
