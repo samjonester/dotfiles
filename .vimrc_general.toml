@@ -24,19 +24,12 @@ repo = 'w0rp/ale'
 repo = 'xolox/vim-misc'
 
 [[plugins]]
-repo = 'fntlnz/atags.vim'
+repo = 'xolox/vim-easytags'
+build = '''
+brew install ctags
+'''
 hook_add = '''
-" Skip tagging files ignored by ag and git
-let g:atags_build_commands_list = [
-    \ 'ag -g "" | ctags -L - --fields=+l -f tags.tmp',
-    \ 'awk "length($0) < 400" tags.tmp > tags',
-    \ 'rm tags.tmp'
-    \ ]
-" Tag when writing files
-autocmd BufWritePost * call atags#generate()
-map <Leader>g :call atags#generate()<cr>
-
-" tags
+let g:easytags_async=1
 " Show tags in vertical split
 map <A-]> :vsp <CR>:exec("tag ".expand("<cword>"))<CR>
 " Show tags in tab
