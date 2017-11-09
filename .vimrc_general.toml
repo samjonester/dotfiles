@@ -77,9 +77,10 @@ let g:rooter_change_directory_for_non_project_files = 'current'
 [[plugins]]
 repo = 'godlygeek/tabular'
 hook_add = '''
-vmap a= :Tabularize /=<CR>
-vmap a; :Tabularize /::<CR>
-vmap a- :Tabularize /-><CR>
+nmap <Leader>a= :Tabularize /=<CR>
+vmap <Leader>a= :Tabularize /=<CR>
+nmap <Leader>a: :Tabularize /:\zs<CR>
+vmap <Leader>a: :Tabularize /:\zs<CR>
 '''
 
 [[plugins]]
