@@ -28,6 +28,7 @@ alias -g G='| grep '
 
 # Other aliases
 alias fixcam='sudo killall VDCAssistant'
+alias fixwifi='sudo ifconfig en0 down && sudo ifconfig en0 up'
 # alias npm=yarn
 alias n=npm
 alias tab='open . -a iTerm'
