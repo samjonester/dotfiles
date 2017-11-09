@@ -24,7 +24,7 @@ export LC_ALL=en_US.UTF-8
 
 # Editors and Browsers
 export EDITOR='nano'
-export VISUAL='nvim'
+export VISUAL='vim'
 export PAGER='less'
 export BROWSER='open'
 
