@@ -44,3 +44,9 @@ on_ft = 'markdown'
 hook_source = '''
 let g:vim_markdown_folding_disabled = 1
 '''
+
+[[plugins]]
+repo = 'vimoutliner/vimoutliner'
+hook_source = '''
+au FileType votl setl sw=4 sts=4 et
+'''
