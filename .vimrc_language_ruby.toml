@@ -4,6 +4,10 @@ map <Leader>b :Dispatch bundle install <CR>
 '''
 
 [[plugins]]
+repo = 'vim-ruby/vim-ruby'
+on_ft = ['ruby', 'html.eruby']
+
+[[plugins]]
 repo = 'tpope/vim-rails'
 on_ft = ['ruby', 'html.eruby']
 
