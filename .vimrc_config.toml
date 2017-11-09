@@ -23,7 +23,6 @@ nnoremap <bs> <C-W><C-H> " Fix <C-H> in neovim
 nnoremap <C-H> <C-W><C-H>
 
 " Neovim escape key fix
-tnoremap <ESC> <C-\><C-n>
 
 " Open splits to the right and below
 set splitright
