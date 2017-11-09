@@ -11,6 +11,10 @@ command! -nargs=* -complete=shellcmd Rvsplit execute "vnew | r! <args>"
 
 " execute a command and show it's output in a new tab
 command! -nargs=* -complete=shellcmd Rtab execute "tabnew | r! <args>"
+
+" Allow project specific .vimrc files
+set exrc
+set secure
 '''
 
 [[plugins]]
