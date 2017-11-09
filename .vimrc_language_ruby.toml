@@ -1,7 +1,6 @@
 hook_add = '''
-map <Leader>b :Dispatch terminal bundle install <CR>
-let g:neomake_ruby_enabled_makers=['mri', 'reek', 'rubylint']
-autocmd BufNewFile,BufRead *.html.erb set filetype=html.eruby
+map <Leader>b :Dispatch bundle install <CR>
+" autocmd BufNewFile,BufRead *.html.erb set filetype=html.eruby
 '''
 
 [[plugins]]
