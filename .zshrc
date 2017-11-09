@@ -31,6 +31,9 @@ alias fixcam='sudo killall VDCAssistant'
 alias fixwifi='sudo ifconfig en0 down && sudo ifconfig en0 up'
 # alias npm=yarn
 alias n=npm
+alias nr='npm run'
+alias nt='npm test'
+alias ni='npm install'
 alias tab='open . -a iTerm'
 alias g=hub
 
