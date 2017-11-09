@@ -155,3 +155,7 @@ pair() {
   sleep 5
   wemux start
 }
+
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
+
+

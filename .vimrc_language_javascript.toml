@@ -6,19 +6,7 @@ nnoremap <Leader>ni :Dispatch npm install <CR>
 nnoremap <Leader>nt :Dispatch npm test <CR>
 nnoremap <Leader>nw :Dispatch npm test -- --watch <CR>
 nnoremap <Leader>ns :Dispatch npm start <CR>
-
-if filereadable(".eslintrc") || filereadable(".eslintrc.yml")
-  let g:neomake_javascript_enabled_makers=['eslint']
-  let g:neomake_javascript_eslint_exe=system('PATH=$(npm bin):$PATH && which eslint | tr -d "\n"')
-elseif filereadable(".jshint") || filereadable(".jshintrc")
-  let g:neomake_javascript_enabled_makers=['jshint']
-  let g:neomake_javascript_jshint_exe=system('PATH=$(npm bin):$PATH && which jshint | tr -d "\n"')
-else
-  let g:neomake_javascript_enabled_makers=['standard']
-  let g:neomake_javascript_standard_exe=system('PATH=$(npm bin):$PATH && which standard | tr -d "\n"')
-endif
 '''
-
 
 [[plugins]]
 repo = 'HerringtonDarkholme/yats.vim'
@@ -32,16 +20,6 @@ repo = 'mxw/vim-jsx'
 depends = 'pangloss/vim-javascript'
 hook_source = '''
 let g:jsx_ext_required = 0
-'''
-
-[[plugins]]
-repo = 'carlitux/deoplete-ternjs'
-on_ft = ['javascript', 'javascript.jsx']
-build = 'npm install -g tern'
-hook_source = '''
-" Use deoplete.
-let g:tern_request_timeout = 1
-let g:tern_show_signature_in_pum = '0'  " This do disable full signature type on autocomplete
 '''
 
 [[plugins]]

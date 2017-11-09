@@ -14,18 +14,10 @@ command! -nargs=* -complete=shellcmd Rtab execute "tabnew | r! <args>"
 '''
 
 [[plugins]]
-repo = 'benekastah/neomake'
-hook_add = '''
-autocmd! BufWritePost * Neomake
-autocmd! BufRead * Neomake
-let g:neomake_echo_current_error=1
-let g:neomake_open_list=1
+repo = 'w0rp/ale'
 
-nmap <Leader>mc :lclose<CR>
-nmap <Leader>mo :lopen<CR>
-nmap <Leader>mn :lnext<CR>
-nmap <Leader>mp :lprev<CR>
-'''
+[[plugins]]
+repo = 'xolox/vim-misc'
 
 [[plugins]]
 repo = 'fntlnz/atags.vim'
@@ -50,45 +42,33 @@ map <A-\> :split <CR>:exec("tag ".expand("<cword>"))<CR>
 '''
 
 [[plugins]]
-repo = 'Shougo/deoplete.nvim'
+repo = 'Valloric/YouCompleteMe'
+build = '''
+npm install -g tern typescript
+./install.py --all
+'''
 hook_add = '''
-let g:deoplete#enable_at_startup = 1
-let g:deoplete#auto_complete_start_length = 3
-let g:deoplete#enable_smart_case = 1
-set completeopt=preview,noselect
+let g:ycm_collect_identifiers_from_tags_files = 1
+let g:ycm_min_num_of_chars_for_completion = 1
 '''
 
 [[plugins]]
-repo = 'ctrlpvim/ctrlp.vim'
-hook_add = '''
-let g:ctrlp_user_command = 'rg --files --hidden  --ignore-file ".git/" %s'
-let g:ctrlp_custom_ignore = 'node_modules\|DS_Store\|git'
-let g:ctrlp_use_caching = 0
-let g:ctrlp_show_hidden = 1
+repo = 'junegunn/fzf'
+build = '''
+./install -all
 '''
 
 [[plugins]]
-repo = 'fisadev/vim-ctrlp-cmdpalette'
-depends = 'ctrlpvim/ctrlp.vim'
+repo = 'junegunn/fzf.vim'
 hook_add = '''
-map <M-Space> :CtrlPCmdPalette<CR>
-'''
-
-[[plugins]]
-repo = 'rking/ag.vim'
-hook_add = '''
-let g:ag_working_path_mode="r"    " Search from project root
-let g:ag_prg="rg --vimgrep"
-'''
-
-[[plugins]]
-repo = 'Chun-Yang/vim-action-ag'
-depends = 'rking/ag.vim'
-hook_add = '''
-" use * to search current word in normal mode
-nmap <Leader>* <Plug>AgActionWord
-" use * to search selected text in visual mode
-vmap <Leader>* <Plug>AgActionVisual
+let $FZF_DEFAULT_COMMAND = 'ag --hidden --ignore-dir .git --ignore-dir node_modules --ignore tags -g ""'
+let g:fzf_buffers_jump = 1
+let g:fzf_history_dir = '~/.local/share/fzf-history'
+map <C-p> :FZF<CR>
+nmap <C-a> :Commands<CR>
+nmap <C-c> :Commits<CR>
+nnoremap <silent> <Leader>* :Ag <C-R><C-W><CR>
+nnoremap <silent> <Leader>ag :Ag<CR>
 '''
 
 [[plugins]]
