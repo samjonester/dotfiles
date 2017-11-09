@@ -18,7 +18,6 @@ fi
 
 
 # Editor aliases
-alias vim=nvim
 alias v=vim
 alias e="emacsclient -nw -c"
 
