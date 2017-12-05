@@ -43,6 +43,9 @@ alias g=hub
 # Development Tools
 #
 
+# Homebrew completions
+fpath=(/usr/local/share/zsh-completions $fpath)
+
 
 # Add stack executables to PATH
 export PATH="$HOME/.local/bin:$PATH"
