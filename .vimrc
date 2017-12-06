@@ -1,12 +1,17 @@
-set nocompatible               " Be iMproved
+set nocompatible     " Be iMproved
+set shell=zsh        " Same shell I normally use
 
 " Set leader to space
 let mapleader = "\<Space>"
 
 
 " Required:
-set runtimepath+=/Users/sam/.dien/repos/github.com/Shougo/dein.vim
+set runtimepath+=~/.vim/bundle/repos/github.com/Shougo/dein.vim
 
+if &compatible
+  set nocompatible
+endif
+set runtimepath+=~/.vim/bundle/repos/github.com/Shougo/dein.vim
 
 " Required:
 call dein#begin('/Users/sam/.dien')
@@ -34,18 +39,13 @@ call dein#load_toml(s:vimconfigs . ".vimrc_platform_web.toml")
 " End Custom Stuff
 """"""""""""""""""
 
-
-" You can specify revision/branch/tag.
-call dein#add('Shougo/vimshell', { 'rev': '3787e5' })
-
-" Required:
-filetype plugin indent on
-syntax enable
-"
 " If you want to install not installed plugins on startup.
 if dein#check_install()
-  call dein#install()
+call dein#install()
 endif
 
 " Required:
 call dein#end()
+
+filetype plugin indent on
+syntax enable
