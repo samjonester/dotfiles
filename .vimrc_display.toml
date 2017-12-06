@@ -33,9 +33,6 @@ colorscheme solarized
 '''
 
 [[plugins]]
-repo = 'majutsushi/tagbar'
-
-[[plugins]]
 repo = 'vim-airline/vim-airline'
 hook_add = '''
 set laststatus=2                  " Always show status line

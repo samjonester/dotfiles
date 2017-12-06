@@ -24,28 +24,12 @@ repo = 'w0rp/ale'
 repo = 'xolox/vim-misc'
 
 [[plugins]]
-repo = 'xolox/vim-easytags'
-build = '''
-brew install ctags
-'''
-hook_add = '''
-let g:easytags_async=1
-" Show tags in vertical split
-map <A-]> :vsp <CR>:exec("tag ".expand("<cword>"))<CR>
-" Show tags in tab
-map <C-\> :tab split<CR>:exec("tag ".expand("<cword>"))<CR>
-" Show tags in horizontal split
-map <A-\> :split <CR>:exec("tag ".expand("<cword>"))<CR>
-'''
-
-[[plugins]]
 repo = 'Valloric/YouCompleteMe'
 build = '''
 npm install -g tern typescript
 ./install.py --all
 '''
 hook_add = '''
-let g:ycm_collect_identifiers_from_tags_files = 1
 let g:ycm_min_num_of_chars_for_completion = 1
 '''
 
