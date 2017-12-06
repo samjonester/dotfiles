@@ -1,8 +1,3 @@
-eval $(/usr/libexec/path_helper -s)
-#
-# Loads & Customizes Prezto
-#
-
 # Source Prezto.
 if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
   source "${ZDOTDIR:-$HOME}/.zprezto/init.zsh"

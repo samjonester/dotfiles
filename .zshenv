@@ -8,3 +8,11 @@ fi
 
 # Local Environment Variables
 [[ -s "${ZDOTDIR:-$HOME}/.localrc" ]] && source "${ZDOTDIR:-$HOME}/.localrc"
+
+eval $(/usr/libexec/path_helper -s)
+
+# Set the list of directories that Zsh searches for programs.
+path=(
+  /usr/local/{bin,sbin}
+  $path
+)
