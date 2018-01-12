@@ -2,8 +2,8 @@ hook_add = '''
 " Display settings
 set number            " Show current line number
 set ruler             " Show curser position
-set cursorline        " Highlight current cursor line
-set cuc cul"          " Highlight active column
+" set cursorline        " Highlight current cursor line
+" set cuc cul"          " Highlight active column
 syntax on             " Syntax Highlighting
 set regexpengine=1
 
@@ -12,7 +12,7 @@ set hlsearch
 " highlight the 80th column
 if exists('+colorcolumn')
   let &colorcolumn="180"
-  highlight ColorColumn ctermbg=236
+  highlight ColorColumn ctermbg=240
 endif
 '''
 
@@ -28,6 +28,7 @@ repo = 'altercation/vim-colors-solarized'
 hook_source = '''
 set background=dark   " Dark background style
 let g:solarized_termtrans = 1
+" let g:solarized_termcolors=256
 set spell
 colorscheme solarized
 '''
