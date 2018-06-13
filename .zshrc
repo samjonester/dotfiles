@@ -166,3 +166,8 @@ docker-cleanup() {
   docker rmi -f $(docker images -q)
   docker volume rm $(docker volume ls -q)
 }
+
+
+ps-kill() {
+  ps aux | grep "$1" | grep -v grep | awk '{ print $2 }' | xargs kill -9
+}
