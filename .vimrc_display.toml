@@ -14,6 +14,9 @@ if exists('+colorcolumn')
   let &colorcolumn="180"
   highlight ColorColumn ctermbg=240
 endif
+
+" Set vim visual bell to do nothing
+set t_vb=
 '''
 
 [[plugins]]
