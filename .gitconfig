@@ -31,6 +31,7 @@
   pop = stash pop
   rmaster = !git fetch && git rebase origin/master
   ri = rebase -i
+  rim = rebase -i origin/master
   unstage = reset HEAD
   fix = !sh -c 'REV=$(git rev-parse $1) && git commit --fixup $@ && git rebase -i --autosquash $REV^' -
   l = log --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative
