@@ -75,3 +75,5 @@
   trustExitCode = true
 [tag]
 	gpgsign = true
+[remote "heroku"]
+  skipFetchAll = true
