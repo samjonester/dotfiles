@@ -51,7 +51,7 @@
   delete-merged-branches = "!git co master && git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
   unpublish = "!git push origin :$(git branch-name)"
   exclude = "!echo >> .git/info/exclude"
-  pr = pull-request
+  pro = "!hub pull-request"
   in = !git f && git l $(git rev-parse --abbrev-ref --symbolic-full-name @{u})
   noindex = update-index --assume-unchanged
 	first-commit = rev-list --max-parents=0 HEAD
