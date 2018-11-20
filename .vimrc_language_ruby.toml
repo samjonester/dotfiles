@@ -25,3 +25,7 @@ map <Leader>rs :call RunNearestSpec()<CR>
 map <Leader>rl :call RunLastSpec()<CR>
 map <Leader>rt :call RunAllSpecs()<CR>
 '''
+
+[[plugins]]
+repo = 'AndrewRadev/splitjoin.vim'
+on_ft = 'ruby'
