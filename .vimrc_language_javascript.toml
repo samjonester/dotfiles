@@ -36,3 +36,10 @@ on_ft = 'coffee'
 
 [[plugins]]
 repo = 'digitaltoad/vim-pug'
+
+[[plugins]]
+repo = 'w0rp/ale'
+on_ft = ['javascript', 'javascript.jsx']
+hook_source = '''
+let g:ale_linters = { 'javascript': ['standard'] }
+'''
