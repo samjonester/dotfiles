@@ -54,7 +54,8 @@
   pro = "!hub pull-request"
   in = !git f && git l $(git rev-parse --abbrev-ref --symbolic-full-name @{u})
   noindex = update-index --assume-unchanged
-	first-commit = rev-list --max-parents=0 HEAD
+  first-commit = rev-list --max-parents=0 HEAD
+  delete-merged-branches = "!git co master && git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
 
 [merge]
   tool = "vim -d"
