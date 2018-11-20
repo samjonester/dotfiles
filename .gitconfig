@@ -14,7 +14,8 @@
   dc = !git d --cached
   f = fetch
   co = checkout
-  cop = !git checkout $1 && git pull -r
+  com = !git co master && git p
+  cob = checkout -b
   c = commit --verbose
   ca = !git add -A && git commit
   ac = !git ca
@@ -37,7 +38,6 @@
   m = merge
   mt = mergetool
   rl = reflog --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative
-  com = checkout master
   cob = checkout -b
   up = !git pull --rebase --prune $@ && git submodule update --init --recursive
   wip = !git add -A && git commit -m '!SAVEPOINT'
