@@ -46,7 +46,7 @@
   undo = reset HEAD~1 --mixed
   amend = commit --amend
   aamend = !git aa && git amend
-  fuckit = !git clean -d -x -f && git reset --hard
+  fuckit = !git clean -df && git co -- .
   origin = !git reset --hard $(git symbolic-ref --short -q  HEAD)
   delete-merged-branches = "!git co master && git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
   unpublish = "!git push origin :$(git branch-name)"
