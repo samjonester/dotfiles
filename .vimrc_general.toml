@@ -158,9 +158,16 @@ repo = 'tpope/vim-dispatch'
 hook_source = '''
 let g:dispatch_tmux_height=20
 nnoremap <Leader>dd :Dispatch <CR>
-nnoremap <Leader>dD :Dispatch 
+nnoremap <Leader>dD :Dispatch! <CR>
+nnoremap <Leader>do :Dispatch <CR> && :Copen <CR>
+nnoremap <Leader>ddd :Dispatch 
 nnoremap <Leader>df :FocusDispatch 
 '''
 
 [[plugins]]
 repo = 'terryma/vim-multiple-cursors'
+
+hook_add = '''
+nnoremap <Leader>dcu :Dispatch docker-compose up -d <CR>
+nnoremap <Leader>dcd :Dispatch docker-compose down <CR>
+'''
