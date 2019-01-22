@@ -6,6 +6,7 @@ nnoremap <Leader>ni :Dispatch npm install <CR>
 nnoremap <Leader>nt :Dispatch npm test <CR>
 nnoremap <Leader>nw :Dispatch npm test -- --watch <CR>
 nnoremap <Leader>ns :Dispatch npm start <CR>
+let g:ale_linters.javascript = ['standard']
 '''
 
 [[plugins]]
@@ -36,10 +37,3 @@ on_ft = 'coffee'
 
 [[plugins]]
 repo = 'digitaltoad/vim-pug'
-
-[[plugins]]
-repo = 'w0rp/ale'
-on_ft = ['javascript', 'javascript.jsx']
-hook_source = '''
-let g:ale_linters = { 'javascript': ['standard'] }
-'''
