@@ -1,0 +1,11 @@
+hook_add = '''
+nnoremap <Leader>mps :Start mix phx.server <CR>
+nnoremap <Leader>md :Dispatch mix deps.get <CR>
+nnoremap <Leader>mt :Dispatch mix test <CR>
+nnoremap <Leader>mT :FocusDispatch mix test % <CR>
+let g:ale_fixers.elixir = ['mix_format']
+let g:ale_linters.elixir = ['credo', 'dialyxir']
+'''
+
+[[plugins]]
+repo = 'elixir-editors/vim-elixir'
