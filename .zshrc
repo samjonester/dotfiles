@@ -48,22 +48,9 @@ export PATH="$HOME/.local/bin:$PATH"
 # added by travis gem
 [ -f /Users/samjones/.travis/travis.sh ] && source /Users/samjones/.travis/travis.sh
 
-# JENV.be
-# export PATH="$HOME/.jenv/bin:$PATH"
-# eval "$(jenv init -)"
-
-# go version manager
-#eval "$(goenv init -)"
-
-# node version manager
 eval "$(nodenv init -)"
-export PATH="$HOME/.nodenv/shims:$PATH"
-
-# ruby version manager
 eval "$(rbenv init -)"
-
-# elixir version manager
-# eval "$(exenv init -)"
+eval "$(exenv init -)"
 
 # git magic
 eval "$(hub alias -s)"
