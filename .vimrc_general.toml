@@ -20,6 +20,7 @@ set secure
 [[plugins]]
 repo = 'w0rp/ale'
 hook_source = '''
+let g:ale_fix_on_save = 1
 let g:ale_completion_enabled = 1
 let g:ale_fixers = {}
 let g:ale_linters = {}
