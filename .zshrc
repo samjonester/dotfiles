@@ -31,6 +31,7 @@ alias nt='npm test'
 alias ni='npm install'
 alias tab='open . -a iTerm'
 alias g=hub
+alias cat=bat --theme darktwo
 
 
 
