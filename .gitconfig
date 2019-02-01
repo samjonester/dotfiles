@@ -34,12 +34,15 @@
   rim = rebase -i origin/master
   unstage = reset HEAD
   fix = !sh -c 'REV=$(git rev-parse $1) && git commit --fixup $@ && git rebase -i --autosquash $REV^' -
-  l = log --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative
+  l = log --abbrev-commit --date=relative
+  lf = !git l --pretty=full
   ln = !git l -n
+  lnf = !git l --pretty=full -n
   lm = !git l origin/master..
+  lmf = !git l --pretty=full origin/master..
   m = merge
   mt = mergetool
-  rl = reflog --pretty=format:'%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset' --abbrev-commit --date=relative
+  rl = reflog --abbrev-commit --date=relative
   cob = checkout -b
   up = !git pull --rebase --prune $@ && git submodule update --init --recursive
   wip = !git add -A && git commit -m '!SAVEPOINT'
@@ -77,3 +80,5 @@
   gpgsign = true
 [remote "heroku"]
   skipFetchAll = true
+[format]
+  pretty = format:%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset
