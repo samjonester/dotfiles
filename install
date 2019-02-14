@@ -15,6 +15,8 @@ then
   git clone git@github.com:samlawrencejones/dotfiles.git ~/code/dotfiles || echo "Generate/Upload SSH Key To Github: https://help.github.com/articles/generating-ssh-keys/"
 fi
 
+## set script that runs every login to set env preferences
+sudo defaults write com.apple.loginwindow LoginHook <path_to_login_script>
 
 # Install Homebrew
 if ! which brew >/dev/null
