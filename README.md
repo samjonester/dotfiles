@@ -10,7 +10,8 @@ curl -s https://raw.githubusercontent.com/samlawrencejones/dotfiles/master/insta
 
 ### Things that can't be scripted
 
-- Disable caps lock
+- Remap caps lock to escape:  
+  ![image](https://user-images.githubusercontent.com/645672/52964618-b8b90e00-3370-11e9-8895-5588fcccc2cd.png)
 - Disable Spotlight keyboard shortcut (CMD+Space)
 - Setup trackpad from screenshot
 - Import better touch tool settings from ~/Dropbox/btt.prefs
