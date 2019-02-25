@@ -30,16 +30,6 @@ let g:ale_linters = {}
 repo = 'xolox/vim-misc'
 
 [[plugins]]
-repo = 'Valloric/YouCompleteMe'
-build = '''
-npm install -g tern typescript
-./install.py --all
-'''
-hook_add = '''
-let g:ycm_min_num_of_chars_for_completion = 1
-'''
-
-[[plugins]]
 repo = 'junegunn/fzf'
 build = '''
 ./install -all
