@@ -14,7 +14,7 @@ endif
 set runtimepath+=~/.vim/bundle/repos/github.com/Shougo/dein.vim
 
 " Required:
-call dein#begin('/Users/sam/.dien')
+call dein#begin('/Users/sam/.dein')
 
 " Let dein manage dein
 " Required:
