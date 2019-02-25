@@ -3,8 +3,14 @@ nnoremap <Leader>mps :Start mix phx.server <CR>
 nnoremap <Leader>md :Dispatch mix deps.get <CR>
 nnoremap <Leader>mt :Dispatch mix test <CR>
 nnoremap <Leader>mT :FocusDispatch mix test % <CR>
+" git clone git@github.com:JakeBecker/elixir-ls.git ~/.elixir-ls
+" cd ~/.elixir-ls
+" mix deps.get deps.compile compile
+" mix elixir_ls.release -o rel
+let g:ale_elixir_elixir_ls_release = $HOME.'/.elixir-ls/rel/'
+let g:ale_elixir_elixir_ls_config = {'elixirLS': {'dialyzerEnabled': v:false}}
+let g:ale_linters.elixir = ['elixir-ls', 'credo']
 let g:ale_fixers.elixir = ['mix_format']
-let g:ale_linters.elixir = ['credo', 'dialyxir']
 '''
 
 [[plugins]]
