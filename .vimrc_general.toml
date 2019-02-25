@@ -22,8 +22,17 @@ repo = 'w0rp/ale'
 hook_source = '''
 let g:ale_fix_on_save = 1
 let g:ale_completion_enabled = 1
+let g:ale_completion_delay=300
+" let g:ale_cursor_detail=1
+let g:ale_echo_msg_format='%linter%: %code: %%s'
 let g:ale_fixers = {}
 let g:ale_linters = {}
+nnoremap <Leader>ad :ALEDetail <CR>
+nnoremap <Leader>ac :pclose <CR>
+nnoremap <Leader>an :ALENext <CR>
+nnoremap <Leader>ap :ALEPrevious <CR>
+nnoremap <Leader>ah :ALEHover <CR>
+nnoremap <Leader>af :ALEFindReferences <CR>
 '''
 
 [[plugins]]
