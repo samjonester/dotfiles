@@ -19,3 +19,4 @@ node_modules
 .vimrc
 .npmrc
 Session.vim
+/.elixir_ls/
