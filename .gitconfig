@@ -16,7 +16,7 @@
   co = checkout
   com = !git co master && git p
   cob = checkout -b
-  c = commit --verbose
+  c = commit
   ca = !git add -A && git commit
   ac = !git ca
   pm = pull
@@ -66,6 +66,7 @@
   prompt = false
 [commit]
   gpgsign = true
+  verbose = true
 [gpg]
   program = /usr/local/bin/gpg
 [rerere]
