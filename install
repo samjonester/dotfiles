@@ -101,5 +101,14 @@ echo "Install Elm"
 brew cask install elm-platform
 npm install -g elm elm-oracle
 
+# Install Elm stuff
+echo
+echo "Install Elixir"
+brew cask install exenv elixir-build erlang
+
 # Tmux
 brew install tmux tmate reattach-to-user-namespace
+
+# Fira Code Ligature Font
+brew tap homebrew/cask-fonts
+brew cask install font-fira-code
