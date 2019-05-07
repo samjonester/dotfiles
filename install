@@ -97,7 +97,7 @@ echo "Install Complete"
 
 # Install Elm stuff
 echo
-echo "Install haskell platform"
+echo "Install Elm"
 brew cask install elm-platform
 npm install -g elm elm-oracle
 
