@@ -44,11 +44,6 @@ link ".vimrc"
 link ".gitconfig"
 link ".gitignore_global"
 
-# ctags
-brew tap universal-ctags/universal-ctags
-brew install --HEAD universal-ctags
-link ".ctags"
-
 # Install spacemacs
 brew install emacs
 git clone https://github.com/syl20bnr/spacemacs ~/.emacs.d
