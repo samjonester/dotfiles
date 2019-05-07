@@ -45,9 +45,9 @@ link ".gitconfig"
 link ".gitignore_global"
 
 # Install spacemacs
-brew install emacs
-git clone https://github.com/syl20bnr/spacemacs ~/.emacs.d
-link ".spacemacs"
+# brew install emacs
+# git clone https://github.com/syl20bnr/spacemacs ~/.emacs.d
+# link ".spacemacs"
 
 # Install Ruby
 brew install rbenv ruby-build rbenv-default-gems rbenv-ctags rbenv-bundler-ruby-version rbenv-gemset rbenv-binstubs brew-gem
