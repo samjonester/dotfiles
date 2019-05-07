@@ -9,8 +9,8 @@ git clone https://github.com/gcuisinier/jenv.git ~/.jenv
 # Checkout dotfiles
 if [ ! -d ~/code/dotfiles ]
 then
-	echo
-	echo "Cloning dotfiles repository"
+  echo
+  echo "Cloning dotfiles repository"
   mkdir -p ~/code
   git clone git@github.com:samlawrencejones/dotfiles.git ~/code/dotfiles || echo "Generate/Upload SSH Key To Github: https://help.github.com/articles/generating-ssh-keys/"
 fi
@@ -19,8 +19,8 @@ fi
 # Install Homebrew
 if ! which brew >/dev/null
 then
-	echo
-	echo "Installing Homebrew"
+  echo
+  echo "Installing Homebrew"
   ruby -e "$(curl -fsSL https://raw.githubusercontent.com/Homebrew/install/master/install)"
 fi
 
@@ -34,7 +34,7 @@ sudo easy_install pip
 brew install python3
 
 link() {
-    ln -fs ~/code/dotfiles/$1 ~
+  ln -fs ~/code/dotfiles/$1 ~
 }
 
 # Link files
@@ -67,9 +67,9 @@ ln -s default-packages $(nodenv root)/default-packages
 # Install GVM
 if ! which gvm >/dev/null
 then
-	zsh < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
+  zsh < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
   source /Users/sam/.gvm/scripts/gvm
-	gvm install go1.4 -B
+  gvm install go1.4 -B
   gvm use go1.4
   export GOROOT_BOOTSTRAP=$GOROOT
   gvm install go1.6
