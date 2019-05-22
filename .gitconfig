@@ -23,6 +23,7 @@
   p = pull -r
   ps = !git stash && git pull -r && git stash pop
   pu = push -u origin HEAD
+  pun = !git pu --no-verify
   pf = push --force-with-lease
   pt = push --tags
   r = rebase
