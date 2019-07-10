@@ -5,7 +5,11 @@ nnoremap <Leader>mt :Dispatch mix test <CR>
 nnoremap <Leader>mc :Dispatch mix compile <CR>
 nnoremap <Leader>mcr :Dispatch mix credo --strict <CR>
 nnoremap <Leader>mdy :Dispatch mix dialyzer --halt-exit-status <CR>
-nnoremap <Leader>mT :FocusDispatch mix test % <CR>
+function RunCurrentTestMix()
+  :FocusDispatch mix test %
+  :Dispatch
+endfunction
+nnoremap <Leader>mT :exec RunCurrentTestMix() <CR>
 " git clone git@github.com:JakeBecker/elixir-ls.git ~/.elixir-ls
 " cd ~/.elixir-ls
 " mix deps.get deps.compile compile
