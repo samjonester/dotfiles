@@ -11,6 +11,7 @@ fi
 
 # Customize to your needs...
 
+export ERL_AFLAGS="+P 2000000 -kernel shell_history enabled"
 
 #
 # Aliases
