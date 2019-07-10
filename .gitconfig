@@ -12,6 +12,7 @@
   ap = add -p
   d = diff --color
   dc = !git d --cached
+  dm = !git d origin/master..HEAD
   f = fetch
   co = checkout
   com = !git co master && git p
