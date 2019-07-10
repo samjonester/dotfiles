@@ -25,6 +25,7 @@
   ps = !git stash && git pull -r && git stash pop
   pu = push -u origin HEAD
   pun = !git pu --no-verify
+  pfn = !git pf --no-verify
   pf = push --force-with-lease
   pt = push --tags
   r = rebase
@@ -32,8 +33,11 @@
   stashall = stash save --all
   pop = stash pop
   rmaster = !git fetch && git rebase origin/master
-  ri = rebase -i
-  rim = rebase -i origin/master
+  rc = rebase --continue
+  ri = rebase -i --autosquash
+  rim = !git ri origin/master
+  frm = !git f && git rebase origin/master
+  update-remote = !git frm && git pfn
   unstage = reset HEAD
   fix = !sh -c 'REV=$(git rev-parse $1) && git commit --fixup $@ && git rebase -i --autosquash $REV^' -
   l = log --abbrev-commit --date=relative
@@ -47,7 +51,8 @@
   rl = reflog --abbrev-commit --date=relative
   cob = checkout -b
   up = !git pull --rebase --prune $@ && git submodule update --init --recursive
-  wip = !git add -A && git commit -m '!SAVEPOINT'
+  wip = commit -am '!SAVEPOINT'
+  show = show --pretty=full
   undo = reset HEAD~1 --mixed
   amend = commit --amend
   aamend = !git aa && git amend
