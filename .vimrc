@@ -5,20 +5,17 @@ set shell=zsh        " Same shell I normally use
 let mapleader = "\<Space>"
 
 
-" Required:
-set runtimepath+=~/.vim/bundle/repos/github.com/Shougo/dein.vim
-
 if &compatible
   set nocompatible
 endif
-set runtimepath+=~/.vim/bundle/repos/github.com/Shougo/dein.vim
+set runtimepath+=~/.dein/repos/github.com/Shougo/dein.vim
 
 " Required:
-call dein#begin('/Users/sam/.dein')
+call dein#begin('~/.dein')
 
 " Let dein manage dein
 " Required:
-call dein#add('Shougo/dein.vim')
+call dein#add('~/.dein/repos/github.com/Shougo/dein.vim')
 
 
 """""""""""""""
