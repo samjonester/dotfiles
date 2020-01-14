@@ -21,13 +21,3 @@ path=(
 # export PATH="$HOME/.jenv/bin:$PATH"
 # eval "$(jenv init -)"
 
-# go version manager
-#eval "$(goenv init -)"
-
-export PATH="$HOME/.rbenv/bin:$PATH"
-eval "$(nodenv init - --no-rehash)"
-export PATH="$HOME/.nodenv/shims:$PATH"
-eval "$(rbenv init - --no-rehash)"
-export PATH="$HOME/.exenv/bin:$PATH"
-eval "$(exenv init - --no-rehash)"
-
