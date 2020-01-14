@@ -11,7 +11,15 @@ fi
 . /usr/local/opt/asdf/asdf.sh
 . /usr/local/opt/asdf/etc/bash_completion.d/asdf.bash
 
+
 # Customize to your needs...
+zstyle :fzy:tmux    enabled      yes
+zstyle :fzy:file    command      rg --files
+zstyle :fzy:cd      command      rg --files
+bindkey '\ec' fzy-cd-widget
+bindkey '^T'  fzy-file-widget
+bindkey '^R'  fzy-history-widget
+bindkey '^P'  fzy-proc-widget
 
 export ERL_AFLAGS="+P 2000000 -kernel shell_history enabled"
 
@@ -40,7 +48,7 @@ alias ni='npm install'
 alias tab='open . -a iTerm'
 alias g=hub
 alias cat=bat --theme darktwo
-alias ls='exa --all --group --header --classify --git'
+alias ls='exa --long --all --group --header --classify --git'
 
 
 
@@ -57,10 +65,6 @@ export PATH="$HOME/.local/bin:$PATH"
 
 # added by travis gem
 [ -f /Users/samjones/.travis/travis.sh ] && source /Users/samjones/.travis/travis.sh
-
-eval "$(nodenv init -)"
-eval "$(rbenv init -)"
-eval "$(exenv init -)"
 
 # git magic
 eval "$(hub alias -s)"
