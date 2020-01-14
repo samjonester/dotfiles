@@ -50,31 +50,22 @@ link ".gitignore_global"
 # git clone https://github.com/syl20bnr/spacemacs ~/.emacs.d
 # link ".spacemacs"
 
-# Install Ruby
-brew install rbenv ruby-build rbenv-default-gems rbenv-ctags rbenv-bundler-ruby-version rbenv-gemset rbenv-binstubs brew-gem
+# Install ASDF tool version manager
+brew install asdf
+asdf plugin add ruby
+asdf plugin add erlang
+asdf plugin add elixir
+asdf plugin add node
+asdf plugin add terraform
+
+# Install Ruby Gems
+brew install brew-gem
 brew gem install bundler
 brew gem install pry
 brew gem install pry-doc
 brew gem install pry-nav
 brew gem install pry-stack_explorer
 brew gem install gem-ctags
-
-# Install node
-brew tap nodenv/nodenv
-brew install nodenv node-build nodenv-package-json-engine nodenv-default-packages
-ln -s default-packages $(nodenv root)/default-packages
-
-# Install GVM
-if ! which gvm >/dev/null
-then
-  zsh < <(curl -s -S -L https://raw.githubusercontent.com/moovweb/gvm/master/binscripts/gvm-installer)
-  source /Users/sam/.gvm/scripts/gvm
-  gvm install go1.4 -B
-  gvm use go1.4
-  export GOROOT_BOOTSTRAP=$GOROOT
-  gvm install go1.6
-  gvm use go1.6 --default
-fi
 
 # Install prezto
 git clone --recursive https://github.com/sorin-ionescu/prezto.git "${ZDOTDIR:-$HOME}/.zprezto"
@@ -101,11 +92,6 @@ echo
 echo "Install Elm"
 brew cask install elm-platform
 npm install -g elm elm-oracle
-
-# Install Elm stuff
-echo
-echo "Install Elixir"
-brew cask install exenv elixir-build erlang
 
 # Tmux
 brew install tmux tmate reattach-to-user-namespace
