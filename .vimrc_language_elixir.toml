@@ -6,7 +6,7 @@ nnoremap <Leader>mc :Dispatch mix compile <CR>
 nnoremap <Leader>mcr :Dispatch mix credo --strict <CR>
 nnoremap <Leader>mdy :Dispatch mix dialyzer --halt-exit-status <CR>
 function RunCurrentTestMix()
-  :FocusDispatch mix test %
+  :FocusDispatch mix test.watch %
   :Dispatch
 endfunction
 nnoremap <Leader>mT :exec RunCurrentTestMix() <CR>
@@ -15,7 +15,7 @@ nnoremap <Leader>mT :exec RunCurrentTestMix() <CR>
 " mix deps.get deps.compile compile
 " mix elixir_ls.release -o rel
 let g:ale_elixir_elixir_ls_release = $HOME.'/.elixir-ls/rel/'
-let g:ale_elixir_elixir_ls_config = {'elixirLS': {'dialyzerEnabled': v:false}}
+" let g:ale_elixir_elixir_ls_config = {'elixirLS': {'dialyzerEnabled': v:false}}
 let g:ale_linters.elixir = ['elixir-ls', 'credo']
 let g:ale_fixers.elixir = ['mix_format']
 '''
