@@ -53,6 +53,7 @@ let g:fzf_history_dir = '~/.local/share/fzf-history'
 map <C-p> :FZF<CR>
 nmap <C-a> :Commands<CR>
 nmap <C-c> :Commits<CR>
+nmap <C-b> :Buffers<CR>
 nnoremap <silent> <Leader>* :Ag <C-R><C-W><CR>
 nnoremap <silent> <Leader>ag :Ag<CR>
 '''
