@@ -1,5 +1,6 @@
 *~
 .DS_Store
+.DS_Store.*
 *.sw*
 */build
 *.class
@@ -20,3 +21,4 @@ node_modules
 .npmrc
 Session.vim
 /.elixir_ls/
+tasks.json
