@@ -16,7 +16,10 @@ if exists('+colorcolumn')
 endif
 
 " Set vim visual bell to do nothing
+set visualbell
 set t_vb=
+
+colorscheme delek
 '''
 
 [[plugins]]
@@ -25,16 +28,6 @@ build = 'make'
 
 [[plugins]]
 repo = 'vim-scripts/L9'
-
-[[plugins]]
-repo = 'altercation/vim-colors-solarized'
-hook_source = '''
-set background=dark   " Dark background style
-let g:solarized_termtrans = 1
-" let g:solarized_termcolors=256
-set spell
-colorscheme solarized
-'''
 
 [[plugins]]
 repo = 'vim-airline/vim-airline'
