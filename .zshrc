@@ -9,7 +9,7 @@ if [[ -s "${ZDOTDIR:-$HOME}/.zprezto/init.zsh" ]]; then
 fi
 
 . /usr/local/opt/asdf/asdf.sh
-. /usr/local/opt/asdf/etc/bash_completion.d/asdf.bash
+# . /usr/local/opt/asdf/etc/bash_completion.d/asdf.bash
 
 
 # Customize to your needs...
