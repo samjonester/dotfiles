@@ -13,6 +13,7 @@
   d = diff --color
   dc = !git d --cached
   dm = !git d origin/master..HEAD
+  e = "!f() { echo $1 >> .git/info/exclude; }; f"
   f = fetch
   co = checkout
   com = !git co master && git p
