@@ -18,6 +18,7 @@
   co = checkout
   com = !git co master && git p
   cob = checkout -b
+  fco = "!f() { git fetch && git checkout $1; }; f"
   c = commit
   ca = !git add -A && git commit
   ac = !git ca
