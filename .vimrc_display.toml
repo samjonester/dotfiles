@@ -58,6 +58,12 @@ autocmd VimEnter * if argc() == 1 && isdirectory(argv()[0]) && !exists("s:std_in
 '''
 
 [[plugins]]
+repo = 'frazrepo/vim-rainbow'
+hook_source = '''
+let g:rainbow_active = 1
+'''
+
+[[plugins]]
 repo = 'scrooloose/nerdtree'
 on_cmd = ['NERDTreeToggle', 'NERDTreeFind', 'NERDTree']
 hook_source = '''
