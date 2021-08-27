@@ -15,6 +15,9 @@ source ~/dotfiles/core/environment.zsh
 # Load color helper variable definitions
 source ~/dotfiles/core/formatting.zsh
 
+# Load configs for MacOS. Does nothing if not on MacOS
+source ~/dotfiles/core/osx.zsh
+
 # Prepare default antigen plugins
 source ~/dotfiles/core/default_bundles.zsh
 
