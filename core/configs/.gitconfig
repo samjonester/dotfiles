@@ -1,0 +1,38 @@
+[include]
+
+	# Include user-specific info like git credentials.
+	path = ~/.gitconfig.local
+	path = ~/dotfiles/personal/.gitconfig
+
+[alias]
+
+  # Amend the currently staged files to the latest commit
+	amend = commit --amend --reuse-message=HEAD
+
+  # Append any staged files onto the most recent commit.
+	commend = commit --amend --no-edit
+
+  # Custom log formats
+	ll = !git --no-pager log --graph --all --decorate --pretty=format:'%C(auto)%h%d  %ad %C(red bold)(%ar%C(red bold))%Creset  %Creset%C(magenta)%an %Creset<%ae>  %C(white bold)%<(80,trunc)%s' --date=iso
+	l = !git --no-pager log -n 40 --graph --pretty=format:'%Cred%h%Creset -%C(auto)%d%Creset %s %Cgreen(%cr) %C(blue bold)<%an>%Creset'
+
+  # View the current working tree status using the short format
+	s = status -s
+
+  # Show verbose output about tags, branches or remotes
+	tags = tag -l
+	branches = branch -av
+	remotes = remote -v
+
+  # Remove branches that have already been merged with master
+	# a.k.a. ‘delete merged’
+	dm = "!git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
+
+  # Forcepush, but fail if the remote has been updated since you last pulled.
+  # Prevents clobbering other people's commits on the same branch unless you really, really want to.
+  forcepush = push --force-with-lease
+
+[apply]
+
+	# Detect whitespace errors when applying a patch
+	whitespace = fix
