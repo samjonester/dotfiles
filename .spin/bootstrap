@@ -1,0 +1,11 @@
+#!/bin/bash
+
+# For setting up a dev environment in Spin to work on the dotfiles template.
+
+# When working on the starter template repo in spin, force the dotfiles template repo to be the dotfiles provider,
+# regardless of personal dotfiles. This will completely stomp your own dotfiles in favor of the template's.
+
+set -e
+
+rm -rf ~/dotfiles
+ln -vsfn ~/src/github.com/Shopify/dotfiles-starter-template ~/dotfiles
