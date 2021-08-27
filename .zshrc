@@ -3,9 +3,17 @@
 # the dotfiles-starter-template
 
 # Include the default Spin zshrc
+# This file has a number of useful functions for detecting the status of the Spin environment.
+# We can still overwrite the terminal display later on, if we want.
 if [ $SPIN ]; then
   source /etc/zsh/zshrc.default.inc.zsh
 fi
+
+# Set up important environment variables
+source ~/dotfiles/core/environment.zsh
+
+# Load color helper variable definitions
+source ~/dotfiles/core/formatting.zsh
 
 # Prepare default antigen plugins
 source ~/dotfiles/core/default_bundles.zsh
