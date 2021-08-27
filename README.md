@@ -11,9 +11,5 @@ dotfiles starter template - compatible with MacOS and Spin.
 The `core` directory contains the framework scripts. Don't alter these unless you want to leave the upgrade path and
 do your own thing.
 
-The `personal/` directory is where any of your own customizations should go. It takes the form of different hook files
-you can define that the core scripts will call when necessary.
-Files:
-- `zshrc-before.zsh` - Runs before anything else in `~/.zshrc`.
-- `zshrc-after.zsh` - Runs after `~/.zshrc` completes. Most of your personalization can probably go here, as this
-running last will allow you to overwrite any changes applied in `.zshrc`.
+The `personal/` directory is where any of your own customizations should go. Any file with the extension `.zsh` will
+be loaded. These files are loaded right at the end of the terminal session setup (at the end of `.zshrc`).
