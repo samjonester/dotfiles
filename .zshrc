@@ -36,6 +36,8 @@ if [ -e $DF_USER/antigen_bundles.zsh ]; then
   source $DF_USER/antigen_bundles.zsh
 fi
 
+source $DF_CORE/utils.zsh
+
 # Load custom dircolors, if present
 if [ -e $DF_USER/dircolors ]; then
   eval $(dircolors $DF_USER/dircolors)
