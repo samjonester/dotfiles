@@ -4,3 +4,6 @@
 # See https://github.com/zsh-users/antigen/wiki/Commands#antigen-bundle for instructions on including custom plugins. 
 #
 # Include a plugin with `antigen bundle <plugin-name>`.
+
+# Uncomment to use the Staples theme: https://github.com/dersam/staples
+# antigen theme dersam/staples staples

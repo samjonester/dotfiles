@@ -1,7 +1,6 @@
 #!/usr/bin/env zsh
 
 # Runs on setup of a new spin environment.
-
 # Create common color functions.
 autoload -U colors
 colors
