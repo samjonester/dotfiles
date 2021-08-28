@@ -21,9 +21,7 @@ fi
 
 # Set up custom environment variables
 source $DF_CORE/environment.zsh
-if [ -e $DF_USER/environment.zsh ]; then
-  source $DF_USER/environment.zsh
-fi
+source $DF_USER/environment.zsh
 
 # Load color helper variable definitions
 source $DF_CORE/formatting.zsh
@@ -38,9 +36,7 @@ fi
 
 # Load zsh plugins via Antigen
 source $DF_CORE/default_bundles.zsh
-if [ -e $DF_USER/antigen_bundles.zsh ]; then
-  source $DF_USER/antigen_bundles.zsh
-fi
+source $DF_USER/antigen_bundles.zsh
 
 source $DF_CORE/utils.zsh
 
@@ -52,13 +48,10 @@ fi
 source $DF_CORE/filter_history.zsh
 
 # Load personalized configs for Spin environments
-if [ $SPIN ]; then
-  source $DF_USER/spin.zsh
-fi
+source $DF_USER/spin.zsh
 
-if [ -e $DF_USER/custom.zsh ]; then
-  source $DF_USER/custom.zsh
-fi
+source $DF_USER/custom.zsh
+
 
 # Loading autocompletions is time consuming. It's faster to do it all once all configuration
 # is ready. That way, if the user wants to modify the antigen bundles included by default,
@@ -66,6 +59,4 @@ fi
 antigen apply
 
 # Load changes specific to this local environment.
-if [ -e ~/extra.zsh ]; then
-  source ~/extra.zsh
-fi
+source ~/extra.zsh

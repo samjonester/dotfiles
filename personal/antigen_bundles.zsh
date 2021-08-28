@@ -6,4 +6,4 @@
 # Include a plugin with `antigen bundle <plugin-name>`.
 
 # Uncomment to use the Staples theme: https://github.com/dersam/staples
-# antigen theme dersam/staples staples
+antigen theme dersam/staples staples
