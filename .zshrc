@@ -2,6 +2,10 @@
 # Don't modify this file directly, or you'll remove your ability to update against new versions of
 # the dotfiles-starter-template
 
+export DF_HOME=~/dotfiles
+export DF_CORE=$DF_HOME/core
+export DF_USER=$DF_HOME/personal
+
 # Include the default Spin zshrc
 # This file has a number of useful functions for detecting the status of the Spin environment.
 # We can still overwrite the terminal display later on, if we want.
@@ -10,40 +14,42 @@ if [ $SPIN ]; then
 fi
 
 # Set up custom environment variables
-source ~/dotfiles/core/environment.zsh
-if [ -e ~/dotfiles/personal/environment.zsh ]; then
-  source ~/dotfiles/personal/environment.zsh
+source $DF_CORE/environment.zsh
+if [ -e $DF_USER/environment.zsh ]; then
+  source $DF_USER/environment.zsh
 fi
 
 # Load color helper variable definitions
-source ~/dotfiles/core/formatting.zsh
+source $DF_CORE/formatting.zsh
 
 # Load configs for MacOS. Does nothing if not on MacOS
 if [ "$ZSH_HOST_OS" = "darwin" ]; then
-  source ~/dotfiles/core/macos.zsh
-  if [ -e ~/dotfiles/personal/macos.zsh ]; then
-    source ~/dotfiles/personal/macos.zsh
+  source $DF_CORE/macos.zsh
+  if [ -e $DF_USER/macos.zsh ]; then
+    source $DF_USER/macos.zsh
   fi
 fi
 
 # Load zsh plugins via Antigen
-source ~/dotfiles/core/default_bundles.zsh
-if [ -e ~/dotfiles/personal/antigen_bundles.zsh ]; then
-  source ~/dotfiles/personal/antigen_bundles.zsh
+source $DF_CORE/default_bundles.zsh
+if [ -e $DF_USER/antigen_bundles.zsh ]; then
+  source $DF_USER/antigen_bundles.zsh
 fi
 
 # Load custom dircolors, if present
-if [ -e ~/dotfiles/personal/dircolors ]; then
-  eval $(dircolors ~/dotfiles/personal/dircolors)
+if [ -e $DF_USER/dircolors ]; then
+  eval $(dircolors $DF_USER/dircolors)
 fi
+
+source $DF_CORE/filter_history.zsh
 
 # Load personalized configs for Spin environments
 if [ $SPIN ]; then
-  source ~/dotfiles/personal/spin.zsh
+  source $DF_USER/spin.zsh
 fi
 
-if [ -e ~/dotfiles/personal/custom.zsh ]; then
-  source ~/dotfiles/personal/custom.zsh
+if [ -e $DF_USER/custom.zsh ]; then
+  source $DF_USER/custom.zsh
 fi
 
 # Loading autocompletions is time consuming. It's faster to do it all once all configuration
