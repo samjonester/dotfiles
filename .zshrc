@@ -9,24 +9,35 @@ if [ $SPIN ]; then
   source /etc/zsh/zshrc.default.inc.zsh
 fi
 
-# Set up important environment variables
+# Set up custom environment variables
 source ~/dotfiles/core/environment.zsh
 
 # Load color helper variable definitions
 source ~/dotfiles/core/formatting.zsh
 
 # Load configs for MacOS. Does nothing if not on MacOS
-source ~/dotfiles/core/osx.zsh
+if [ "$ZSH_HOST_OS" = "darwin" ]; then
+  source ~/dotfiles/core/macos.zsh
+  if [ -e ~/dotfiles/personal/macos.zsh ]; then
+    source ~/dotfiles/personal/macos.zsh
+  fi
+fi
 
-# Prepare default antigen plugins
+# Load zsh plugins via Antigen
 source ~/dotfiles/core/default_bundles.zsh
+if [ -e ~/dotfiles/personal/antigen_bundles.zsh ]; then
+  source ~/dotfiles/personal/antigen_bundles.zsh
+fi
 
 # Load custom dircolors, if present
-test -f ~/dotfiles/personal/dircolors && eval $(dircolors ~/dotfiles/personal/dircolors)
+if [ -e ~/dotfiles/personal/dircolors ]; then
+  eval $(dircolors ~/dotfiles/personal/dircolors)
+fi
 
-# Load your own custom scripts from ~/dotfiles/personal. 
-# Everything in that directory with a .zsh extension will be sourced.
-test -d ~/dotfiles/personal && antigen bundle ~/dotfiles/personal --no-local-clone
+# Load personalized configs for Spin environments
+if [ $SPIN ]; then
+  source ~/dotfiles/personal/spin.zsh
+fi
 
 # Loading autocompletions is time consuming. It's faster to do it all once all configuration
 # is ready. That way, if the user wants to modify the antigen bundles included by default,
@@ -34,4 +45,6 @@ test -d ~/dotfiles/personal && antigen bundle ~/dotfiles/personal --no-local-clo
 antigen apply
 
 # Load changes specific to this local environment.
-test -f ~/extra.zsh && source ~/extra.zsh
+if [ -e ~/extra.zsh ]; then
+  source ~/extra.zsh
+fi
