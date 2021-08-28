@@ -1,5 +1,17 @@
 # Useful aliases and functions
 
+# From https://twitter.com/climagic/status/370595711483514880
+# Example: git push origin master -f || fliptable
+fliptable()
+{
+	echo "（╯°□°）╯ ┻━┻";
+}
+
+ultraflip()
+{
+	echo " ┻━┻ ︵╰(°□°)╯︵ ┻━┻";
+}
+
 # Open VSCode on the current directory
 vs () {
 	code .
