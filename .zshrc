@@ -42,6 +42,10 @@ if [ $SPIN ]; then
   source ~/dotfiles/personal/spin.zsh
 fi
 
+if [ -e ~/dotfiles/personal/custom.zsh ]; then
+  source ~/dotfiles/personal/custom.zsh
+fi
+
 # Loading autocompletions is time consuming. It's faster to do it all once all configuration
 # is ready. That way, if the user wants to modify the antigen bundles included by default,
 # they won't incur an additional time cost from another call to apply.
