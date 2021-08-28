@@ -13,6 +13,8 @@ Set up the repo by cloning to `~/dotfiles`:
 git clone https://github.com/Shopify/dotfiles-starter-template.git ~/dotfiles
 ```
 
+- how to pull from original template, vs push to your own personal version
+
 --------------
 The `core` directory contains the framework scripts. Don't alter these unless you want to leave the upgrade path and
 do your own thing.
