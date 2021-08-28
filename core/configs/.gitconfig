@@ -36,3 +36,63 @@
 
 	# Detect whitespace errors when applying a patch
 	whitespace = fix
+
+[core]
+	# http://adaptivepatchwork.com/2012/03/01/mind-the-end-of-your-line/
+	eol = native
+	autocrlf = input
+	safecrlf = true
+	ignorecase = false
+	excludesfile = ~/.gitignore_global
+
+	# Make `git rebase` safer on OS X
+	# More info: <http://www.git-tower.com/blog/make-git-rebase-safe-on-osx/>
+	trustctime = false
+
+	# Prevent showing files whose names contain non-ASCII symbols as unversioned.
+	# http://michael-kuehnel.de/git/2014/11/21/git-mac-osx-and-german-umlaute.html
+	precomposeunicode = false
+
+[color "branch"]
+
+	current = yellow reverse
+	local = yellow
+	remote = green
+
+[color "diff"]
+
+	meta = yellow bold
+	frag = magenta bold # line info
+	old = red # deletions
+	new = green # additions
+
+[color "status"]
+
+	added = yellow
+	changed = green
+	untracked = cyan
+
+[diff]
+
+	# Detect copies as well as renames
+	renames = copies
+	algorithm = patience
+
+[help]
+
+	# Automatically correct and execute mistyped commands. Keep this off unless you enjoy pain.
+	autocorrect = 0
+
+[pull]
+	# Prevent automatic creation of merge commits if the pull can't fast forward.
+	# If a pull fails because of this, you can retry it with `git pull --rebase` to rebase onto the new commits.
+	# Shopify prefers to rebase, so this will require you to decide if a rebase is necessary.
+	ff = only
+
+[rerere]
+	# https://git-scm.com/docs/git-rerere
+	# Reuse Recorded Resolution
+	# If you have a merge conflict, this setting will record how that conflict was resolved. If you would then need to
+	# resolve that same conflict in a future rebase, this setting will reuse your previously recorded conflict resolution.
+	enabled = true
+	autoupdate = true

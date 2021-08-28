@@ -10,16 +10,13 @@ colors
 # and that you don't want to follow you across environments.
 touch ~/extra.zsh
 
-# Install the antigen plugin/theme manager
+# Install the antigen plugin/theme manager if it's not already installed.
 if [[ ! -d $HOME/antigen ]]; then
 	echo -e "Antigen not found, installing..."
 	cd $HOME
 	git clone https://github.com/zsh-users/antigen.git
 	cd -
 fi
-
-# Load the antigen plugin/theme manager
-source ~/antigen/antigen.zsh
 
 if [ $SPIN ]; then
   # Install Ripgrep for better code searching: `rg <string>` to search. Obeys .gitignore
@@ -36,7 +33,7 @@ fi
 # Link in the custom gitconfig. This has to happen after we rename to .gitconfig.local, otherwise we clobber the
 # spin generated user config.
 ln -vsfn ~/dotfiles/core/configs/.gitconfig ~/.gitconfig
-ln -vsfn ~/dotfiles/core/configs/.gitignore ~/.gitignore
+ln -vsfn ~/dotfiles/core/configs/.gitignore ~/.gitignore_global
 
 # Symlink this repo's .zshrc to ~/.zshrc. Using a symlink ensures that when the repo is
 # updated, the terminal will pick up the new version on reload without having to run
