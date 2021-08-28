@@ -14,7 +14,9 @@ colors
 # This file has a number of useful functions for detecting the status of the Spin environment.
 # We can still overwrite the terminal display later on, if we want.
 if [ $SPIN ]; then
-  source /etc/zsh/zshrc.default.inc.zsh
+  if [ -e /etc/zsh/zshrc.default.inc.zsh ]; then
+    source /etc/zsh/zshrc.default.inc.zsh
+  fi
 fi
 
 # Set up custom environment variables
