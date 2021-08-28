@@ -27,3 +27,6 @@ antigen bundle sudo
 
 # Syntax highlighting on the prompt as you type commands
 antigen bundle zsh-users/zsh-syntax-highlighting
+
+# Substring search in history of partially entered commands (i.e. enter `git` and search only commands starting with git)
+# antigen bundle zsh-users/zsh-history-substring-search
