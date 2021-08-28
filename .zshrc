@@ -11,6 +11,9 @@ fi
 
 # Set up custom environment variables
 source ~/dotfiles/core/environment.zsh
+if [ -e ~/dotfiles/personal/environment.zsh ]; then
+  source ~/dotfiles/personal/environment.zsh
+fi
 
 # Load color helper variable definitions
 source ~/dotfiles/core/formatting.zsh
