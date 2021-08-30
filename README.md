@@ -45,3 +45,8 @@ Load order can be seen in `.zshrc`.
 - `spin.zsh`: Customizations that should only be applied to Spin environments.
 - `custom.zsh`: Customizations that should apply everywhere. This is the LAST file
 loaded, so any conflicting changes made here will override any previous files.
+
+#### Custom install
+`personal/install.sh` is a special case. It is run as part of the `install.sh` script, and should be where you put
+any customizations around initial setup and installation. For example, if you want to symlink a config from `personal`
+into your home directory, that's where you'd run that command.
