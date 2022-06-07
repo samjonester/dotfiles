@@ -4,6 +4,7 @@ case $ZSH_HOST_OS in
 	darwin*)
 
 	#Environment variables
+  source ~/.dotfile_brew_setup
 
 	# Assumes that coreutils and other GNU tools have replaced OSX'
 	export PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH"
