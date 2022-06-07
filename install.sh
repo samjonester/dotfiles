@@ -17,6 +17,7 @@ case $ZSH_HOST_OS in
   BREW_EXECUTABLE=/opt/homebrew/bin/brew
 
   $BREW_EXECUTABLE shellenv > $HOME/.dotfile_brew_setup
+  $BREW_EXECUTABLE install coreutils
 ;;
 esac
 
