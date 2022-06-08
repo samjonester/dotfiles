@@ -9,6 +9,18 @@ colors
 # and that you don't want to follow you across environments.
 touch ~/extra.zsh
 
+ZSH_HOST_OS=$(uname | awk '{print tolower($0)}')
+
+case $ZSH_HOST_OS in
+  darwin*)
+
+  BREW_EXECUTABLE=/opt/homebrew/bin/brew
+
+  $BREW_EXECUTABLE shellenv > $HOME/.dotfile_brew_setup
+  $BREW_EXECUTABLE install coreutils
+;;
+esac
+
 # Install the antigen plugin/theme manager if it's not already installed.
 if [[ ! -d $HOME/antigen ]]; then
 	echo -e "Antigen not found, installing..."
