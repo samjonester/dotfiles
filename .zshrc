@@ -2,7 +2,8 @@
 # Don't modify this file directly, or you'll remove your ability to update against new versions of
 # the dotfiles-starter-template
 
-export DF_HOME=~/dotfiles
+export DOTFILES_DIRECTORY_NAME=$([ $SPIN ] && echo "shopify-dotfiles" || echo "dotfiles")
+export DF_HOME=~/$DOTFILES_DIRECTORY_NAME
 export DF_CORE=$DF_HOME/core
 export DF_USER=$DF_HOME/personal
 
