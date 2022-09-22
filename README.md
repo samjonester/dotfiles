@@ -11,7 +11,7 @@ git clone https://github.com/Shopify/dotfiles-starter-template.git ~/dotfiles
 2. Run `install.sh`. This will symlink configs and .zshrc, overwriting anything you already have.
 3. Open a new terminal, or `exec zsh`. Antigen bundles will be installed and you should be ready to go.
 
-To make your own copy to save your customizations, create a personal Github repo called `dotfiles`, and push to it.
+To make your own copy to save your customizations, create a branch with your Github handle to the [dotfiles repo](https://github.com/Shopify/dotfiles), and push to it.
 
 ### Update
 If you've made your own copy, you can still pull updates from the main repo by creating an `upstream` origin.
