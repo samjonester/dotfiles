@@ -3,6 +3,7 @@
 	# Include user-specific info like git credentials.
 	path = ~/.gitconfig.local
 	path = ~/dotfiles/personal/.gitconfig
+	path = ~/shopify-dotfiles/personal/.gitconfig
 
 [alias]
 
