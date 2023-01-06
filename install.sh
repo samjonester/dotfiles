@@ -33,17 +33,11 @@ fi
 if [ $SPIN ]; then
   # Install Ripgrep for better code searching: `rg <string>` to search. Obeys .gitignore
   sudo apt-get install -y ripgrep
-
-  # Set system generated .gitconfig to .gitconfig.local. We'll pull it in later as part
-  # of our custom gitconfig. The generated gitconfig already has the right user and email,
-  # since Spin knows that from login.
-  mv -n ~/.gitconfig ~/.gitconfig.local
 fi
 
 # Symlink core configs
 
-# Link in the custom gitconfig. This has to happen after we rename to .gitconfig.local, otherwise we clobber the
-# spin generated user config.
+# Link in the custom gitconfig.
 ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/core/configs/.gitconfig ~/.gitconfig
 ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/core/configs/.gitignore_global ~/.gitignore_global
 
