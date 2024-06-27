@@ -19,7 +19,6 @@ endif
 set visualbell
 set t_vb=
 
-colorscheme delek
 '''
 
 [[plugins]]
@@ -39,13 +38,14 @@ let g:airline_detect_spell = 0    " Don't show spell
 let g:airline#extensions#default#layout = [ [ 'a', 'b', 'c' ], [ 'z', 'error', 'warning' ] ]
 let g:airline_section_b='%{airline#util#wrap(airline#extensions#branch#get_head(),0)}'
 let g:airline_section_z = airline#section#create(['col %3v'])
+let g:airline_theme='sol'
 '''
 
 [[plugins]]
 repo = 'vim-airline/vim-airline-themes'
 depends = 'vim-airline/vim-airline'
 hook_add = '''
-let g:airline_theme='solarized'
+let g:airline_theme='sol'
 '''
 
 hook_add = '''
