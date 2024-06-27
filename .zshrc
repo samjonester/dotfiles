@@ -49,7 +49,7 @@ alias ni='npm install'
 alias tab='open . -a iTerm'
 alias g=hub
 alias cat=bat --theme darktwo
-alias ls='exa --long --all --group --header --classify --git'
+alias ls='eza --long --all --group --header --classify --git'
 
 
 

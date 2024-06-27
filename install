@@ -25,7 +25,7 @@ then
 fi
 
 # Install Homebrew tools
-brew install wget git vim zsh heroku-toolbelt ripgrep cmake tree gpg hub editorconfig git-imerge jq fzf zsh-completions bat exa
+brew install wget git vim zsh heroku-toolbelt ripgrep cmake tree gpg hub editorconfig git-imerge jq fzf zsh-completions bat eza
 brew tap heroku/brew && brew install heroku
 echo
 echo "Installing python"
