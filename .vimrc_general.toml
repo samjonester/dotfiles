@@ -35,6 +35,18 @@ nnoremap <Leader>ah :ALEHover <CR>
 nnoremap <Leader>af :ALEFindReferences <CR>
 '''
 
+# [[plugins]]
+# repo = 'roxma/nvim-yarp'
+#
+# [[plugins]]
+# repo = 'roxma/vim-hug-neovim-rpc'
+#
+# [[plugins]]
+# repo = 'Shougo/deoplete.nvim'
+# hook_add = '''
+# let g:deoplete#enable_at_startup = 1
+# '''
+
 [[plugins]]
 repo = 'xolox/vim-misc'
 
@@ -168,3 +180,9 @@ hook_add = '''
 nnoremap <Leader>dcu :Dispatch docker-compose up -d <CR>
 nnoremap <Leader>dcd :Dispatch docker-compose down <CR>
 '''
+
+[[plugins]]
+repo = 'vim-pandoc/vim-criticmarkup'
+
+[[plugins]]
+repo = 'honza/vim-snippets'
