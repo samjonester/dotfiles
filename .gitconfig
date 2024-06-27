@@ -12,11 +12,11 @@
   ap = add -p
   d = diff --color
   dc = !git d --cached
-  dm = !git d origin/master..HEAD
+  dm = !git d origin/main..HEAD
   e = "!f() { echo $1 >> .git/info/exclude; }; f"
   f = fetch
   co = checkout
-  com = !git co master && git p
+  com = !git co main && git p
   cob = checkout -b
   fco = "!f() { git fetch && git checkout $1; }; f"
   c = commit
@@ -34,11 +34,11 @@
   rs = rebase -i --autosquash
   stashall = stash save --all
   pop = stash pop
-  rmaster = !git fetch && git rebase origin/master
+  rmain = !git fetch && git rebase origin/main
   rc = rebase --continue
   ri = rebase -i --autosquash
-  rim = !git ri origin/master
-  frm = !git f && git rebase origin/master
+  rim = !git ri origin/main
+  frm = !git f && git rebase origin/main
   update-remote = !git frm && git pfn
   unstage = reset HEAD
   fix = !sh -c 'REV=$(git rev-parse $1) && git commit --fixup $@ && git rebase -i --autosquash $REV^' -
@@ -46,8 +46,8 @@
   lf = !git l --pretty=full
   ln = !git l -n
   lnf = !git l --pretty=full -n
-  lm = !git l origin/master..
-  lmf = !git l --pretty=full origin/master..
+  lm = !git l origin/main..
+  lmf = !git l --pretty=full origin/main..
   m = merge
   mt = mergetool
   rl = reflog --abbrev-commit --date=relative
@@ -60,14 +60,14 @@
   aamend = !git aa && git amend
   fuckit = !git clean -df && git co -- .
   origin = !git reset --hard $(git symbolic-ref --short -q  HEAD)
-  delete-merged-branches = "!git co master && git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
+  delete-merged-branches = "!git co main && git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
   unpublish = "!git push origin :$(git branch-name)"
   exclude = "!echo >> .git/info/exclude"
   pro = "!hub pull-request"
   in = !git f && git l $(git rev-parse --abbrev-ref --symbolic-full-name @{u})
   noindex = update-index --assume-unchanged
   first-commit = rev-list --max-parents=0 HEAD
-  delete-merged-branches = "!git co master && git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
+  delete-merged-branches = "!git co main && git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
 
 [merge]
   tool = "vim -d"
@@ -94,3 +94,5 @@
   pretty = format:%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset
 [pull]
   rebase = true
+[init]
+	defaultBranch = main
