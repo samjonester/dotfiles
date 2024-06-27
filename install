@@ -102,3 +102,7 @@ brew install tmux tmate reattach-to-user-namespace
 # Fira Code Ligature Font
 brew tap homebrew/cask-fonts
 brew cask install font-fira-code
+
+# Install VSCode Extensions & configs
+ cat code/extensions.list |% { code --install-extension $_}
+ cp code/user-settings.json ~/Library/Application Support/Code/User/settings.json
