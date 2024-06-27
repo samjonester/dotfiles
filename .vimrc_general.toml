@@ -110,10 +110,6 @@ nnoremap <Leader>ghr :GitGutterUndoHunk <CR>
 nnoremap <Leader>ghp :GitGutterPreviewHunk <CR>
 nnoremap <Leader>ghh :GitGutterLineHighlightsToggle <CR>
 nnoremap <Leader>ghh :GitGutterLineHighlightsToggle <CR>
-noremap <Left> :GitGutterPrevHunk <CR>
-noremap <Right> :GitGutterNextHunk <CR>
-noremap <Up> :m--1 <CR>
-noremap <Down> :m+1 <CR>
 '''
 
 [[plugins]]
