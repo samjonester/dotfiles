@@ -68,6 +68,7 @@
   noindex = update-index --assume-unchanged
   first-commit = rev-list --max-parents=0 HEAD
   delete-merged-branches = "!git co main && git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
+  bare-clone = "!sh $HOME/bare-clone.sh"
 
 [merge]
   tool = "vim -d"
