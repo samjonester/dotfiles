@@ -17,6 +17,9 @@
     gpgsign = true
 [format]
     pretty = format:%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset
+[pager]
+    branch = false
+    branches = false
 [alias]
     s = status
     aa = add .
