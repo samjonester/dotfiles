@@ -1,1 +1,80 @@
 # Add your preferred git settings here. This will overwrite anything in `core/configs/.gitconfig`.
+
+# [filter "lfs"]
+#     process = git-lfs filter-process
+#     required = true
+#     clean = git-lfs clean -- %f
+#     smudge = git-lfs smudge -- %f
+[user]
+    email = sam.jones@shopify.com
+    name = Sam Jones
+[credential]
+    helper = store --file /opt/dev/var/private/git_credential_store
+[core]
+    editor = vim
+    autocrlf = input
+[tag]
+    gpgsign = true
+[format]
+    pretty = format:%Cred%h%Creset -%C(yellow)%d%Creset %s %Cgreen(%cr)%Creset
+[alias]
+    s = status
+    aa = add .
+    a = add
+    ap = add -p
+    d = diff --color
+    dc = !git d --cached
+    dm = !git d origin/main..HEAD
+    e = "!f() { echo $1 >> .git/info/exclude; }; f"
+    f = fetch
+    co = checkout
+    com = !git co main && git p
+    cob = checkout -b
+    fco = "!f() { git fetch && git checkout $1; }; f"
+    c = commit
+    ca = !git add -A && git commit
+    ac = !git ca
+    pm = pull
+    p = pull
+    ps = !git stash && git pull -r && git stash pop
+    pu = push -u origin HEAD
+    pun = !git pu --no-verify
+    pfn = !git pf --no-verify
+    pf = push --force-with-lease
+    pt = push --tags
+    r = rebase
+    rs = rebase -i --autosquash
+    stashall = stash save --all
+    pop = stash pop
+    rmain = !git fetch && git rebase origin/main
+    ra = rebase --abort
+    rc = rebase --continue
+    ri = rebase -i --autosquash
+    rim = !git ri origin/main
+    frm = !git f && git rebase origin/main
+    unstage = reset HEAD
+    fix = !sh -c 'REV=$(git rev-parse $1) && git commit --fixup $@ && git rebase -i --autosquash $REV^' -
+    l = !git l -n 10
+    lf = !git l --pretty=full
+    ln = !git l -n
+    lnf = !git l --pretty=full -n
+    lm = !git l origin/main..
+    lmf = !git l --pretty=full origin/main..
+    m = merge
+    mt = mergetool
+    rl = reflog --abbrev-commit --date=relative
+    cob = checkout -b
+    up = !git pull --rebase --prune $@ && git submodule update --init --recursive
+    show = show --pretty=full
+    undo = reset HEAD~1 --mixed
+    aamend = !git aa && git amend
+    fuckit = !git clean -df && git co -- .
+    delete-merged-branches = "!git co main && git branch --merged | grep -v '\\*' | xargs -n 1 git branch -d"
+    unpublish = "!git push origin :$(git branch-name)"
+    exclude = "!echo >> .git/info/exclude"
+    in = !git f && git l $(git rev-parse --abbrev-ref --symbolic-full-name @{u})
+    noindex = update-index --assume-unchanged
+    first-commit = rev-list --max-parents=0 HEAD
+    bare-clone = "!sh $HOME/bare-clone.sh"
+    wta = worktree add
+    wtb = "!wtb() { git fetch && git worktree add -b samjonester/$1 $1 origin/main; }; wtb"
