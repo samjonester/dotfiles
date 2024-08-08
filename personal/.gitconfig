@@ -75,6 +75,6 @@
     in = !git f && git l $(git rev-parse --abbrev-ref --symbolic-full-name @{u})
     noindex = update-index --assume-unchanged
     first-commit = rev-list --max-parents=0 HEAD
-    bare-clone = "!sh $HOME/bare-clone.sh"
+    bare-clone = "!bare-clone"
     wta = worktree add
     wtb = "!wtb() { git fetch && git worktree add -b samjonester/$1 $1 origin/main; }; wtb"
