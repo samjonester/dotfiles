@@ -5,11 +5,14 @@
 #     required = true
 #     clean = git-lfs clean -- %f
 #     smudge = git-lfs smudge -- %f
+[include]
+	path = ~/.config/dev/gitconfig
+
 [user]
     email = sam.jones@shopify.com
     name = Sam Jones
 [credential]
-    helper = store --file /opt/dev/var/private/git_credential_store
+	helper = store --file /opt/dev/var/private/git_credential_store
 [core]
     editor = vim
     autocrlf = input
