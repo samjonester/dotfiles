@@ -11,6 +11,7 @@ case $ZSH_HOST_OS in
     $BREW_EXECUTABLE install bat
     $BREW_EXECUTABLE install eza
     $BREW_EXECUTABLE install tig
+    $BREW_EXECUTABLE install ranger
     $BREW_EXECUTABLE install asdf
     asdf plugin add ruby
     asdf plugin add erlang
