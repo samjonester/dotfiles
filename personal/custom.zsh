@@ -12,6 +12,11 @@ alias fixwifi='sudo ifconfig en0 down && sudo ifconfig en0 up'
 
 alias ls='eza --long --all --group --header --classify --git'
 
+source <(fzf --zsh)
+[[ -f /opt/dev/sh/chruby/chruby.sh ]] && { type chruby >/dev/null 2>&1 || chruby () { source /opt/dev/sh/chruby/chruby.sh; chruby "$@"; } }
+[[ -x /opt/homebrew/bin/brew ]] && eval $(/opt/homebrew/bin/brew shellenv)
+[ -f /opt/dev/dev.sh ] && source /opt/dev/dev.sh
+
 
 mcd() {
     mkdir -p $1
