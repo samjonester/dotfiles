@@ -15,7 +15,13 @@
 # Staples theme: https://github.com/dersam/staples
 # antigen theme dersam/staples staples
 
+
+# Temporarily disable the antigen cache
+#     clear cache with `rm -rf ~/.antigen/.cache`
+# ANTIGEN_CACHE=false
+
 antigen theme https://github.com/denysdovhan/spaceship-zsh-theme spaceship
+SPACESHIP_DIR_TRUNC_REPO=false
 
 antigen bundle gitfast
 antigen bundle gitignore
