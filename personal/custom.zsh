@@ -6,6 +6,7 @@
 alias v=vim
 alias g=git
 alias n=npm
+alias r=ranger
 
 alias fixcam='sudo killall VDCAssistant'
 alias fixwifi='sudo ifconfig en0 down && sudo ifconfig en0 up'
