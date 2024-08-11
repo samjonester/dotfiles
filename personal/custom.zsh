@@ -3,7 +3,7 @@
 # Put anything here that you want to exist on all your environment, and to have the highest priority
 # over any other customization.
 
-alias v=vim
+alias v=nvim
 alias g=git
 alias n=npm
 alias r=ranger
