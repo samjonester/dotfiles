@@ -18,6 +18,9 @@ case $ZSH_HOST_OS in
     asdf plugin add elixir
     asdf plugin add node
     asdf plugin add terraform
+
+    $BREW_EXECUTABLE install kitty
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty.conf ~/.config/kitty/
 ;;
 esac
 
