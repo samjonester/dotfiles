@@ -14,9 +14,12 @@ darwin*)
   # Terminal Tooling
   $BREW_EXECUTABLE install bat
   $BREW_EXECUTABLE install eza
-  $BREW_EXECUTABLE install tig
   $BREW_EXECUTABLE install ranger
+
+  # Git tooling
+  $BREW_EXECUTABLE install tig
   $BREW_EXECUTABLE install lazygit
+  $BREW_EXECUTABLE install delta
 
   # Search
   $BREW_EXECUTABLE install fzf
