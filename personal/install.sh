@@ -15,6 +15,7 @@ darwin*)
   $BREW_EXECUTABLE install bat
   $BREW_EXECUTABLE install eza
   $BREW_EXECUTABLE install ranger
+  $BREW_EXECUTABLE install zoxide
 
   # Git tooling
   $BREW_EXECUTABLE install tig
