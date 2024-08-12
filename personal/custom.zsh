@@ -4,6 +4,7 @@
 # over any other customization.
 
 # Terminal tooling aliases
+alias c=clear
 alias v=nvim
 alias g=git
 alias n=npm
