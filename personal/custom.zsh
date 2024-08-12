@@ -3,14 +3,11 @@
 # Put anything here that you want to exist on all your environment, and to have the highest priority
 # over any other customization.
 
+# Terminal tooling aliases
 alias v=nvim
 alias g=git
 alias n=npm
 alias r=ranger
-
-alias fixcam='sudo killall VDCAssistant'
-alias fixwifi='sudo ifconfig en0 down && sudo ifconfig en0 up'
-
 alias ls='eza --long --all --group --header --classify --git'
 
 # FZF Setup
@@ -28,11 +25,21 @@ _fzf_compgen_dir() {
   fd --type=d --hidden --exclude .git . "$1"
 }
 
+# Bat setup
+export BAT_THEME=gruvbox-dark
+alias bat='bat --color=always'
+alias cat='bat'
+
+# Shopify Dev tooling setup
 [[ -f /opt/dev/sh/chruby/chruby.sh ]] && { type chruby >/dev/null 2>&1 || chruby () { source /opt/dev/sh/chruby/chruby.sh; chruby "$@"; } }
 [[ -x /opt/homebrew/bin/brew ]] && eval $(/opt/homebrew/bin/brew shellenv)
 [ -f /opt/dev/dev.sh ] && source /opt/dev/dev.sh
 
+# Utility aliases 
+alias fixcam='sudo killall VDCAssistant'
+alias fixwifi='sudo ifconfig en0 down && sudo ifconfig en0 up'
 
+# Utility functions
 mcd() {
     mkdir -p $1
     cd $1

@@ -9,6 +9,7 @@ darwin*)
   $BREW_EXECUTABLE install --cask font-jetbrains-mono-nerd-font
   $BREW_EXECUTABLE install kitty
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
+  git clone --depth 1 https://github.com/dexpota/kitty-themes.git ~/.config/kitty/kitty-themes
 
   # Terminal Tooling
   $BREW_EXECUTABLE install bat
