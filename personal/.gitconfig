@@ -53,6 +53,7 @@
     stashall = stash save --all
     pop = stash pop
     rmain = !git fetch && git rebase origin/main
+    rs = restore --staged
     ra = rebase --abort
     rc = rebase --continue
     ri = rebase -i --autosquash
