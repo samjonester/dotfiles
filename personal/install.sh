@@ -26,8 +26,7 @@ darwin*)
   $BREW_EXECUTABLE install fzy
   $BREW_EXECUTABLE install fd
   $BREW_EXECUTABLE install ripgrep
-  mkdir -p ~/src/github/junegunn/
-  git clone https://github.com/junegunn/fzf-git.sh.git
+  git clone https://github.com/junegunn/fzf-git.sh.git ~/src/github.com/junegunn/
 
   # ASDF Version Management
   $BREW_EXECUTABLE install asdf

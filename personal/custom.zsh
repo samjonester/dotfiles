@@ -12,7 +12,7 @@ alias ls='eza --long --all --group --header --classify --git'
 
 # FZF Setup
 source <(fzf --zsh)
-source ~/src/github/junegunn/fzf-git.sh/fzf-git.sh
+source ~/src/github.com/junegunn/fzf-git.sh/fzf-git.sh
 export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
 export FZF_ALT_C_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exclude .git"
