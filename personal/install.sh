@@ -13,6 +13,7 @@ darwin*)
   $BREW_EXECUTABLE install tig
   $BREW_EXECUTABLE install ranger
   $BREW_EXECUTABLE install asdf
+  $BREW_EXECUTABLE install lazygit
   asdf plugin add ruby
   asdf plugin add erlang
   asdf plugin add elixir
