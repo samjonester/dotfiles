@@ -9,7 +9,11 @@ alias v=nvim
 alias g=git
 alias n=npm
 alias r=ranger
-alias ls='eza --long --all --group --header --classify --git'
+
+alias eza='eza --color=always --long --git --no-filesize --icons=always --no-time --no-user'
+alias ls='eza'
+alias tree='eza --tree --color=always'
+alias t2='eza --tree --color=always --level=2'
 
 # FZF Setup
 source <(fzf --zsh)
