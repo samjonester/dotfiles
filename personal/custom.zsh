@@ -13,7 +13,21 @@ alias fixwifi='sudo ifconfig en0 down && sudo ifconfig en0 up'
 
 alias ls='eza --long --all --group --header --classify --git'
 
+# FZF Setup
 source <(fzf --zsh)
+source ~/src/github/junegunn/fzf-git.sh/fzf-git.sh
+export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
+export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"
+export FZF_ALT_C_COMMAND="fd --type=d --hidden --strip-cwd-prefix --exclude .git"
+
+_fzf_compgen_path() {
+  fd --hidden --exclude .git . "$1"
+}
+
+_fzf_compgen_dir() {
+  fd --type=d --hidden --exclude .git . "$1"
+}
+
 [[ -f /opt/dev/sh/chruby/chruby.sh ]] && { type chruby >/dev/null 2>&1 || chruby () { source /opt/dev/sh/chruby/chruby.sh; chruby "$@"; } }
 [[ -x /opt/homebrew/bin/brew ]] && eval $(/opt/homebrew/bin/brew shellenv)
 [ -f /opt/dev/dev.sh ] && source /opt/dev/dev.sh

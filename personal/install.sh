@@ -5,30 +5,39 @@ ZSH_HOST_OS=$(uname | awk '{print tolower($0)}')
 
 case $ZSH_HOST_OS in
 darwin*)
-  $BREW_EXECUTABLE install ripgrep
-  $BREW_EXECUTABLE install fzf
-  $BREW_EXECUTABLE install fzy
+  # Terminal
+  $BREW_EXECUTABLE install --cask font-jetbrains-mono-nerd-font
+  $BREW_EXECUTABLE install kitty
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
+
+  # Terminal Tooling
   $BREW_EXECUTABLE install bat
   $BREW_EXECUTABLE install eza
   $BREW_EXECUTABLE install tig
   $BREW_EXECUTABLE install ranger
-  $BREW_EXECUTABLE install asdf
   $BREW_EXECUTABLE install lazygit
+
+  # Search
+  $BREW_EXECUTABLE install fzf
+  $BREW_EXECUTABLE install fzy
+  $BREW_EXECUTABLE install fd
+  $BREW_EXECUTABLE install ripgrep
+  mkdir -p ~/src/github/junegunn/
+  git clone https://github.com/junegunn/fzf-git.sh.git
+
+  # ASDF Version Management
+  $BREW_EXECUTABLE install asdf
   asdf plugin add ruby
   asdf plugin add erlang
   asdf plugin add elixir
   asdf plugin add node
   asdf plugin add terraform
 
-  $BREW_EXECUTABLE install --cask font-jetbrains-mono-nerd-font
-
-  $BREW_EXECUTABLE install kitty
-  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
-
+  # Setup Neovim
   $BREW_EXECUTABLE install neovim
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/nvim ~/.config/
-
   $BREW_EXECUTABLE install neovim
+
   ;;
 esac
 
