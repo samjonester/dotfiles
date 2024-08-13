@@ -62,11 +62,6 @@ alias cat='bat'
 eval "$(zoxide init zsh)"
 alias cd='z'
 
-# Shopify Dev tooling setup
-[[ -f /opt/dev/sh/chruby/chruby.sh ]] && { type chruby >/dev/null 2>&1 || chruby () { source /opt/dev/sh/chruby/chruby.sh; chruby "$@"; } }
-[[ -x /opt/homebrew/bin/brew ]] && eval $(/opt/homebrew/bin/brew shellenv)
-[ -f /opt/dev/dev.sh ] && source /opt/dev/dev.sh
-
 # Utility aliases 
 alias fixcam='sudo killall VDCAssistant'
 alias fixwifi='sudo ifconfig en0 down && sudo ifconfig en0 up'
