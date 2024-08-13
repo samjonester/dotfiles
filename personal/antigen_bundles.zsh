@@ -22,6 +22,15 @@
 
 antigen theme https://github.com/denysdovhan/spaceship-zsh-theme spaceship
 SPACESHIP_DIR_TRUNC_REPO=false
+SPACESHIP_GIT_STATUS_SHOW=false
+SPACESHIP_GIT_PREFIX="· "
+SPACESHIP_PROMPT_ORDER=(
+  dir           # Current directory section
+  git           # Git section (git_branch + git_status)
+  exec_time     # Execution time
+  line_sep
+  char          # Prompt character
+)
 
 antigen bundle gitfast
 antigen bundle gitignore
