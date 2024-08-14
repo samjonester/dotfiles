@@ -32,6 +32,8 @@ SPACESHIP_PROMPT_ORDER=(
   char          # Prompt character
 )
 
+antigen bundle zsh-autosuggestions
+antigen bundle zsh-completions
 antigen bundle gitfast
 antigen bundle gitignore
 antigen bundle z
