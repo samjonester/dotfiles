@@ -60,7 +60,6 @@ alias bat='bat --color=always'
 alias cat='bat'
 
 eval "$(zoxide init zsh)"
-alias cd='z'
 
 # Utility aliases 
 alias fixcam='sudo killall VDCAssistant'
