@@ -22,6 +22,9 @@ darwin*)
   $BREW_EXECUTABLE install tig
   $BREW_EXECUTABLE install lazygit
   $BREW_EXECUTABLE install delta
+  $BREW_EXECUTABLE install gh
+  gh auth login --web -h github.com
+  gh extension install github/gh-copilot --force
 
   # Search
   $BREW_EXECUTABLE install fzf
