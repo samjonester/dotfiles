@@ -6,6 +6,7 @@ ZSH_HOST_OS=$(uname | awk '{print tolower($0)}')
 case $ZSH_HOST_OS in
 darwin*)
   # Terminal
+  chsh -s $(which zsh)
   $BREW_EXECUTABLE install --cask font-jetbrains-mono-nerd-font
   $BREW_EXECUTABLE install kitty
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
