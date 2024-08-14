@@ -3,6 +3,10 @@
 # Put anything here that you want to exist on all your environment, and to have the highest priority
 # over any other customization.
 
+
+# pipx
+# export PATH="$PATH:/Users/sam/.local/bin"
+
 # Terminal tooling aliases
 alias c=clear
 alias v=nvim
