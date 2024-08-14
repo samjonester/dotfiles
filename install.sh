@@ -15,7 +15,11 @@ ZSH_HOST_OS=$(uname | awk '{print tolower($0)}')
 case $ZSH_HOST_OS in
   darwin*)
 
-  BREW_EXECUTABLE=/opt/homebrew/bin/brew
+  if [[ $(uname -m) == 'arm64' ]]; then
+    BREW_EXECUTABLE=/opt/homebrew/bin/brew
+  else
+    BREW_EXECUTABLE=/usr/local/bin/brew
+  fi
 
   $BREW_EXECUTABLE shellenv > $HOME/.dotfile_brew_setup
   $BREW_EXECUTABLE install coreutils
