@@ -33,9 +33,13 @@ darwin*)
   # ASDF Version Management
   $BREW_EXECUTABLE install asdf
   asdf plugin add ruby
+  asdf install ruby latest
+  asdf global ruby latest
+  asdf plugin add node
+  asdf install nodejs latest
+  asdf global nodejs latest
   asdf plugin add erlang
   asdf plugin add elixir
-  asdf plugin add node
   asdf plugin add terraform
 
   # Setup Neovim
