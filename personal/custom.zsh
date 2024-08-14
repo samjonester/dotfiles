@@ -10,6 +10,9 @@ alias g=git
 alias n=npm
 alias r=ranger
 
+alias '?s'='gh copilot suggest'
+alias '?e'='gh copilot explain'
+
 alias eza='eza --color=always --long --git --no-filesize --icons=always --no-time --no-user'
 alias ls='eza'
 alias tree='eza --tree --color=always'
