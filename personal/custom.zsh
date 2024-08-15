@@ -68,9 +68,11 @@ alias cat='bat'
 
 eval "$(zoxide init zsh)"
 
-# Utility aliases 
+# Utility aliases
 alias fixcam='sudo killall VDCAssistant'
 alias fixwifi='sudo ifconfig en0 down && sudo ifconfig en0 up'
+alias enable-key-repeat='defaults write -g ApplePressAndHoldEnabled -bool false'
+alias disable-key-repeat='defaults write -g ApplePressAndHoldEnabled -bool true'
 
 # Utility functions
 mcd() {
