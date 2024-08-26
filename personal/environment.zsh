@@ -9,6 +9,6 @@ export LC_ALL=en_US.UTF-8
 
 # Editors and Browsers
 export EDITOR='nano'
-export VISUAL='vim'
+export VISUAL='nvim'
 export PAGER='less'
 export BROWSER='open'
