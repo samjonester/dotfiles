@@ -16,6 +16,7 @@ darwin*)
   $BREW_EXECUTABLE install bat
   $BREW_EXECUTABLE install eza
   $BREW_EXECUTABLE install ranger
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/ranger ~/.config/
   $BREW_EXECUTABLE install zoxide
 
   # Git tooling
