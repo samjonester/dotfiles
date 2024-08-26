@@ -17,6 +17,7 @@ darwin*)
   $BREW_EXECUTABLE install eza
   $BREW_EXECUTABLE install ranger
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/ranger ~/.config/
+  git clone https://github.com/alexanderjeurissen/ranger_devicons ~/.config/ranger/plugins/ranger_devicons
   $BREW_EXECUTABLE install zoxide
 
   # Git tooling
