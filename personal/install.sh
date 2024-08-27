@@ -64,8 +64,7 @@ linux*)
   ubuntu)
 
     # Terminal
-    chsh -s $(which zsh)
-    $BREW_EXECUTABLE install kitty
+    sudo apt-get install -y kitty
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
 
     # Terminal Tooling
@@ -80,7 +79,7 @@ linux*)
     sudo apt-get install -y fzf fzy ripgrep
 
     # Setup Neovim
-    sudo apt-get install neovim
+    sudo apt-get install -y neovim
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/nvim ~/.config/
 
     ;;
