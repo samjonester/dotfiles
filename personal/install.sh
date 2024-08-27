@@ -68,7 +68,7 @@ linux*)
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
 
     # Terminal Tooling
-    sudo apt-get install -y bat ranger zoxide
+    sudo apt-get install -y bat ranger
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/ranger ~/.config/
     git clone https://github.com/alexanderjeurissen/ranger_devicons ~/.config/ranger/plugins/ranger_devicons
 
