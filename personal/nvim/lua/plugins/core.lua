@@ -41,6 +41,7 @@ return {
     config = function()
       require("ranger-nvim").setup()
       vim.api.nvim_set_keymap("n", "<leader>ef", "", {
+        desc = "Open Ranger",
         noremap = true,
         callback = function()
           require("ranger-nvim").open(true)
