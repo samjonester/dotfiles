@@ -24,7 +24,7 @@ alias t2='eza --tree --color=always --level=2'
 alias ls='ls -lAh --color=auto'
 
 # FZF Setup
-source <(fzf --zsh)
+[ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
 source ~/src/github.com/junegunn/fzf-git.sh/fzf-git.sh
 export FZF_DEFAULT_COMMAND="fd --hidden --strip-cwd-prefix --exclude .git"
 export FZF_CTRL_T_COMMAND="$FZF_DEFAULT_COMMAND"

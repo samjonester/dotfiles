@@ -74,9 +74,16 @@ linux*)
 
     # Git tooling
     sudo apt-get install -y tig delta
+    LAZYGIT_VERSION=$(curl -s "https://api.github.com/repos/jesseduffield/lazygit/releases/latest" | grep -Po '"tag_name": "v\K[^"]*')
+    curl -Lo lazygit.tar.gz "https://github.com/jesseduffield/lazygit/releases/latest/download/lazygit_${LAZYGIT_VERSION}_Linux_x86_64.tar.gz"
+    tar xf lazygit.tar.gz lazygit
+    sudo install lazygit /usr/local/bin
 
     # Search
-    sudo apt-get install -y fzf fzy ripgrep
+    git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
+    ~/.fzf/install --no-update-rc --key-bindings --completion
+    sudo apt-get install -y fzy ripgrep
+    git clone https://github.com/junegunn/fzf-git.sh.git ~/src/github.com/junegunn/fzf-git.sh
 
     # Setup Neovim
     sudo apt-get install -y neovim
