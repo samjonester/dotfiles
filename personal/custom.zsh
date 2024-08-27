@@ -18,9 +18,10 @@ alias '?s'='gh copilot suggest'
 alias '?e'='gh copilot explain'
 
 alias eza='eza --color=always --long --git --no-filesize --icons=always --no-time --no-user'
-alias ls='eza'
-alias tree='eza --tree --color=always'
+alias e='eza'
+alias et='eza --tree --color=always'
 alias t2='eza --tree --color=always --level=2'
+alias ls='ls -lAh --color=auto'
 
 # FZF Setup
 source <(fzf --zsh)

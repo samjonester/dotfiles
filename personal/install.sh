@@ -65,25 +65,24 @@ linux*)
 
     # Terminal
     chsh -s $(which zsh)
+    $BREW_EXECUTABLE install kitty
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
 
     # Terminal Tooling
-    sudo apt-get install -y bat eza ranger zoxide
+    sudo apt-get install -y bat ranger zoxide
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/ranger ~/.config/
     git clone https://github.com/alexanderjeurissen/ranger_devicons ~/.config/ranger/plugins/ranger_devicons
 
     # Git tooling
-    sudo apt-get install -y tig lazygit delta
+    sudo apt-get install -y tig delta
 
     # Search
-    sudo apt-get install -y fzf fzy fd ripgrep
-    git clone https://github.com/junegunn/fzf-git.sh.git ~/src/github.com/junegunn/fzf-git.sh
+    sudo apt-get install -y fzf fzy ripgrep
 
     # Setup Neovim
     sudo apt-get install neovim
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/nvim ~/.config/
 
-    # Install VS Code Extensions
-    # cat ~/$DOTFILES_DIRECTORY_NAME/personal/code-extensions.list | xargs -L 1 code --force --install-extension
     ;;
   esac
   ;;
