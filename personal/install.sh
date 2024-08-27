@@ -50,13 +50,41 @@ darwin*)
   # Setup Neovim
   $BREW_EXECUTABLE install neovim
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/nvim ~/.config/
-  $BREW_EXECUTABLE install neovim
+
+  curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
+
+  # Install VSCode Extensions & configs
+  cat ~/$DOTFILES_DIRECTORY_NAME/personal/code-extensions.list | xargs -L 1 code --force --install-extension
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/code-user-settings.json ~/Library/Application\ Support/Code/User/settings.json
 
   ;;
+linux*)
+  HOST_OS_ID=$(awk -F= '$1=="ID" { print $2 ;}' /etc/os-release | tr -d '"')
+  case $HOST_OS_ID in
+  ubuntu)
+
+    # Terminal
+    chsh -s $(which zsh)
+
+    # Terminal Tooling
+    sudo apt-get install -y bat eza ranger zoxide
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/ranger ~/.config/
+    git clone https://github.com/alexanderjeurissen/ranger_devicons ~/.config/ranger/plugins/ranger_devicons
+
+    # Git tooling
+    sudo apt-get install -y tig lazygit delta
+
+    # Search
+    sudo apt-get install -y fzf fzy fd ripgrep
+    git clone https://github.com/junegunn/fzf-git.sh.git ~/src/github.com/junegunn/fzf-git.sh
+
+    # Setup Neovim
+    sudo apt-get install neovim
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/nvim ~/.config/
+
+    # Install VS Code Extensions
+    cat ~/$DOTFILES_DIRECTORY_NAME/personal/code-extensions.list | xargs -L 1 code --force --install-extension
+    ;;
+  esac
+  ;;
 esac
-
-curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
-
-# Install VSCode Extensions & configs
-cat ~/$DOTFILES_DIRECTORY_NAME/personal/code-extensions.list | xargs -L 1 code --force --install-extension
-ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/code-user-settings.json ~/Library/Application\ Support/Code/User/settings.json
