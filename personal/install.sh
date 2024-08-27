@@ -83,7 +83,7 @@ linux*)
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/nvim ~/.config/
 
     # Install VS Code Extensions
-    cat ~/$DOTFILES_DIRECTORY_NAME/personal/code-extensions.list | xargs -L 1 code --force --install-extension
+    # cat ~/$DOTFILES_DIRECTORY_NAME/personal/code-extensions.list | xargs -L 1 code --force --install-extension
     ;;
   esac
   ;;
