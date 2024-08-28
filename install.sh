@@ -26,7 +26,7 @@ esac
 if [[ ! -d $HOME/antigen ]]; then
 	echo -e "Antigen not found, installing..."
 	cd $HOME
-	git clone https://github.com/zsh-users/antigen.git
+	git clone https://github.com/shopify/antigen.git
 	cd -
 fi
 
