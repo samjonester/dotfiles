@@ -82,7 +82,7 @@ linux*)
     # Search
     git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf
     ~/.fzf/install --no-update-rc --key-bindings --completion
-    sudo apt-get install -y fzy ripgrep
+    sudo apt-get install -y fzy fd-find ripgrep
     git clone https://github.com/junegunn/fzf-git.sh.git ~/src/github.com/junegunn/fzf-git.sh
 
     # Setup Neovim
