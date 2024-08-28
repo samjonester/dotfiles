@@ -8,10 +8,10 @@
 # export PATH="$PATH:/Users/sam/.local/bin"
 
 # Terminal tooling aliases
-alias c=clear
-alias v=nvim
+# alias c=clear
+# alias v=nvim
 alias g=git
-alias n=npm
+# alias n=npm
 alias r=ranger
 
 alias '?s'='gh copilot suggest'
