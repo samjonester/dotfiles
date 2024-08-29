@@ -1,5 +1,9 @@
 #!/usr/bin/env zsh
 
+# DON'T MAKE CHANGES TO THIS FILE. If you want to customize the install, add
+# your changes to personal/install.sh. Modifying this file is likely to take
+# you off the upgrade path.
+
 # Runs on setup of a new spin environment.
 # Create common color functions.
 autoload -U colors
