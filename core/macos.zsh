@@ -4,7 +4,7 @@ case $ZSH_HOST_OS in
 	darwin*)
 
 	#Environment variables
-  source ~/.dotfile_brew_setup
+  	source ~/.dotfile_brew_setup
 
 	# Assumes that coreutils and other GNU tools have replaced OSX'
 	export PATH="/usr/local/opt/gnu-tar/libexec/gnubin:$PATH"
@@ -20,7 +20,7 @@ case $ZSH_HOST_OS in
 	defaults write NSGlobalDomain KeyRepeat -int 1
 	defaults write NSGlobalDomain InitialKeyRepeat -int 12
 
-  # Show hidden files in finder. I want to see everything.
+  	# Show hidden files in finder. I want to see everything.
 	defaults write com.apple.finder AppleShowAllFiles YES
 ;;
 esac
