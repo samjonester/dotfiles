@@ -1,0 +1,12 @@
+name: dotfiles
+
+up:
+  - custom
+    name: run initial setup
+    met?: test -f .installed
+    meet: ./install.sh
+
+commands:
+  reload:
+    desc: 'reapply dotfiles settings'
+    run: source ~/.zshrc
