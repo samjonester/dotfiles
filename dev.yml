@@ -1,12 +1,11 @@
 name: dotfiles
 
 up:
-  - custom
-    name: run initial setup
-    met?: test -f .installed
-    meet: ./install.sh
-
-commands:
-  reload:
-    desc: 'reapply dotfiles settings'
-    run: source ~/.zshrc
+  - custom:
+      name: Ensure dotfiles repo is linked in home directory
+      met?: test -h ~/dotfiles
+      meet: ln -vsfn ~/src/github.com/Shopify/dotfiles ~/dotfiles
+  - custom:
+      name: Install and link dotfiles
+      met?: test -f .installed
+      meet: ./install.sh
