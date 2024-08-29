@@ -24,6 +24,7 @@ darwin*)
   $BREW_EXECUTABLE install tig
   $BREW_EXECUTABLE install lazygit
   $BREW_EXECUTABLE install delta
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/delta ~/.config/
   $BREW_EXECUTABLE install gh
   gh auth login --web -h github.com
   gh extension install github/gh-copilot --force
@@ -80,6 +81,7 @@ linux*)
     sudo install lazygit /usr/local/bin
     curl -Lo /tmp/delta.deb https://github.com/dandavison/delta/releases/download/0.18.1/git-delta_0.18.1_amd64.deb
     sudo dpkg -i /tmp/delta.deb
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/delta ~/.config/
 
     # Search
     git clone --depth 1 https://github.com/junegunn/fzf.git ~/.fzf

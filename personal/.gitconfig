@@ -7,6 +7,7 @@
 #     smudge = git-lfs smudge -- %f
 [include]
 	path = ~/.config/dev/gitconfig
+  path = ~/.config/delta/themes.gitconfig
 
 [user]
     email = sam.jones@shopify.com
@@ -21,7 +22,8 @@
     diffFilter = delta --color-only
 [delta]
     navigate = true
-  side-by-side = true
+    side-by-side = true
+    features = gruvmax-fang
 [merge]
     conflictstyle = diff3
 [diff]
