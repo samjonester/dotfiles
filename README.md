@@ -1,26 +1,21 @@
-Opinionated dotfiles starter template - compatible with MacOS and Spin.
+Opinionated zsh dotfiles starter template - compatible with MacOS and Spin.
 
 Uses [oh-my-zsh](https://ohmyz.sh/) with [Antigen](https://github.com/zsh-users/antigen) to manage dependencies and themes.
 Default theme is [Staples](https://github.com/dersam/staples).
 
 ### Installation
-1. Clone the repo to `~/dotfiles`:
-```
-git clone https://github.com/Shopify/dotfiles-starter-template.git ~/dotfiles
-```
-2. Run `install.sh`. This will symlink configs and .zshrc, overwriting anything you already have.
-3. Open a new terminal, or `exec zsh`. Antigen bundles will be installed and you should be ready to go.
+
+WARNING: If you already have personal dotfiles set up, installing this repo will likely overwrite them.
+Make copies of anything you want to keep. If you don't know if you set dotfiles up, you probably haven't.
+
+1. `dev clone`
+2. `dev up`. This will install dependencies, symlink configs and .zshrc, *overwriting anything you already have*.
 
 To make your own copy to save your customizations, create a branch with your Github handle to the [dotfiles repo](https://github.com/Shopify/dotfiles), and push to it.
 
 ### Update
-If you've made your own copy, you can still pull updates from the main repo by creating an `upstream` origin.
+You can make whatever changes you like in your branch (see Customization below). To pull in updates if you haven't diverged, you can rebase on main.
 
-```
-git remote add upstream https://github.com/Shopify/dotfiles-starter-template
-```
-
-Updating your copy can be done with:
 ```
 git pull upstream main --rebase
 ```
@@ -29,8 +24,13 @@ git pull upstream main --rebase
 The `core` directory contains the framework scripts. Don't alter these unless you want to leave the upgrade path and
 do your own thing.
 
-The `personal` directory is where all of your customizations should go. The main repo will not alter these significantly,
-so you should be able to easily resolve any merge conflicts during an update.
+The `personal` directory is where all of your customizations should go. The main repo will not alter these.
+
+#### Themes
+
+You can use any theme from https://github.com/ohmyzsh/ohmyzsh/wiki/Themes by setting `antigen theme xxxx` in `personal/antigen_bundles.zsh`.
+
+The default theme, [Staples](https://github.com/dersam/staples), is a custom theme by @dersam that is pulled from a git repo. You can copy that config if you have a preferred theme in a separate repo.
 
 #### Available customizations
 Files are listed in the order they are loaded. Conflicts between files, such as
