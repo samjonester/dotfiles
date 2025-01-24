@@ -20,7 +20,7 @@ alias '?e'='gh copilot explain'
 alias eza='eza --color=always --long --git --no-filesize --icons=always --no-time --no-user'
 alias e='eza'
 alias et='eza --tree --color=always'
-alias t2='eza --tree --color=always --level=2'
+alias et2='eza --tree --color=always --level=2'
 alias ls='ls -lAh --color=auto'
 
 # FZF Setup
