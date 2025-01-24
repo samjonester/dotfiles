@@ -12,8 +12,6 @@
 [user]
     email = sam.jones@shopify.com
     name = Sam Jones
-[credential]
-	helper = store --file /opt/dev/var/private/git_credential_store
 [core]
     editor = vim
     autocrlf = input
