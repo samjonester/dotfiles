@@ -33,6 +33,8 @@
 [pager]
     branch = false
     branches = false
+[init]
+    defaultBranch = main
 [alias]
     s = status
     aa = add .
