@@ -4,6 +4,8 @@
 # your changes to personal/install.sh. Modifying this file is likely to take
 # you off the upgrade path.
 
+set -e
+
 # Runs on setup of a new spin environment.
 # Create common color functions.
 autoload -U colors
@@ -57,3 +59,5 @@ ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/core/configs/.gitignore_global ~/.gitignore_
 ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/.zshrc ~/.zshrc
 
 source ~/$DOTFILES_DIRECTORY_NAME/personal/install.sh
+
+touch ~/$DOTFILES_DIRECTORY_NAME/.installed
