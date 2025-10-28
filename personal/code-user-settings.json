@@ -1,7 +1,6 @@
 {
-  "workbench.colorTheme": "Solarized Dark",
-  "workbench.preferredDarkColorTheme": "Tokyo Night",
-  "workbench.preferredLightColorTheme": "Solarized Light",
+  "workbench.colorTheme": "GrunBoxTheme",
+  "workbench.preferredDarkColorTheme": "GrunBoxTheme",
   "window.autoDetectColorScheme": true,
   "editor.fontFamily": "Source Code Pro",
   "editor.codeLensFontFamily": "Source Code Pro",
@@ -38,5 +37,10 @@
   "terminal.integrated.fontSize": 14,
   "debug.console.fontSize": 14,
   "git.autofetch": true,
-  "gitlens.ai.experimental.generateCommitMessage.enabled": false
+  "gitlens.ai.experimental.generateCommitMessage.enabled": false,
+  "githubPullRequests.pullBranch": "never",
+  "security.promptForRemoteFileProtocolHandling": false,
+  "terminal.external.linuxExec": "xterm-kitty",
+  "terminal.external.osxExec": "Kitty.app",
+  "git.openRepositoryInParentFolders": "always"
 }
