@@ -60,3 +60,11 @@ source ~/extra.zsh
 [[ -f /opt/dev/sh/chruby/chruby.sh ]] && { type chruby >/dev/null 2>&1 || chruby () { source /opt/dev/sh/chruby/chruby.sh; chruby "$@"; } }
 
 [[ -x /opt/homebrew/bin/brew ]] && eval $(/opt/homebrew/bin/brew shellenv)
+
+[ -f /opt/dev/dev.sh ] && source /opt/dev/dev.sh
+
+# cloudplatform: add Shopify clusters to your local kubernetes config
+export KUBECONFIG=${KUBECONFIG:+$KUBECONFIG:}/Users/sam/.kube/config:/Users/sam/.kube/config.shopify.cloudplatform
+
+# Added by tec agent
+[[ -x /Users/sam/.local/state/tec/profiles/base/current/global/init ]] && eval "$(/Users/sam/.local/state/tec/profiles/base/current/global/init zsh)"
