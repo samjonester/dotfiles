@@ -98,3 +98,4 @@
     wta = "!wta() { git fetch && git worktree add $1 $1; cd $1; git branch --set-upstream-to=origin/$1 $1; }; wta"
     wtb = "!wtb() { git fetch && git worktree add -b samjonester/$1 $1 origin/main; cd $1; }; wtb"
     root = rev-parse --show-toplevel
+    restack = "!grestack() { git fetch && git checkout $1 && git rebase origin/main && git push --force; }; grestack"
