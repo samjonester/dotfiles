@@ -11,6 +11,7 @@
 # alias c=clear
 # alias v=nvim
 alias g=git
+alias gco='git checkout $(git branch --format="%(refname:short)" | fzf)'
 # alias n=npm
 alias r=ranger
 
@@ -114,4 +115,13 @@ bare-clone() {
 
   # Gets all branches from origin
   git fetch origin
+}
+
+killport() {
+    local port=$1
+    if [ -z "$port" ]; then
+      lsof -i TCP | fzf --multi | awk '{print $2}' | xargs kill -9
+    else
+      lsof -i :$port | awk '{print $2}' | xargs kill -9
+    fi
 }
