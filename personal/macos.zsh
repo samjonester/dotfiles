@@ -9,9 +9,9 @@
 eval "$(zoxide init zsh)"
 
 # ASDF Setup
-. $(brew --prefix)/opt/asdf/libexec/asdf.sh
-. /opt/homebrew/opt/asdf/libexec/asdf.sh
-. /opt/homebrew/opt/asdf/libexec/asdf.sh
+# . $(brew --prefix)/opt/asdf/libexec/asdf.sh
+# . /opt/homebrew/opt/asdf/libexec/asdf.sh
+# . /opt/homebrew/opt/asdf/libexec/asdf.sh
 
 # Google cloud cli and autocompletions
 if [ -f '/Users/sam/src/google/google-cloud-sdk/path.zsh.inc' ]; then . '/Users/sam/src/google/google-cloud-sdk/path.zsh.inc'; fi
