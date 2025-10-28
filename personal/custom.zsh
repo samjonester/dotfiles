@@ -3,6 +3,11 @@
 # Put anything here that you want to exist on all your environment, and to have the highest priority
 # over any other customization.
 
+TMOUT=1
+TRAPALRM() {
+  zle reset-prompt
+}
+
 
 # pipx
 # export PATH="$PATH:/Users/sam/.local/bin"
