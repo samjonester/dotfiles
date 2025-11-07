@@ -6,7 +6,15 @@
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init - zsh)"
+
+if [[ -n "$KITTY_INSTALLATION_DIR" ]]; then
+    _kitty_preexec_backup="$functions[preexec]"
+fi
+
 preexec() {
+  if [[ -n "$_kitty_preexec_backup" ]]; then
+    eval "$_kitty_preexec_backup"
+  fi
   echo "\033[1;33m$(date '+%H:%M:%S')\033[0m\n"
 }
 
