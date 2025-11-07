@@ -21,23 +21,19 @@
 # ANTIGEN_CACHE=false
 
 antigen theme https://github.com/denysdovhan/spaceship-zsh-theme spaceship
-SPACESHIP_TIME_SHOW=true
-SPACESHIP_TIME_FORMAT='%D{%H:%M:%S}'
-SPACESHIP_TIME_PREFIX="⏲ "
-SPACESHIP_DIR_PREFIX=""
+SPACESHIP_DIR_PREFIX="\n"
 SPACESHIP_DIR_TRUNC_REPO=false
 SPACESHIP_GIT_STATUS_SHOW=false
-SPACESHIP_GIT_PREFIX=""
+SPACESHIP_GIT_PREFIX="\n"
 SPACESHIP_EXEC_TIME_PRECISION=3
 SPACESHIP_EXEC_TIME_PREFIX=""
-SPACESHIP_EXEC_TIME_ELAPSED=1
+SPACESHIP_EXEC_TIME_ELAPSED=0
 SPACESHIP_EXEC_TIME_COLOR="blue"
+SPACESHIP_CHAR_PREFIX="\n"
 SPACESHIP_PROMPT_ORDER=(
-  time          # Time stamps section
+  exec_time     # Execution time section
   dir           # Current directory section
   git           # Git section (git_branch + git_status)
-  exec_time     # Execution time
-  line_sep
   char          # Prompt character
 )
 

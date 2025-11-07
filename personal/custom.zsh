@@ -3,11 +3,12 @@
 # Put anything here that you want to exist on all your environment, and to have the highest priority
 # over any other customization.
 
-TMOUT=1
-TRAPALRM() {
-  zle reset-prompt
+export PYENV_ROOT="$HOME/.pyenv"
+[[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
+eval "$(pyenv init - zsh)"
+preexec() {
+  echo "\033[1;33m$(date '+%H:%M:%S')\033[0m\n"
 }
-
 
 # pipx
 # export PATH="$PATH:/Users/sam/.local/bin"
