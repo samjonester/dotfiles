@@ -11,6 +11,7 @@ darwin*)
   $BREW_EXECUTABLE install kitty
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
   git clone --depth 1 https://github.com/dexpota/kitty-themes.git ~/.config/kitty/kitty-themes
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
 
   # Terminal Tooling
   $BREW_EXECUTABLE install bat
@@ -67,6 +68,7 @@ linux*)
     # Terminal
     sudo apt-get install -y kitty
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
 
     # Terminal Tooling
     sudo apt-get install -y bat ranger
