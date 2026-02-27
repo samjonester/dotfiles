@@ -3,6 +3,7 @@
 	# Include user-specific info like git credentials.
 	path = ~/dotfiles/personal/.gitconfig
 	path = ~/shopify-dotfiles/personal/.gitconfig
+	path = /Users/sam/.config/dev/gitconfig
 
 [alias]
 
@@ -96,10 +97,10 @@
 	# resolve that same conflict in a future rebase, this setting will reuse your previously recorded conflict resolution.
 	enabled = true
 	autoupdate = true
-[maintenance]
-	repo = /Users/sam/world/trees/root/src
 [filter "lfs"]
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
 	required = true
+[maintenance]
+	repo = /Users/sam/world/trees/root/src
