@@ -1,5 +1,11 @@
 #!/usr/bin/env zsh
 
+# DON'T MAKE CHANGES TO THIS FILE. If you want to customize the install, add
+# your changes to personal/install.sh. Modifying this file is likely to take
+# you off the upgrade path.
+
+set -e
+
 # Runs on setup of a new spin environment.
 # Create common color functions.
 autoload -U colors
@@ -15,11 +21,7 @@ ZSH_HOST_OS=$(uname | awk '{print tolower($0)}')
 case $ZSH_HOST_OS in
   darwin*)
 
-  if [[ $(uname -m) == 'arm64' ]]; then
-    BREW_EXECUTABLE=/opt/homebrew/bin/brew
-  else
-    BREW_EXECUTABLE=/usr/local/bin/brew
-  fi
+  BREW_EXECUTABLE=/opt/homebrew/bin/brew
 
   $BREW_EXECUTABLE shellenv > $HOME/.dotfile_brew_setup
   $BREW_EXECUTABLE install coreutils
@@ -30,24 +32,38 @@ esac
 if [[ ! -d $HOME/antigen ]]; then
 	echo -e "Antigen not found, installing..."
 	cd $HOME
-	git clone https://github.com/zsh-users/antigen.git
+	git clone https://github.com/shopify/antigen.git
 	cd -
 fi
 
 if [ $SPIN ]; then
   # Install Ripgrep for better code searching: `rg <string>` to search. Obeys .gitignore
-  sudo apt-get install -y ripgrep
+  sudo apt-get install -y ripgrep bat
+
+  # Set system generated .gitconfig to .gitconfig.local. We'll pull it in later as part
+  # of our custom gitconfig. The generated gitconfig already has the right user and email,
+  # since Spin knows that from login.
+  mv -n ~/.gitconfig ~/.gitconfig.local
 fi
 
 # Symlink core configs
 
-# Link in the custom gitconfig.
+# Link in the custom gitconfig. This has to happen after we rename to .gitconfig.local, otherwise we clobber the
+# spin generated user config. This will backup any existing .gitconfig to .gitconfig.bak.
+if [ -f ~/.gitconfig ] || [ -L ~/.gitconfig ]; then
+  cp -L ~/.gitconfig ~/.gitconfig.$(date +%Y%m%d).bak
+fi
 ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/core/configs/.gitconfig ~/.gitconfig
 ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/core/configs/.gitignore_global ~/.gitignore_global
 
 # Symlink this repo's .zshrc to ~/.zshrc. Using a symlink ensures that when the repo is
 # updated, the terminal will pick up the new version on reload without having to run
-# install again. This will overwrite any existing .zshrc.
+# install again. This will backup any existing .zshrc to .zshrc.bak.
+if [ -f ~/.zshrc ] || [ -L ~/.zshrc ]; then
+  cp -L ~/.zshrc ~/.zshrc.$(date +%Y%m%d).bak
+fi
 ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/.zshrc ~/.zshrc
 
 source ~/$DOTFILES_DIRECTORY_NAME/personal/install.sh
+
+touch ~/$DOTFILES_DIRECTORY_NAME/.installed

@@ -1,0 +1,11 @@
+name: dotfiles
+
+up:
+  - custom:
+      name: Ensure dotfiles repo is linked in home directory
+      met?: test -h ~/dotfiles
+      meet: ln -vsfn ~/src/github.com/Shopify/dotfiles ~/dotfiles
+  - custom:
+      name: Install and link dotfiles
+      met?: test -f .installed
+      meet: ./install.sh

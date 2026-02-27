@@ -1,9 +1,10 @@
 [include]
 
 	# Include user-specific info like git credentials.
-	path = ~/dotfiles/personal/.gitconfig
-	path = ~/shopify-dotfiles/personal/.gitconfig
 	path = /Users/sam/.config/dev/gitconfig
+	path = ~/.gitconfig.local # not part of the dotfiles repo. Apply settings for a specific local environment that you don't want everywhere.
+	path = ~/dotfiles/personal/.gitconfig # Your personal gitconfig settings. Anything specific to you that you want everywhere.
+	path = ~/shopify-dotfiles/personal/.gitconfig # gitconfig automatically provided when you're using Spin. Ignored anywhere else.
 
 [alias]
 
@@ -32,6 +33,9 @@
   # Forcepush, but fail if the remote has been updated since you last pulled.
   # Prevents clobbering other people's commits on the same branch unless you really, really want to.
   forcepush = push --force-with-lease
+
+  # Add all, and amend most recent commit to include those changes
+	ac = "!git add . && git commend"
 
 [apply]
 
@@ -96,7 +100,6 @@
 	# If you have a merge conflict, this setting will record how that conflict was resolved. If you would then need to
 	# resolve that same conflict in a future rebase, this setting will reuse your previously recorded conflict resolution.
 	enabled = true
-	autoupdate = true
 [filter "lfs"]
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
@@ -104,3 +107,4 @@
 	required = true
 [maintenance]
 	repo = /Users/sam/world/trees/root/src
+	autoupdate = true
