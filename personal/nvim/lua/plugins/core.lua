@@ -30,9 +30,8 @@ return {
   { "folke/flash.nvim", enabled = false },
   {
     "kevinhwang91/nvim-ufo",
-    dependencies = "kevinhwang91/promise-async", -- Ensure to include the dependency
+    dependencies = "kevinhwang91/promise-async",
     config = function()
-      -- Configuration for nvim-ufo
       require("ufo").setup()
     end,
   },
