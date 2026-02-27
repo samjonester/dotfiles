@@ -33,6 +33,10 @@
 [pager]
     branch = false
     branches = false
+    diff = false
+    log = false
+    show = false
+    stash = false
 [init]
     defaultBranch = main
 [alias]
