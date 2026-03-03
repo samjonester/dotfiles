@@ -10,7 +10,7 @@
   "git.enableCommitSigning": true,
   "git.enableSmartCommit": true,
   "[rust]": {
-    "editor.defaultFormatter": "rust-lang.rust-analyzer"
+    "editor.defaultFormatter": "rust-lang.rust-analyzer",
   },
   "files.trimTrailingWhitespace": true,
   "files.trimTrailingWhitespaceInRegexAndStrings": true,
@@ -19,13 +19,13 @@
   "terminal.external.profiles.osx": {
     "bash": {
       "path": "bash",
-      "icon": "terminal-bash"
+      "icon": "terminal-bash",
     },
     "zsh": {
       "path": "zsh",
       "icon": "terminal-zsh",
-      "args": ["-i", "-l"]
-    }
+      "args": ["-i", "-l"],
+    },
   },
   "terminal.integrated.defaultProfile.osx": "zsh",
   "security.workspace.trust.untrustedFiles": "open",
@@ -49,7 +49,7 @@
     "editor.formatOnSave": true,
     "editor.formatOnType": true,
     "editor.tabSize": 2,
-    "editor.insertSpaces": true
+    "editor.insertSpaces": true,
   },
   "rubyLsp.enabledFeatures": {
     "codeActions": true,
@@ -65,7 +65,7 @@
     "selectionRanges": true,
     "semanticHighlighting": true,
     "completion": true,
-    "codeLens": true
+    "codeLens": true,
   },
 
   // JavaScript/TypeScript settings
@@ -73,19 +73,19 @@
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true,
     "editor.tabSize": 2,
-    "editor.insertSpaces": true
+    "editor.insertSpaces": true,
   },
   "[typescript]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true,
     "editor.tabSize": 2,
-    "editor.insertSpaces": true
+    "editor.insertSpaces": true,
   },
   "[typescriptreact]": {
     "editor.defaultFormatter": "esbenp.prettier-vscode",
     "editor.formatOnSave": true,
     "editor.tabSize": 2,
-    "editor.insertSpaces": true
+    "editor.insertSpaces": true,
   },
   "typescript.updateImportsOnFileMove.enabled": "always",
   "javascript.updateImportsOnFileMove.enabled": "always",
@@ -94,13 +94,13 @@
   "tailwindCSS.includeLanguages": {
     "html": "html",
     "javascript": "javascript",
-    "typescript": "typescript"
+    "typescript": "typescript",
   },
   "tailwindCSS.experimental.classRegex": [
-    ["clsx\\(([^)]*)\\)", "(?:'|\")([^']*)(?:'|\")"]
+    ["clsx\\(([^)]*)\\)", "(?:'|\")([^']*)(?:'|\")"],
   ],
   "editor.quickSuggestions": {
-    "strings": true
+    "strings": true,
   },
-
+  "claudeCode.preferredLocation": "panel",
 }

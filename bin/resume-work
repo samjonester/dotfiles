@@ -1,0 +1,116 @@
+#!/bin/bash
+# resume-work - Resume work in an existing worktree with Claude Code
+#
+# Usage: resume-work
+#
+# This script:
+# 1. Shows a selector with active worktrees
+# 2. Navigates to the selected worktree
+# 3. Starts claude code in that worktree
+
+set -e
+
+# Base directory for worktrees
+WORKTREE_BASE="$HOME/src/shopify/.claude/worktrees"
+
+# Check if worktree directory exists
+if [ ! -d "$WORKTREE_BASE" ]; then
+    echo "No worktrees directory found at: $WORKTREE_BASE"
+    exit 1
+fi
+
+# Get list of worktrees with their branch info
+echo "Fetching active worktrees..."
+
+# Change to shopify directory to run git commands
+cd "$HOME/src/shopify"
+
+# Build array of worktrees with branch info
+declare -a WORKTREE_OPTIONS
+declare -a WORKTREE_PATHS
+
+while IFS= read -r line; do
+    if [[ -n "$line" ]]; then
+        # Extract path and branch from git worktree list output
+        WORKTREE_PATH=$(echo "$line" | awk '{print $1}')
+        BRANCH=$(echo "$line" | awk '{print $3}' | tr -d '[]')
+
+        # Only include Claude worktrees
+        if [[ "$WORKTREE_PATH" == *"/.claude/worktrees/"* ]]; then
+            # Extract relative path for display
+            REL_PATH=${WORKTREE_PATH#$WORKTREE_BASE/}
+
+            # Add to arrays
+            WORKTREE_OPTIONS+=("$REL_PATH [$BRANCH]")
+            WORKTREE_PATHS+=("$WORKTREE_PATH")
+        fi
+    fi
+done < <(git worktree list)
+
+# Check if any worktrees found
+if [ ${#WORKTREE_OPTIONS[@]} -eq 0 ]; then
+    echo "No active worktrees found in $WORKTREE_BASE"
+    exit 1
+fi
+
+# Show selector
+echo ""
+echo "Select a worktree to resume:"
+echo ""
+
+# Check if fzf is available for a better selector
+if command -v fzf &> /dev/null; then
+    # Use fzf for selection
+    SELECTED=$(printf '%s\n' "${WORKTREE_OPTIONS[@]}" | fzf --height=40% --reverse --header="Select worktree to resume")
+
+    # Find the index of selected option
+    for i in "${!WORKTREE_OPTIONS[@]}"; do
+        if [[ "${WORKTREE_OPTIONS[$i]}" == "$SELECTED" ]]; then
+            SELECTED_INDEX=$i
+            break
+        fi
+    done
+else
+    # Fall back to bash select
+    PS3="Enter number: "
+    select SELECTED in "${WORKTREE_OPTIONS[@]}"; do
+        if [[ -n "$SELECTED" ]]; then
+            SELECTED_INDEX=$((REPLY-1))
+            break
+        else
+            echo "Invalid selection. Please try again."
+        fi
+    done
+fi
+
+# Get the selected worktree path
+SELECTED_PATH="${WORKTREE_PATHS[$SELECTED_INDEX]}"
+
+# Navigate to the worktree
+echo ""
+echo "Navigating to: $SELECTED_PATH"
+cd "$SELECTED_PATH"
+
+# Show current status
+echo ""
+echo "Current branch: $(git branch --show-current)"
+echo "Status:"
+git status --short
+
+# Check for Graphite stack
+if command -v gt &> /dev/null && gt stack &> /dev/null; then
+    echo ""
+    echo "Graphite stack:"
+    gt stack --oneline
+fi
+
+# Open Claude Code in the worktree
+echo ""
+echo "Opening Claude Code in worktree..."
+claude code .
+
+echo ""
+echo "✓ Resumed work in: $SELECTED_PATH"
+echo "✓ Claude Code is now running in the worktree"
+echo ""
+echo "You can now use cmd+enter in kitty to split and open nvim"

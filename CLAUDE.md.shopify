@@ -1,0 +1,89 @@
+# Claude Code Configuration for Shopify Development
+
+This file should be copied to `~/src/shopify/CLAUDE.md` to provide context for Claude Code.
+
+## Project Context
+
+You're working in a Shopify monorepo with the following characteristics:
+- Large codebase requiring sparse checkout
+- Uses Graphite for PR stacks
+- Uses `dev` command for server management
+- Worktrees are stored in `.claude/worktrees/`
+
+## Available Custom Skills
+
+- `/review-pr <number>` - Set up isolated environment for PR review
+- `/new-feature <name>` - Start new feature work with Graphite stack
+- `/resume-work <feature> [pr]` - Resume existing work
+- `/worktree-status` - Show all worktrees and their status
+- `/prune-worktrees` - Clean up merged worktrees (shell alias: pwt)
+
+## Workflow Preferences
+
+### PR Reviews
+When user asks to review a PR, proactively:
+1. Suggest using `/review-pr` skill
+2. Remind them about sparse checkout if needed
+3. Show PR description and stack context
+
+### New Features
+When starting new work:
+1. Use descriptive worktree names: `feature-{name}`
+2. Initialize Graphite stack immediately
+3. Follow conventional commit format
+
+### Graphite Commands
+Common commands to suggest:
+- `gt stack` - View current stack
+- `gt create` - New PR in stack
+- `gt checkout` - Navigate within stack
+- `gt sync` - Update and prune branches
+- `gt submit` - Push changes
+
+### Server Management
+- Only one `dev up` server at a time
+- Always `dev down` before switching worktrees
+- Use different ports if needed: `dev up -p 3001`
+
+## Sparse Checkout Paths
+
+Default paths for sparse checkout (customize as needed):
+```
+app/
+config/
+db/
+lib/
+test/
+Gemfile*
+package.json
+```
+
+## Code Style
+
+- Ruby: Follow Rubocop configuration
+- JavaScript/TypeScript: Follow ESLint configuration
+- Commit messages: Conventional commits (feat:, fix:, chore:, etc.)
+- PR titles: Clear and concise, under 70 characters
+
+## Testing
+
+Before submitting PRs:
+- Run relevant tests: `dev test`
+- Check linting: `dev style`
+- Verify in browser if UI changes
+
+## Common Issues
+
+1. **Sparse checkout missing files**: Run `git sparse-checkout reapply`
+2. **Worktree conflicts**: Use `git worktree remove --force`
+3. **Server port in use**: Find and kill with `killport 3000`
+4. **Graphite out of sync**: Run `gt sync --force`
+
+## Terminal Setup
+
+Recommended layout:
+- Left pane: Claude Code
+- Right top: Neovim for quick edits
+- Right bottom: Terminal for git/server commands
+
+Use tmux or terminal splits for best experience.

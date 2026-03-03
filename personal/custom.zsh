@@ -139,3 +139,6 @@ killport() {
       lsof -i :$port | awk '{print $2}' | xargs kill -9
     fi
 }
+
+# Claude Code Worktree Configuration
+source ~/dotfiles/shell-worktree-config.sh

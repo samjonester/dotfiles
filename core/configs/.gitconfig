@@ -100,11 +100,12 @@
 	# If you have a merge conflict, this setting will record how that conflict was resolved. If you would then need to
 	# resolve that same conflict in a future rebase, this setting will reuse your previously recorded conflict resolution.
 	enabled = true
+[maintenance]
+	repo = /Users/sam/world/trees/root/src
+	autoupdate = true
+	repo = /Users/sam/world/trees/kcc--video-csv-import/src
 [filter "lfs"]
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
 	required = true
-[maintenance]
-	repo = /Users/sam/world/trees/root/src
-	autoupdate = true

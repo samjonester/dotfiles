@@ -29,3 +29,21 @@ vim.keymap.set("n", "<leader>fW", "<cmd>Telescope lsp_workspace_symbols<cr>", { 
 vim.keymap.set("n", "<leader>fgc", "<cmd>Telescope git_commits<cr>", { desc = "Git Commits (Telescope)" })
 vim.keymap.set("n", "<leader>fgb", "<cmd>Telescope git_branches<cr>", { desc = "Git Branches (Telescope)" })
 vim.keymap.set("n", "<leader>fgs", "<cmd>Telescope git_status<cr>", { desc = "Git Status (Telescope)" })
+
+-- Word under cursor search commands
+vim.keymap.set("n", "<leader>fw", function()
+  require('telescope.builtin').find_files({ default_text = vim.fn.expand("<cword>") })
+end, { desc = "Find Files with word under cursor" })
+
+vim.keymap.set("n", "<leader>fW", function()
+  require('telescope.builtin').live_grep({ default_text = vim.fn.expand("<cword>") })
+end, { desc = "Search for word under cursor" })
+
+-- Alternative keybindings for quick access
+vim.keymap.set("n", "gfw", function()
+  require('telescope.builtin').find_files({ default_text = vim.fn.expand("<cword>") })
+end, { desc = "Find Files with word under cursor" })
+
+vim.keymap.set("n", "gfW", function()
+  require('telescope.builtin').live_grep({ default_text = vim.fn.expand("<cword>") })
+end, { desc = "Grep for word under cursor" })

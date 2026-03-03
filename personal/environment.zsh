@@ -12,3 +12,6 @@ export EDITOR='nano'
 export VISUAL='nvim'
 export PAGER='less'
 export BROWSER='open'
+
+# Add dotfiles bin to PATH
+export PATH="$HOME/dotfiles/bin:$PATH"

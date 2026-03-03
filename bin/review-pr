@@ -1,0 +1,101 @@
+#!/bin/bash
+# review-pr - Review a PR in a new worktree with Claude Code
+#
+# Usage: review-pr <branch-name-or-pr-number>
+#
+# This script:
+# 1. Takes a branch name or PR number
+# 2. Prompts for a worktree name
+# 3. Uses dev to prompt for the area to check out (default mozart)
+# 4. Creates the worktree using `dev cd -t` with author prefix
+# 5. Navigates to the new worktree
+# 6. Opens claude code in the new worktree
+
+set -e
+
+# Check if argument provided
+if [ $# -eq 0 ]; then
+    echo "Usage: review-pr <branch-name-or-pr-number>"
+    exit 1
+fi
+
+BRANCH_OR_PR="$1"
+
+# Get PR author's GitHub handle
+if [[ "$BRANCH_OR_PR" =~ ^[0-9]+$ ]]; then
+    # It's a PR number
+    echo "Fetching PR #${BRANCH_OR_PR} details..."
+    AUTHOR_HANDLE=$(gh pr view "$BRANCH_OR_PR" --json author -q .author.login 2>/dev/null)
+    if [ $? -ne 0 ] || [ -z "$AUTHOR_HANDLE" ]; then
+        echo "Warning: Could not fetch PR author, using 'review' as prefix"
+        AUTHOR_HANDLE="review"
+    fi
+else
+    # It's a branch name, try to find associated PR
+    echo "Looking up PR for branch: $BRANCH_OR_PR"
+    AUTHOR_HANDLE=$(gh pr list --head "$BRANCH_OR_PR" --json author -q '.[0].author.login' 2>/dev/null)
+    if [ -z "$AUTHOR_HANDLE" ]; then
+        echo "Warning: Could not find PR author for branch, using 'review' as prefix"
+        AUTHOR_HANDLE="review"
+    fi
+fi
+
+# Prompt for worktree name
+echo ""
+echo "Enter worktree name (will be prefixed with ${AUTHOR_HANDLE}/):"
+read -p "Worktree name: " WORKTREE_NAME
+
+if [ -z "$WORKTREE_NAME" ]; then
+    echo "Error: Worktree name cannot be empty"
+    exit 1
+fi
+
+# Construct full worktree name with author prefix
+FULL_WORKTREE_NAME="${AUTHOR_HANDLE}/${WORKTREE_NAME}"
+
+echo ""
+echo "Creating worktree: $FULL_WORKTREE_NAME"
+echo "Prompting for area to checkout (default: mozart)..."
+
+# Use dev cd -t to create the worktree
+# This will prompt for the area interactively
+dev cd -t "$FULL_WORKTREE_NAME"
+
+# Get the worktree path
+WORKTREE_PATH="$HOME/src/shopify/.claude/worktrees/${FULL_WORKTREE_NAME}"
+
+# Check if worktree was created successfully
+if [ ! -d "$WORKTREE_PATH" ]; then
+    echo "Error: Worktree was not created at expected path: $WORKTREE_PATH"
+    exit 1
+fi
+
+# Navigate to the worktree
+cd "$WORKTREE_PATH"
+
+# Checkout the PR/branch
+echo ""
+if [[ "$BRANCH_OR_PR" =~ ^[0-9]+$ ]]; then
+    echo "Checking out PR #${BRANCH_OR_PR}..."
+    gh pr checkout "$BRANCH_OR_PR"
+else
+    echo "Checking out branch: $BRANCH_OR_PR"
+    git checkout "$BRANCH_OR_PR" || git checkout -b "$BRANCH_OR_PR" "origin/$BRANCH_OR_PR"
+fi
+
+# Show PR info if available
+if [[ "$BRANCH_OR_PR" =~ ^[0-9]+$ ]]; then
+    echo ""
+    gh pr view "$BRANCH_OR_PR"
+fi
+
+# Open Claude Code in the worktree
+echo ""
+echo "Opening Claude Code in worktree..."
+claude code .
+
+echo ""
+echo "✓ Worktree created at: $WORKTREE_PATH"
+echo "✓ Claude Code is now running in the worktree"
+echo ""
+echo "You can now use cmd+enter in kitty to split and open nvim"

@@ -1,0 +1,83 @@
+#!/bin/bash
+# new-work - Start new work in a fresh worktree with Claude Code
+#
+# Usage: new-work
+#
+# This script:
+# 1. Prompts for a worktree name
+# 2. Uses dev to prompt for the area to check out (default mozart)
+# 3. Creates the worktree using `dev cd -t`
+# 4. Navigates to the new worktree
+# 5. Checks out the latest main
+# 6. Opens claude code in the new worktree
+
+set -e
+
+# Get the current user's GitHub handle for prefixing
+GITHUB_HANDLE=$(gh api user -q .login 2>/dev/null)
+if [ -z "$GITHUB_HANDLE" ]; then
+    echo "Warning: Could not fetch GitHub handle, using $USER"
+    GITHUB_HANDLE="$USER"
+fi
+
+# Prompt for worktree name
+echo "Starting new work..."
+echo ""
+echo "Enter worktree name (will be prefixed with ${GITHUB_HANDLE}/):"
+read -p "Worktree name: " WORKTREE_NAME
+
+if [ -z "$WORKTREE_NAME" ]; then
+    echo "Error: Worktree name cannot be empty"
+    exit 1
+fi
+
+# Construct full worktree name with user prefix
+FULL_WORKTREE_NAME="${GITHUB_HANDLE}/${WORKTREE_NAME}"
+
+echo ""
+echo "Creating worktree: $FULL_WORKTREE_NAME"
+echo "Prompting for area to checkout (default: mozart)..."
+
+# Use dev cd -t to create the worktree
+# This will prompt for the area interactively
+dev cd -t "$FULL_WORKTREE_NAME"
+
+# Get the worktree path
+WORKTREE_PATH="$HOME/src/shopify/.claude/worktrees/${FULL_WORKTREE_NAME}"
+
+# Check if worktree was created successfully
+if [ ! -d "$WORKTREE_PATH" ]; then
+    echo "Error: Worktree was not created at expected path: $WORKTREE_PATH"
+    exit 1
+fi
+
+# Navigate to the worktree
+cd "$WORKTREE_PATH"
+
+# Fetch and checkout the latest main
+echo ""
+echo "Fetching latest changes..."
+git fetch origin main
+
+echo "Checking out latest main..."
+git checkout main
+git reset --hard origin/main
+
+# Show current status
+echo ""
+echo "Current branch: $(git branch --show-current)"
+echo "Latest commit: $(git log --oneline -1)"
+
+# Open Claude Code in the worktree
+echo ""
+echo "Opening Claude Code in worktree..."
+claude code .
+
+echo ""
+echo "✓ Worktree created at: $WORKTREE_PATH"
+echo "✓ On latest main branch"
+echo "✓ Claude Code is now running in the worktree"
+echo ""
+echo "You can now:"
+echo "  - Use cmd+enter in kitty to split and open nvim"
+echo "  - Create your first PR with: gt create -m 'your message'"

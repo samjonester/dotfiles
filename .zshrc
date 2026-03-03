@@ -56,3 +56,6 @@ source $DF_USER/custom.zsh
 
 # Load changes specific to this local environment.
 source ~/extra.zsh
+
+# Added by tec agent
+[[ -x /Users/sam/.local/state/tec/profiles/base/current/global/init ]] && eval "$(/Users/sam/.local/state/tec/profiles/base/current/global/init zsh)"
