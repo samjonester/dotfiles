@@ -5,6 +5,7 @@
 	path = ~/.gitconfig.local # not part of the dotfiles repo. Apply settings for a specific local environment that you don't want everywhere.
 	path = ~/dotfiles/personal/.gitconfig # Your personal gitconfig settings. Anything specific to you that you want everywhere.
 	path = ~/shopify-dotfiles/personal/.gitconfig # gitconfig automatically provided when you're using Spin. Ignored anywhere else.
+	path = /Users/sam/.config/dev/gitconfig
 
 [alias]
 

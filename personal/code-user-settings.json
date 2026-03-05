@@ -1,6 +1,4 @@
 {
-  "workbench.colorTheme": "GrunBoxTheme",
-  "workbench.preferredDarkColorTheme": "GrunBoxTheme",
   "window.autoDetectColorScheme": true,
   "editor.fontFamily": "Source Code Pro",
   "editor.codeLensFontFamily": "Source Code Pro",
@@ -103,4 +101,6 @@
     "strings": true,
   },
   "claudeCode.preferredLocation": "panel",
+  "claudeCode.useCtrlEnterToSend": true,
+  "claudeCode.selectedModel": "haiku",
 }

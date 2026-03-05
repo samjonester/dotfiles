@@ -31,15 +31,15 @@ vim.keymap.set("n", "<leader>fgb", "<cmd>Telescope git_branches<cr>", { desc = "
 vim.keymap.set("n", "<leader>fgs", "<cmd>Telescope git_status<cr>", { desc = "Git Status (Telescope)" })
 
 -- Word under cursor search commands
-vim.keymap.set("n", "<leader>fw", function()
+vim.keymap.set("n", "<leader>f<C-w>", function()
   require('telescope.builtin').find_files({ default_text = vim.fn.expand("<cword>") })
 end, { desc = "Find Files with word under cursor" })
 
-vim.keymap.set("n", "<leader>fW", function()
+vim.keymap.set("n", "<leader>F<C-w>", function()
   require('telescope.builtin').live_grep({ default_text = vim.fn.expand("<cword>") })
 end, { desc = "Search for word under cursor" })
 
--- Alternative keybindings for quick access
+-- Alternative keybindings using 'g' prefix for quick access
 vim.keymap.set("n", "gfw", function()
   require('telescope.builtin').find_files({ default_text = vim.fn.expand("<cword>") })
 end, { desc = "Find Files with word under cursor" })
@@ -47,3 +47,12 @@ end, { desc = "Find Files with word under cursor" })
 vim.keymap.set("n", "gfW", function()
   require('telescope.builtin').live_grep({ default_text = vim.fn.expand("<cword>") })
 end, { desc = "Grep for word under cursor" })
+
+-- Additional convenient keybindings
+vim.keymap.set("n", "<leader>*", function()
+  require('telescope.builtin').grep_string({ search = vim.fn.expand("<cword>") })
+end, { desc = "Search current word" })
+
+vim.keymap.set("n", "<leader>#", function()
+  require('telescope.builtin').grep_string({ search = vim.fn.expand("<cWORD>") })
+end, { desc = "Search current WORD" })

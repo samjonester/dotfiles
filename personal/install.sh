@@ -12,6 +12,7 @@ darwin*)
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
   git clone --depth 1 https://github.com/dexpota/kitty-themes.git ~/.config/kitty/kitty-themes
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/CLAUDE.md ~/.claude/CLAUDE.md
 
   # Terminal Tooling
   $BREW_EXECUTABLE install bat
