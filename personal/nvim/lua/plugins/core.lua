@@ -28,6 +28,18 @@ return {
     },
   },
   { "folke/flash.nvim", enabled = false },
+  {
+    "nvim-neo-tree/neo-tree.nvim",
+    opts = {
+      filesystem = {
+        window = {
+          mappings = {
+            ["H"] = "toggle_hidden",
+          },
+        },
+      },
+    },
+  },
   -- Disabled nvim-ufo: major cause of cursor movement lag
   { "kevinhwang91/nvim-ufo", enabled = false },
   { "kevinhwang91/promise-async", enabled = false },
