@@ -29,6 +29,9 @@ alias gco='git checkout $(git branch --format="%(refname:short)" | fzf)'
 # alias n=npm
 alias r=ranger
 
+alias dpi='devx pi'
+alias lg='lazygit'
+
 alias '?s'='gh copilot suggest'
 alias '?e'='gh copilot explain'
 

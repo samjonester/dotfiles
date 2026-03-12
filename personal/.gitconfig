@@ -6,7 +6,6 @@
 #     clean = git-lfs clean -- %f
 #     smudge = git-lfs smudge -- %f
 [include]
-	path = ~/.config/dev/gitconfig
   path = ~/.config/delta/themes.gitconfig
 
 [user]

@@ -1,7 +1,7 @@
 -- Performance optimizations for Neovim
 return {
   {
-    "echasnovski/mini.hipatterns",
+    "nvim-mini/mini.hipatterns",
     opts = {
       -- Reduce update frequency to improve cursor movement performance
       delay = {
