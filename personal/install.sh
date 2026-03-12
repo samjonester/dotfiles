@@ -14,11 +14,15 @@ darwin*)
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
 
   # Pi Configuration
-  mkdir -p ~/.pi/agent
+  mkdir -p ~/.pi/agent/extensions
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/AGENTS.md ~/.pi/agent/AGENTS.md
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/settings.json ~/.pi/agent/settings.json
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/skills ~/.pi/agent/skills
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/prompts ~/.pi/agent/prompts
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/subagent ~/.pi/agent/extensions/subagent
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/git-safety.ts ~/.pi/agent/extensions/git-safety.ts
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/bash-guard ~/.pi/agent/extensions/bash-guard
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/session-namer ~/.pi/agent/extensions/session-namer
   # Set up Shopify-specific AGENTS.md per instructions in the file
   if [ -d ~/src/shopify ]; then
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/AGENTS.md.shopify ~/src/shopify/AGENTS.md
@@ -82,11 +86,15 @@ linux*)
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
 
     # Pi Configuration
-    mkdir -p ~/.pi/agent
+    mkdir -p ~/.pi/agent/extensions
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/AGENTS.md ~/.pi/agent/AGENTS.md
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/settings.json ~/.pi/agent/settings.json
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/skills ~/.pi/agent/skills
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/prompts ~/.pi/agent/prompts
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/subagent ~/.pi/agent/extensions/subagent
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/git-safety.ts ~/.pi/agent/extensions/git-safety.ts
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/bash-guard ~/.pi/agent/extensions/bash-guard
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/session-namer ~/.pi/agent/extensions/session-namer
     # Set up Shopify-specific AGENTS.md per instructions in the file
     if [ -d ~/src/shopify ]; then
       ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/AGENTS.md.shopify ~/src/shopify/AGENTS.md

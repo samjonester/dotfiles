@@ -1,6 +1,6 @@
 {
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-sonnet-4-6",
+  "defaultModel": "claude-opus-4-6",
   "defaultThinkingLevel": "medium",
   "theme": "dark",
   "compaction": {
@@ -12,6 +12,16 @@
     "enabled": true,
     "maxRetries": 3
   },
-  "enabledModels": ["claude-sonnet-4-6", "claude-opus-4-6"],
-  "enableSkillCommands": true
+  "enabledModels": [
+    "claude-sonnet-4-6",
+    "claude-opus-4-6",
+    "gpt-5.3-codex"
+  ],
+  "enableSkillCommands": true,
+  "lastChangelogVersion": "0.57.1",
+  "packages": [
+    "npm:pi-web-access",
+    "npm:pi-messenger",
+    "npm:pi-tool-display"
+  ]
 }

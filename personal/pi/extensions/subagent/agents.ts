@@ -1,0 +1,1 @@
+/nix/store/12kw121hq0xsjyi4gng90x5sb6x800wa-pi-coding-agent-0.57.1/lib/node_modules/pi-monorepo/examples/extensions/subagent/agents.ts

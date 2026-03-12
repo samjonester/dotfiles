@@ -15,3 +15,7 @@
 ## Workflow
 
 - Clean up any `.md` files created during planning or task coordination at the end of each step. Do not defer cleanup until the end of a task.
+
+## Git Safety
+
+- Always highlight local git/graphite commands after executing them.
