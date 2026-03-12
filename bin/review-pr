@@ -1,5 +1,5 @@
 #!/bin/bash
-# review-pr - Review a PR in a new worktree with Claude Code
+# review-pr - Review a PR in a new worktree with pi
 #
 # Usage: review-pr <branch-name-or-pr-number>
 #
@@ -9,7 +9,7 @@
 # 3. Uses dev to prompt for the area to check out (default mozart)
 # 4. Creates the worktree using `dev cd -t` with author prefix
 # 5. Navigates to the new worktree
-# 6. Opens claude code in the new worktree
+# 6. Opens pi in the new worktree
 
 set -e
 
@@ -62,7 +62,7 @@ echo "Prompting for area to checkout (default: mozart)..."
 dev cd -t "$FULL_WORKTREE_NAME"
 
 # Get the worktree path
-WORKTREE_PATH="$HOME/src/shopify/.claude/worktrees/${FULL_WORKTREE_NAME}"
+WORKTREE_PATH="$HOME/src/shopify/.pi/worktrees/${FULL_WORKTREE_NAME}"
 
 # Check if worktree was created successfully
 if [ ! -d "$WORKTREE_PATH" ]; then
@@ -89,13 +89,13 @@ if [[ "$BRANCH_OR_PR" =~ ^[0-9]+$ ]]; then
     gh pr view "$BRANCH_OR_PR"
 fi
 
-# Open Claude Code in the worktree
+# Open pi in the worktree
 echo ""
-echo "Opening Claude Code in worktree..."
-claude code .
+echo "Opening pi in worktree..."
+pi
 
 echo ""
 echo "✓ Worktree created at: $WORKTREE_PATH"
-echo "✓ Claude Code is now running in the worktree"
+echo "✓ pi is now running in the worktree"
 echo ""
 echo "You can now use cmd+enter in kitty to split and open nvim"

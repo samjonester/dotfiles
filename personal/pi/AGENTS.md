@@ -1,4 +1,4 @@
-# Personal Claude Code Preferences
+# Personal Coding Preferences
 
 ## Service Design
 

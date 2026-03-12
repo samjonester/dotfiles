@@ -13,13 +13,15 @@ darwin*)
   git clone --depth 1 https://github.com/dexpota/kitty-themes.git ~/.config/kitty/kitty-themes
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
 
-  # Claude Code Configuration
-  mkdir -p ~/.claude
-  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/claude/CLAUDE.md ~/.claude/CLAUDE.md
-  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/claude/claude-code-settings.json ~/.claude/settings.json
-  # Set up Shopify-specific CLAUDE.md per instructions in the file
+  # Pi Configuration
+  mkdir -p ~/.pi/agent
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/AGENTS.md ~/.pi/agent/AGENTS.md
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/settings.json ~/.pi/agent/settings.json
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/skills ~/.pi/agent/skills
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/prompts ~/.pi/agent/prompts
+  # Set up Shopify-specific AGENTS.md per instructions in the file
   if [ -d ~/src/shopify ]; then
-    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/CLAUDE.md.shopify ~/src/shopify/CLAUDE.md
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/AGENTS.md.shopify ~/src/shopify/AGENTS.md
   fi
 
   # Terminal Tooling
@@ -79,13 +81,15 @@ linux*)
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
 
-    # Claude Code Configuration
-    mkdir -p ~/.claude
-    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/claude/CLAUDE.md ~/.claude/CLAUDE.md
-    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/claude/claude-code-settings.json ~/.claude/settings.json
-    # Set up Shopify-specific CLAUDE.md per instructions in the file
+    # Pi Configuration
+    mkdir -p ~/.pi/agent
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/AGENTS.md ~/.pi/agent/AGENTS.md
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/settings.json ~/.pi/agent/settings.json
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/skills ~/.pi/agent/skills
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/prompts ~/.pi/agent/prompts
+    # Set up Shopify-specific AGENTS.md per instructions in the file
     if [ -d ~/src/shopify ]; then
-      ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/CLAUDE.md.shopify ~/src/shopify/CLAUDE.md
+      ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/AGENTS.md.shopify ~/src/shopify/AGENTS.md
     fi
 
     # Terminal Tooling

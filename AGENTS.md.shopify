@@ -1,6 +1,6 @@
-# Claude Code Configuration for Shopify Development
+# Pi Configuration for Shopify Development
 
-This file should be copied to `~/src/shopify/CLAUDE.md` to provide context for Claude Code.
+This file should be copied to `~/src/shopify/AGENTS.md` to provide context for pi.
 
 ## Project Context
 
@@ -8,21 +8,20 @@ You're working in a Shopify monorepo with the following characteristics:
 - Large codebase requiring sparse checkout
 - Uses Graphite for PR stacks
 - Uses `dev` command for server management
-- Worktrees are stored in `.claude/worktrees/`
+- Worktrees are stored in `.pi/worktrees/`
 
-## Available Custom Skills
+## Available Skills
 
-- `/review-pr <number>` - Set up isolated environment for PR review
-- `/new-feature <name>` - Start new feature work with Graphite stack
-- `/resume-work <feature> [pr]` - Resume existing work
-- `/worktree-status` - Show all worktrees and their status
-- `/prune-worktrees` - Clean up merged worktrees (shell alias: pwt)
+- `/skill:review-pr` - Set up isolated environment for PR review
+- `/skill:new-feature` - Start new feature work with Graphite stack
+- `/skill:resume-work` - Resume existing work
+- `/skill:worktree-status` - Show all worktrees and their status
 
 ## Workflow Preferences
 
 ### PR Reviews
 When user asks to review a PR, proactively:
-1. Suggest using `/review-pr` skill
+1. Suggest using `/skill:review-pr`
 2. Remind them about sparse checkout if needed
 3. Show PR description and stack context
 
@@ -82,7 +81,7 @@ Before submitting PRs:
 ## Terminal Setup
 
 Recommended layout:
-- Left pane: Claude Code
+- Left pane: pi
 - Right top: Neovim for quick edits
 - Right bottom: Terminal for git/server commands
 

@@ -1,17 +1,17 @@
 #!/bin/bash
-# resume-work - Resume work in an existing worktree with Claude Code
+# resume-work - Resume work in an existing worktree with pi
 #
 # Usage: resume-work
 #
 # This script:
 # 1. Shows a selector with active worktrees
 # 2. Navigates to the selected worktree
-# 3. Starts claude code in that worktree
+# 3. Starts pi in that worktree
 
 set -e
 
 # Base directory for worktrees
-WORKTREE_BASE="$HOME/src/shopify/.claude/worktrees"
+WORKTREE_BASE="$HOME/src/shopify/.pi/worktrees"
 
 # Check if worktree directory exists
 if [ ! -d "$WORKTREE_BASE" ]; then
@@ -35,8 +35,8 @@ while IFS= read -r line; do
         WORKTREE_PATH=$(echo "$line" | awk '{print $1}')
         BRANCH=$(echo "$line" | awk '{print $3}' | tr -d '[]')
 
-        # Only include Claude worktrees
-        if [[ "$WORKTREE_PATH" == *"/.claude/worktrees/"* ]]; then
+        # Only include pi worktrees
+        if [[ "$WORKTREE_PATH" == *"/.pi/worktrees/"* ]]; then
             # Extract relative path for display
             REL_PATH=${WORKTREE_PATH#$WORKTREE_BASE/}
 
@@ -104,13 +104,13 @@ if command -v gt &> /dev/null && gt stack &> /dev/null; then
     gt stack --oneline
 fi
 
-# Open Claude Code in the worktree
+# Open pi in the worktree
 echo ""
-echo "Opening Claude Code in worktree..."
-claude code .
+echo "Opening pi in worktree..."
+pi -c
 
 echo ""
 echo "✓ Resumed work in: $SELECTED_PATH"
-echo "✓ Claude Code is now running in the worktree"
+echo "✓ pi is now running in the worktree"
 echo ""
 echo "You can now use cmd+enter in kitty to split and open nvim"

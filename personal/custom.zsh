@@ -140,5 +140,3 @@ killport() {
     fi
 }
 
-# Claude Code Worktree Configuration
-source ~/dotfiles/shell-worktree-config.sh
