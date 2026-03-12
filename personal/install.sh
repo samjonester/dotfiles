@@ -12,7 +12,15 @@ darwin*)
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
   git clone --depth 1 https://github.com/dexpota/kitty-themes.git ~/.config/kitty/kitty-themes
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
-  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/CLAUDE.md ~/.claude/CLAUDE.md
+
+  # Claude Code Configuration
+  mkdir -p ~/.claude
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/claude/CLAUDE.md ~/.claude/CLAUDE.md
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/claude/claude-code-settings.json ~/.claude/settings.json
+  # Set up Shopify-specific CLAUDE.md per instructions in the file
+  if [ -d ~/src/shopify ]; then
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/CLAUDE.md.shopify ~/src/shopify/CLAUDE.md
+  fi
 
   # Terminal Tooling
   $BREW_EXECUTABLE install bat
@@ -70,6 +78,15 @@ linux*)
     sudo apt-get install -y kitty
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
+
+    # Claude Code Configuration
+    mkdir -p ~/.claude
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/claude/CLAUDE.md ~/.claude/CLAUDE.md
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/claude/claude-code-settings.json ~/.claude/settings.json
+    # Set up Shopify-specific CLAUDE.md per instructions in the file
+    if [ -d ~/src/shopify ]; then
+      ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/CLAUDE.md.shopify ~/src/shopify/CLAUDE.md
+    fi
 
     # Terminal Tooling
     sudo apt-get install -y bat ranger
