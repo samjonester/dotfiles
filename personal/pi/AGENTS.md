@@ -41,6 +41,29 @@ The goal is **speed and responsiveness** — use the fastest model that produces
 - Consider Haiku when you're about to do a long stretch of trivial reads/lookups before the real work begins
 - Consider Codex when stuck or when working outside the Ruby/TypeScript comfort zone
 
+### Multi-model planning workflow
+When asked to "plan", "propose options", "evaluate approaches", or similar planning tasks, use the parallel subagent workflow:
+
+1. **Diverge** — run `planner-opus` and `planner-codex` in parallel with the same problem statement. They have deliberately different philosophies:
+   - **planner-opus** (Claude): minimal correct change, low risk, ship fast
+   - **planner-codex** (Codex): clean design, proper abstractions, future-proofed
+   The model difference AND framing difference together produce genuinely diverse proposals.
+2. **Judge** — feed both proposals into `plan-judge` (Opus), which verifies claims against the codebase and synthesizes the right level of investment between the two extremes.
+3. **Present** — show the user the recommended plan with the verdict.
+4. **Iterate** — if the user wants changes, re-run the judge with their feedback (no need to re-run both planners unless the problem statement changed significantly).
+
+Run the parallel planners first, then feed into the judge:
+```
+subagent({ tasks: [
+  { agent: "planner-opus", task: "<problem statement>" },
+  { agent: "planner-codex", task: "<problem statement>" }
+]})
+```
+Then:
+```
+subagent({ agent: "plan-judge", task: "Evaluate these proposals:\n\n<proposals from above>" })
+```
+
 ## Session Hygiene
 
 - Prefer starting new sessions (`/session new`) for unrelated tasks rather than using `/clear`
