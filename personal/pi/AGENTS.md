@@ -42,27 +42,52 @@ The goal is **speed and responsiveness** — use the fastest model that produces
 - Consider Codex when stuck or when working outside the Ruby/TypeScript comfort zone
 
 ### Multi-model planning workflow
-When asked to "plan", "propose options", "evaluate approaches", or similar planning tasks, use the parallel subagent workflow:
+When asked to "plan", "propose options", "evaluate approaches", or similar planning tasks, use this workflow:
 
-1. **Diverge** — run `planner-opus` and `planner-codex` in parallel with the same problem statement. They have deliberately different philosophies:
-   - **planner-opus** (Claude): minimal correct change, low risk, ship fast
-   - **planner-codex** (Codex): clean design, proper abstractions, future-proofed
-   The model difference AND framing difference together produce genuinely diverse proposals.
-2. **Judge** — feed both proposals into `plan-judge` (Opus), which verifies claims against the codebase and synthesizes the right level of investment between the two extremes.
-3. **Present** — show the user the recommended plan with the verdict.
-4. **Iterate** — if the user wants changes, re-run the judge with their feedback (no need to re-run both planners unless the problem statement changed significantly).
+#### Step 0: Question (fast pre-pass)
+Run `plan-questioner` (Sonnet) to sharpen the problem statement before any solution work begins. It reads the relevant code, identifies ambiguities, discovers hard constraints, and produces a refined problem statement. This avoids wasting two expensive planning calls on an under-specified problem.
 
-Run the parallel planners first, then feed into the judge:
+```
+subagent({ agent: "plan-questioner", task: "<raw problem statement>" })
+```
+
+The questioner is designed to ask the user rather than assume — expect one or more rounds of back-and-forth. **Do not advance to Step 1 until the questioner has produced its final refined problem statement.** A plan built on wrong assumptions is worse than a slower plan built on confirmed understanding.
+
+#### Step 1: Diverge (parallel proposals)
+Choose the proposer pair based on the problem type:
+
+**Minimal vs. clean-design** (default — for new features, refactors, greenfield work):
+- `planner-opus` (Opus): smallest correct change, low risk, ship fast
+- `planner-codex` (Codex): clean design, proper abstractions, future-proofed
+
+**Local vs. systemic** (for bugs, regressions, recurring issues):
+- `planner-local` (Opus): targeted fix scoped to the immediate problem area
+- `planner-systemic` (Codex): root-cause fix that addresses the underlying pattern
+
+Why these model assignments:
+- **Opus for the contained proposals** (minimal, local): Opus excels at careful, restrained analysis — reading existing code precisely and finding the smallest correct intervention. Its conservatism is a feature here.
+- **Codex for the expansive proposals** (clean-design, systemic): Codex's 400K context window lets it ingest more of the codebase, which matters when the task is to read broadly, find patterns across files, and think about system-level design. A different model family also provides genuine cognitive diversity — not variety for its own sake, but because different training produces different blind spots.
+
 ```
 subagent({ tasks: [
-  { agent: "planner-opus", task: "<problem statement>" },
-  { agent: "planner-codex", task: "<problem statement>" }
+  { agent: "planner-opus", task: "<refined problem statement>" },
+  { agent: "planner-codex", task: "<refined problem statement>" }
 ]})
 ```
-Then:
+
+#### Step 2: Judge
+Feed both proposals AND the original problem statement into `plan-judge` (Opus).
+
+Why Opus for judging: The judge's core job is claim verification (spot-checking proposals against real code) and reasoning about tradeoffs — both are pure analytical tasks where Opus is strongest. The prompt explicitly forces it to assess local-vs-systemic fit from evidence, which counteracts any conservatism bias.
+
+**Always include the original problem statement** so the judge evaluates proposals against the actual goal, not just against each other:
+
 ```
-subagent({ agent: "plan-judge", task: "Evaluate these proposals:\n\n<proposals from above>" })
+subagent({ agent: "plan-judge", task: "## Original problem\n<raw problem statement>\n\n## Proposal A\n<proposal A output>\n\n## Proposal B\n<proposal B output>" })
 ```
+
+#### Step 3: Present & iterate
+Show the user the recommended plan with the verdict. If the user wants changes, re-run the judge with their feedback (no need to re-run both planners unless the problem statement changed significantly).
 
 ## Session Hygiene
 
