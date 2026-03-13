@@ -1,8 +1,14 @@
 {
   "defaultProvider": "anthropic",
   "defaultModel": "claude-opus-4-6",
-  "defaultThinkingLevel": "medium",
+  "defaultThinkingLevel": "high",
   "theme": "dark",
+  "thinkingBudgets": {
+    "minimal": 1024,
+    "low": 4096,
+    "medium": 10240,
+    "high": 32768
+  },
   "compaction": {
     "enabled": true,
     "reserveTokens": 16384,
