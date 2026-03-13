@@ -87,6 +87,22 @@ subagent({ agent: "plan-judge", task: "Evaluate these proposals:\n\n<proposals f
 
 - Clean up any `.md` files created during planning or task coordination at the end of each step. Do not defer cleanup until the end of a task.
 
+## Dotfiles & Pi Config Management
+
+All pi configuration is versioned in `~/dotfiles/personal/pi/` and symlinked into `~/.pi/agent/`. When creating or modifying any pi resource (extensions, skills, agents, prompts, settings.json, AGENTS.md), always:
+
+1. **Write the file to `~/dotfiles/personal/pi/<type>/`** — not directly into `~/.pi/agent/`
+2. **Symlink into `~/.pi/agent/`** if a symlink doesn't already exist for that path
+3. The symlink structure is:
+   - `~/.pi/agent/AGENTS.md` → `~/dotfiles/personal/pi/AGENTS.md`
+   - `~/.pi/agent/settings.json` → `~/dotfiles/personal/pi/settings.json`
+   - `~/.pi/agent/agents/` → `~/dotfiles/personal/pi/agents/`
+   - `~/.pi/agent/skills/` → `~/dotfiles/personal/pi/skills/`
+   - `~/.pi/agent/prompts` → `~/dotfiles/personal/pi/prompts`
+   - `~/.pi/agent/extensions/<name>` → `~/dotfiles/personal/pi/extensions/<name>` (per-extension symlinks)
+4. Directory-level symlinks (agents, skills, prompts) mean new files inside them are automatically versioned — no extra symlinking needed
+5. Extensions use per-extension symlinks (not a directory symlink) because `shopify-proxy` is managed externally via nix
+
 ## Git Safety
 
 - Always highlight local git/graphite commands after executing them.
