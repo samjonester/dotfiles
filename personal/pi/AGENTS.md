@@ -10,19 +10,22 @@
 
 ## Model & Thinking Selection
 
-- **Code editing** (write, edit, refactor, implement features, fix bugs): always use Opus
+The goal is **speed and responsiveness** — use the fastest model that produces correct results for the task at hand.
+
+- **Code editing** (write, edit, refactor, implement features, fix bugs): always use Opus with high thinking
 - **Code reviews and architectural planning**: use Opus with high thinking
-- **Mechanical tasks** (grep, find, read, file exploration, running tests, PR descriptions, git operations, renaming across files): use Sonnet with medium thinking
-- **Simple substitutions and small edits** (renaming a variable, fixing a typo, updating a string): Opus is fine, but use medium thinking — high thinking is unnecessary
-- When transitioning from a planning/review phase to an implementation phase, suggest switching to Sonnet for the mechanical parts
-- After `/clear` or starting a new task in the same session, re-evaluate whether the current model is appropriate
+- **Debugging subtle issues**: use Opus with high thinking
+- **Mechanical tasks** (grep, find, read, file exploration, running tests, PR descriptions, git operations, renaming across files): use Sonnet with medium thinking — Sonnet is significantly faster for these and produces identical results
+- **Simple substitutions and small edits** (renaming a variable, fixing a typo, updating a string): Opus is fine since it's already loaded, but drop to medium thinking — high thinking adds latency with no quality gain
+- When entering a long stretch of mechanical work (>10 sequential tool calls of grep/read/find/test runs), suggest switching to Sonnet for speed
+- After the mechanical stretch, suggest switching back to Opus before code editing resumes
 
 ## Session Hygiene
 
 - Prefer starting new sessions (`/session new`) for unrelated tasks rather than using `/clear`
-- `/clear` causes full cache misses — the entire context must be re-sent and re-cached, which is expensive at high context sizes
-- If you must stay in the same session, be aware that accumulated context from earlier tasks inflates cost for later ones
-- For long implementation sessions (>50 tool calls), suggest compacting with `/compact` if context is growing large
+- `/clear` causes full cache misses — the entire context must be re-sent and re-cached, adding seconds of latency to the next turn and slowing down every subsequent response as context rebuilds
+- Large accumulated context slows down every turn — the model processes more tokens, increasing latency. Keep sessions focused.
+- For long implementation sessions (>50 tool calls), suggest compacting with `/compact` to reduce context size and speed up responses
 
 ## Service Design
 
