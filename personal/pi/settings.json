@@ -19,8 +19,9 @@
     "maxRetries": 3
   },
   "enabledModels": [
-    "claude-sonnet-4-6",
     "claude-opus-4-6",
+    "claude-sonnet-4-6",
+    "claude-haiku-4-5",
     "gpt-5.3-codex"
   ],
   "enableSkillCommands": true,

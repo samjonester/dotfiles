@@ -12,13 +12,34 @@
 
 The goal is **speed and responsiveness** — use the fastest model that produces correct results for the task at hand.
 
+### Opus (claude-opus-4-6) — deep reasoning, code correctness
 - **Code editing** (write, edit, refactor, implement features, fix bugs): always use Opus with high thinking
 - **Code reviews and architectural planning**: use Opus with high thinking
 - **Debugging subtle issues**: use Opus with high thinking
-- **Mechanical tasks** (grep, find, read, file exploration, running tests, PR descriptions, git operations, renaming across files): use Sonnet with medium thinking — Sonnet is significantly faster for these and produces identical results
-- **Simple substitutions and small edits** (renaming a variable, fixing a typo, updating a string): Opus is fine since it's already loaded, but drop to medium thinking — high thinking adds latency with no quality gain
+- **Simple substitutions and small edits** (renaming a variable, fixing a typo): Opus is fine since it's already loaded, but drop to medium thinking — high thinking adds latency with no quality gain
+
+### Sonnet (claude-sonnet-4-6) — fast, correct for straightforward work
+- **Mechanical tasks** (grep, find, read, file exploration, running tests, git operations, renaming across files): use Sonnet with medium thinking — significantly faster than Opus for these and produces identical results
 - When entering a long stretch of mechanical work (>10 sequential tool calls of grep/read/find/test runs), suggest switching to Sonnet for speed
 - After the mechanical stretch, suggest switching back to Opus before code editing resumes
+
+### Haiku (claude-haiku-4-5) — near-instant responses for trivial tasks
+- **Quick lookups and summaries**: reading a file and answering a factual question about it, summarizing grep results, listing what changed in a diff
+- **Bulk simple operations**: when doing 20+ repetitive tool calls that need no reasoning (e.g., checking file existence, reading configs, collecting data across many files before doing real work)
+- **Drafting commit messages**: generating conventional commit messages from staged changes
+- Do NOT use Haiku for code editing, reviews, PR descriptions, or anything requiring correctness judgment
+
+### Codex (gpt-5.3-codex) — break out of loops, get a fresh perspective
+- **If the same approach has failed twice, switch to Codex automatically.** Don't ask — just switch, explain why ("Switching to Codex for a fresh approach — same fix has failed twice"), try the problem from scratch, and switch back to Opus when resolved.
+- **Second opinion on tricky bugs**: when debugging is going in circles, Codex often spots what Claude misses (and vice versa)
+- **Polyglot strength**: Codex can be stronger on less common languages or frameworks where Claude may have less training data
+- **Large-scale code generation**: Codex has a 400K context window — useful when you need to ingest a huge codebase before generating code
+
+### General rules
+- Default to Opus with high thinking — it's the primary model
+- Switch to Sonnet for speed during mechanical phases, switch back before editing
+- Consider Haiku when you're about to do a long stretch of trivial reads/lookups before the real work begins
+- Consider Codex when stuck or when working outside the Ruby/TypeScript comfort zone
 
 ## Session Hygiene
 
