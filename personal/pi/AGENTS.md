@@ -86,6 +86,15 @@ Why Opus for judging: The judge's core job is claim verification (spot-checking 
 subagent({ agent: "plan-judge", task: "## Original problem\n<raw problem statement>\n\n## Proposal A\n<proposal A output>\n\n## Proposal B\n<proposal B output>" })
 ```
 
+#### Degraded mode: one planner fails
+If one planner fails (error, empty output, timeout), do NOT skip the judge or improvise. Instead:
+1. **Tell the user** which planner failed and why (if known)
+2. **Present options** and let the user decide:
+   - **Retry** the failed planner (transient failures are common with external models)
+   - **Run the judge on the single proposal** — it still adds value by verifying claims and checking for blind spots
+   - **Skip the judge** and present the single proposal directly
+3. Never substitute the questioner output for a missing proposal — the questioner defines the problem, it does not propose solutions
+
 #### Step 3: Present & iterate
 Show the user the recommended plan with the verdict. If the user wants changes, re-run the judge with their feedback (no need to re-run both planners unless the problem statement changed significantly).
 

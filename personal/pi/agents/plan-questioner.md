@@ -50,3 +50,5 @@ Questions that came up during intake, how they were resolved (user answered, or 
 
 ## Refined problem statement
 A tightened version of the original ask, incorporating everything learned. This is what the proposers will receive.
+
+**Critical**: The refined problem statement must describe WHAT needs to change and WHY, not HOW. Do not list step-by-step implementation plans, file-by-file change lists, or specific code to write. The proposers determine the HOW — that's the entire point of having two divergent proposals. If your refined problem statement reads like an implementation plan, you've gone too far. Stick to: the goal, the constraints, the edge cases, and what "done" looks like.

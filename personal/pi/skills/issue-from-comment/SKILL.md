@@ -1,6 +1,6 @@
 ---
 name: issue-from-comment
-description: Create a GitHub issue from a PR comment. Researches the comment context, suggests labels, and writes an AI-implementable issue on the Marketing Efficiency Team project board (shop/issues-marketing-efficiency, project 665). Use when the user shares a PR comment URL or asks to turn a review comment into an issue.
+description: Create a GitHub issue from a PR comment. Researches the comment context, suggests labels, and writes an AI-implementable issue on the Marketing Efficiency Team project board (shop/issues-marketing-efficiency). Use when the user shares a PR comment URL or asks to turn a review comment into an issue.
 ---
 
 # Issue from PR Comment
@@ -10,7 +10,7 @@ Turn a PR review comment into a well-researched, AI-implementable GitHub issue o
 ## Input
 
 The user provides one of:
-- A PR comment URL (e.g., `https://github.com/shop/world/pull/501464#discussion_r12345`)
+- A PR comment URL (e.g., `https://github.com/shop/world/pull/123456#discussion_r12345`)
 - A PR number + description of the comment
 - A pasted comment body with context
 
@@ -153,18 +153,21 @@ Capture the issue URL from the output.
 After creating the issue, add it to the project and set status to Backlog:
 
 ```bash
-# Add to project and get the item ID
+# 1. Add issue to the project and get the item ID
 ITEM_ID=$(gh project item-add 665 --owner shop --url <issue_url> --format json | jq -r '.id')
 
-# Set status to Backlog
-# Project ID: PVT_kwDOCq3Ses4A95KL
-# Status field ID: PVTSSF_lADOCq3Ses4A95KLzgxdajc
-# Backlog option ID: b460b52d
+# 2. Look up the project's node ID and Status field details
+PROJECT_ID=$(gh project view 665 --owner shop --format json | jq -r '.id')
+STATUS_FIELD=$(gh project field-list 665 --owner shop --format json | jq '.fields[] | select(.name == "Status")')
+FIELD_ID=$(echo "$STATUS_FIELD" | jq -r '.id')
+BACKLOG_OPTION_ID=$(echo "$STATUS_FIELD" | jq -r '.options[] | select(.name == "Backlog") | .id')
+
+# 3. Set status to Backlog
 gh project item-edit \
-  --project-id PVT_kwDOCq3Ses4A95KL \
+  --project-id "$PROJECT_ID" \
   --id "$ITEM_ID" \
-  --field-id PVTSSF_lADOCq3Ses4A95KLzgxdajc \
-  --single-select-option-id b460b52d
+  --field-id "$FIELD_ID" \
+  --single-select-option-id "$BACKLOG_OPTION_ID"
 ```
 
 ## Step 7: Report
