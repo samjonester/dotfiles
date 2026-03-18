@@ -11,9 +11,11 @@
  * Timeouts and errors count as abstentions (ignored in vote tally).
  * Toggle with `/guard on|off|debug`. Not exposed as a tool — LLM cannot disable it.
  *
- * Override memory: when the user overrides a NO/split decision, the command is
- * recorded. Exact repeat commands are auto-allowed with a notification. Past
- * overrides are provided as context to voters so they can learn user preferences.
+ * Override memory: when the user overrides a NO/split decision with `y`, the
+ * command is recorded. Exact repeat commands are auto-allowed with a notification.
+ * Past overrides are provided as context to voters so they can learn user
+ * preferences. Pressing `o` allows the command once without recording it —
+ * the same command will be reviewed again next time.
  */
 
 import {
@@ -32,7 +34,7 @@ import {
 	type ExtensionAPI,
 	type ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
-import { Container, Markdown, matchesKey, Key, Spacer, Text } from "@mariozechner/pi-tui";
+import { Container, Input, Markdown, matchesKey, Key, Spacer, Text } from "@mariozechner/pi-tui";
 
 // ── Configuration ────────────────────────────────────────────────────────────
 
@@ -77,39 +79,150 @@ Based on the conversation context provided, respond in exactly this format:
 Be factual and concise. Do not add any other text outside this format.`;
 
 // ── Safe-command whitelist ────────────────────────────────────────────────────
+//
+// Architecture: compound-command-aware parsing
+//
+//   1. Strip safe stderr redirects (2>&1, 2>/dev/null)
+//   2. Split on command separators (&&, ||, ;, \n)
+//   3. Within each segment, split pipe chains on spaced ` | `
+//      (spaced split avoids false-splitting grep's \| alternation and ERE |)
+//   4. Validate each atomic command against safe patterns + dangerous-flag checks
+//
+// Commands with conditionally-safe patterns (sed, find, sort) are allowed
+// only when dangerous flags are absent (-i, -exec/-delete, -o respectively).
+//
+// awk is intentionally omitted: system() builtin and internal file I/O make
+// it impossible to whitelist safely without parsing the awk program.
 
+/** Patterns for commands that are always safe (read-only, no side effects). */
 const SAFE_COMMAND_PATTERNS: RegExp[] = [
+	// ── File reading & text processing ──
 	/^\s*ls\b/, /^\s*cat\b/, /^\s*echo\b/, /^\s*printf\b/,
 	/^\s*pwd\s*$/, /^\s*whoami\s*$/, /^\s*date\b/,
 	/^\s*head\b/, /^\s*tail\b/, /^\s*wc\b/,
 	/^\s*grep\b/, /^\s*rg\b/,
-	// find/fd omitted: -exec, -delete can run/delete anything
-	// awk omitted: system() builtin, internal file I/O
-	// sort omitted: -o flag writes to files
+	/^\s*sed\b/,   // conditionally safe: blocked if -i / --in-place
+	/^\s*find\b/,  // conditionally safe: blocked if -exec / -delete / -ok
+	/^\s*sort\b/,  // conditionally safe: blocked if -o
 	/^\s*which\b/, /^\s*type\b/, /^\s*file\b/, /^\s*stat\b/,
 	/^\s*du\b/, /^\s*df\b/, /^\s*tree\b/, /^\s*man\b/, /^\s*diff\b/,
 	/^\s*md5(sum)?\b/, /^\s*sha\d+sum\b/,
 	/^\s*uniq\b/, /^\s*cut\b/, /^\s*tr\b/, /^\s*jq\b/,
-	/^\s*git\s+(status|log|diff|show|branch|tag|remote|stash\s+list|config\s+--get)\b/,
+
+	// ── Path & environment ──
 	/^\s*cd\b/, /^\s*basename\b/, /^\s*dirname\b/, /^\s*realpath\b/, /^\s*readlink\b/,
 	/^\s*env\s*$/, /^\s*printenv\b/, /^\s*uname\b/, /^\s*id\s*$/,
 	/^\s*hostname\b/, /^\s*nproc\s*$/, /^\s*free\b/, /^\s*uptime\s*$/,
 	/^\s*test\b/, /^\s*\[\s/,
+	/^\s*true\s*$/, /^\s*false\s*$/,
+
+	// ── System inspection (read-only) ──
+	/^\s*ps\b/, /^\s*tput\b/,
+
+	// ── Shell comments ──
+	/^\s*#/,
+
+	// ── xargs with safe targets ──
+	/^\s*xargs\s+(grep|rg|ls|cat|head|tail|wc|file|stat)\b/,
+
+	// ── Git read-only operations ──
+	/^\s*git\s+(status|log|diff|show|branch|tag|remote|fetch)\b/,
+	/^\s*git\s+(reflog|blame|annotate|shortlog)\b/,
+	/^\s*git\s+(ls-files|rev-parse|describe|merge-base|name-rev)\b/,
+	/^\s*git\s+worktree\s+list\b/,
+	/^\s*git\s+stash\s+(list|show)\b/,
+	/^\s*git\s+config\s+(--get|--list|-l)\b/,
+
+	// ── GitHub CLI read operations ──
+	/^\s*gh\s+pr\s+(view|list|diff|checks|status)\b/,
+	/^\s*gh\s+issue\s+(view|list|status)\b/,
+	/^\s*gh\s+label\s+list\b/,
+	/^\s*gh\s+repo\s+(view|list)\b/,
+	/^\s*gh\s+project\s+(view|list|field-list)\b/,
+
+	// ── Graphite read operations ──
+	/^\s*gt\s+(ls|log|status|diff)\b/,
 ];
 
-/** Hoisted guard patterns for shell metacharacters that disqualify whitelist. */
-const UNSAFE_SHELL_CHARS = /[|;&`\n]/;
-const SUBSHELL_PATTERN = /\$\(/;
-const REDIRECT_PATTERN = />{1,2}/;
+/** Stderr redirects that are always safe to strip before analysis. */
+const STDERR_REDIRECT = /\s*2>(?:&1|\/dev\/null)/g;
 
+/** Splits a full command line into independent segments on &&, ||, ;, or \n. */
+const COMMAND_SEPARATOR = /\s*(?:&&|\|\||;|\n)\s*/;
+
+/**
+ * Check if a conditionally-safe command has dangerous flags.
+ * Returns true if the command should be BLOCKED despite matching a safe pattern.
+ */
+function hasDangerousFlags(cmd: string): boolean {
+	// sed: -i (in-place edit) or --in-place
+	if (/^\s*sed\b/.test(cmd) && (/\s-[a-zA-Z]*i/.test(cmd) || /--in-place/.test(cmd))) {
+		return true;
+	}
+	// find: -exec, -execdir, -delete, -ok, -okdir
+	if (/^\s*find\b/.test(cmd) && /-(exec|execdir|delete|ok|okdir)\b/.test(cmd)) {
+		return true;
+	}
+	// sort: -o (output to file)
+	if (/^\s*sort\b/.test(cmd) && /\s-[a-zA-Z]*o\b/.test(cmd)) {
+		return true;
+	}
+	return false;
+}
+
+/**
+ * Check if a single atomic command (no pipes, no conjunctions) is safe.
+ * At this point, stderr redirects and command separators are already handled.
+ */
+function isSingleCommandSafe(cmd: string): boolean {
+	const trimmed = cmd.trim();
+	if (!trimmed) return true;
+
+	// Block dangerous constructs within a single command
+	if (trimmed.includes("`")) return false;    // backtick subshell
+	if (trimmed.includes("$(")) return false;   // $() subshell
+	if (trimmed.includes("<(")) return false;   // process substitution
+	if (trimmed.includes(">")) return false;    // any remaining redirect (stderr already stripped)
+
+	// Check against safe patterns, then verify no dangerous flags
+	if (SAFE_COMMAND_PATTERNS.some((p) => p.test(trimmed))) {
+		return !hasDangerousFlags(trimmed);
+	}
+	return false;
+}
+
+/**
+ * Check if a command segment (may contain pipe chains) is safe.
+ * Splits on spaced pipes ` | ` to avoid false-splitting grep \| and ERE |.
+ */
+function isSegmentSafe(segment: string): boolean {
+	const trimmed = segment.trim();
+	if (!trimmed) return true;
+
+	// Split pipe chains on spaced pipes only — grep 'foo\|bar' and grep -E 'foo|bar'
+	// won't be split because the | inside patterns lacks surrounding spaces
+	const stages = trimmed.split(/\s\|\s/);
+	return stages.every((stage) => isSingleCommandSafe(stage));
+}
+
+/**
+ * Determine if a bash command can skip the security guard.
+ *
+ * Handles compound commands (&&, ||, ;, newlines), pipe chains, and
+ * stderr redirects. Each atomic command in the pipeline must be safe
+ * for the whole command to be whitelisted.
+ */
 function isWhitelisted(command: string): boolean {
-	// Collapse line-continuations and stray newlines into spaces so that
-	// long paths wrapped by the LLM don't trigger the \n guard.
-	const trimmed = command.trim().replace(/\\\n\s*/g, "").replace(/\n\s*/g, " ");
-	if (UNSAFE_SHELL_CHARS.test(trimmed)) return false;
-	if (SUBSHELL_PATTERN.test(trimmed)) return false;
-	if (REDIRECT_PATTERN.test(trimmed)) return false;
-	return SAFE_COMMAND_PATTERNS.some((p) => p.test(trimmed));
+	// Collapse line-continuations (backslash + newline)
+	let normalized = command.trim().replace(/\\\n\s*/g, " ");
+
+	// Strip safe stderr redirects before any analysis — these never
+	// create files or change command semantics
+	normalized = normalized.replace(STDERR_REDIRECT, "");
+
+	// Split on command separators — each segment is checked independently
+	const segments = normalized.split(COMMAND_SEPARATOR);
+	return segments.every((seg) => isSegmentSafe(seg));
 }
 
 // ── Shared helpers ───────────────────────────────────────────────────────────
@@ -581,11 +694,12 @@ async function showReviewDialog(
 	header: string,
 	debugEnabled: boolean,
 	interactive: boolean,
-): Promise<{ allowed: boolean; explanation: string }> {
-	return ctx.ui.custom<{ allowed: boolean; explanation: string }>((tui, theme, _kb, done) => {
+): Promise<{ allowed: boolean; remember: boolean; explanation: string; instructions?: string }> {
+	return ctx.ui.custom<{ allowed: boolean; remember: boolean; explanation: string; instructions?: string }>((tui, theme, _kb, done) => {
 		const mdTheme = getMarkdownTheme();
 		let explanationText = "";
 		let resolved = false;
+		let mode: "decide" | "feedback" = "decide";
 
 		const { container } = buildDialogContainer(theme, header, command, result.records);
 		container.addChild(new Spacer(1));
@@ -599,17 +713,64 @@ async function showReviewDialog(
 			debugText.setText("\n" + renderDebugTable(result.records, theme));
 		}
 
-		container.addChild(new Spacer(1));
-		container.addChild(new Text(
+		// Feedback input (created but not added to container until feedback mode)
+		const feedbackInput = new Input();
+		feedbackInput.onSubmit = (value: string) => {
+			if (resolved) return;
+			resolved = true;
+			done({ allowed: false, remember: false, explanation: explanationText, instructions: value || undefined });
+		};
+		feedbackInput.onEscape = () => {
+			if (resolved) return;
+			resolved = true;
+			done({ allowed: false, remember: false, explanation: explanationText });
+		};
+
+		// Footer components (stored for re-ordering when entering feedback mode)
+		const footerSpacer = new Spacer(1);
+		const hintsText = new Text(
 			interactive
-				? "  " + theme.fg("dim", "y") + theme.fg("muted", " allow  ") + theme.fg("dim", "n/esc") + theme.fg("muted", " block")
+				? "  " + theme.fg("dim", "y") + theme.fg("muted", " allow  ") +
+				  theme.fg("dim", "o") + theme.fg("muted", " once  ") +
+				  theme.fg("dim", "n") + theme.fg("muted", " deny  ") +
+				  theme.fg("dim", "esc") + theme.fg("muted", " dismiss")
 				: "  " + theme.fg("dim", "press any key to continue"),
 			1, 0,
-		));
-		container.addChild(new Spacer(1));
-		container.addChild(border(theme));
+		);
+		const bottomSpacer = new Spacer(1);
+		const bottomBorder = border(theme);
+
+		container.addChild(footerSpacer);
+		container.addChild(hintsText);
+		container.addChild(bottomSpacer);
+		container.addChild(bottomBorder);
 
 		const repaint = () => { container.invalidate(); tui.requestRender(); };
+
+		const enterFeedbackMode = () => {
+			mode = "feedback";
+
+			// Remove footer, insert feedback section, re-add footer with updated hints
+			container.removeChild(footerSpacer);
+			container.removeChild(hintsText);
+			container.removeChild(bottomSpacer);
+			container.removeChild(bottomBorder);
+
+			container.addChild(new Text("  " + theme.fg("muted", "Tell the agent what to do instead:"), 1, 0));
+			container.addChild(feedbackInput);
+			container.addChild(new Spacer(1));
+
+			hintsText.setText(
+				"  " + theme.fg("dim", "enter") + theme.fg("muted", " submit  ") +
+				theme.fg("dim", "esc") + theme.fg("muted", " skip"),
+			);
+			container.addChild(hintsText);
+			container.addChild(bottomSpacer);
+			container.addChild(bottomBorder);
+
+			feedbackInput.focused = true;
+			repaint();
+		};
 
 		// getExplanation never rejects (internal try/catch), so .catch is defensive only
 		getExplanation(ctx, command, result).then((text) => {
@@ -623,14 +784,24 @@ async function showReviewDialog(
 			invalidate: () => container.invalidate(),
 			handleInput: (data: string) => {
 				if (resolved) return;
+				if (mode === "feedback") {
+					feedbackInput.handleInput(data);
+					repaint();
+					return;
+				}
 				if (interactive) {
-					if (data === "y" || data === "Y") { resolved = true; done({ allowed: true, explanation: explanationText }); }
-					else if (data === "n" || data === "N" || matchesKey(data, Key.escape)) { resolved = true; done({ allowed: false, explanation: explanationText }); }
+					if (data === "y" || data === "Y") { resolved = true; done({ allowed: true, remember: true, explanation: explanationText }); }
+					else if (data === "o" || data === "O") { resolved = true; done({ allowed: true, remember: false, explanation: explanationText }); }
+					else if (data === "n" || data === "N") { enterFeedbackMode(); }
+					else if (matchesKey(data, Key.escape)) { resolved = true; done({ allowed: false, remember: false, explanation: explanationText }); }
 				} else {
 					resolved = true;
-					done({ allowed: true, explanation: explanationText });
+					done({ allowed: true, remember: false, explanation: explanationText });
 				}
 			},
+			// Focusable: propagate to Input for IME cursor positioning
+			get focused() { return feedbackInput.focused; },
+			set focused(v: boolean) { feedbackInput.focused = v; },
 		};
 	});
 }
@@ -781,25 +952,30 @@ export default function (pi: ExtensionAPI) {
 			? `${icon} Command blocked (${result.noCount}/${result.decidedCount} NO) in ${elapsed}`
 			: `${icon} Split vote (${voteBreakdown}) in ${elapsed}`;
 
-		const { allowed, explanation } = await showReviewDialog(ctx, command, result, header, debugEnabled, true);
+		const { allowed, remember, explanation, instructions } = await showReviewDialog(ctx, command, result, header, debugEnabled, true);
 
 		if (allowed) {
-			const override: VoteOverride = {
-				command,
-				outcome: result.unanimous === "no" ? "no" : "split",
-				voteBreakdown: `${result.yesCount} YES / ${result.noCount} NO`,
-				timestamp: Date.now(),
-			};
-			overrideHistory.push(override);
-			pi.appendEntry("bash-guard-override", override);
-			ctx.ui.notify(`⚠️ User override — allowed despite ${voteBreakdown}`, "warning");
+			if (remember) {
+				const override: VoteOverride = {
+					command,
+					outcome: result.unanimous === "no" ? "no" : "split",
+					voteBreakdown: `${result.yesCount} YES / ${result.noCount} NO`,
+					timestamp: Date.now(),
+				};
+				overrideHistory.push(override);
+				pi.appendEntry("bash-guard-override", override);
+				ctx.ui.notify(`⚠️ User override — allowed despite ${voteBreakdown} (remembered)`, "warning");
+			} else {
+				ctx.ui.notify(`⚠️ User override — allowed once despite ${voteBreakdown}`, "warning");
+			}
 			return;
 		}
 
 		return {
 			block: true,
 			reason: `Security review: ${voteBreakdown}. User declined.`
-				+ (explanation ? ` Explanation: ${explanation}` : ""),
+				+ (instructions ? `\n\nUser instructions: ${instructions}` : "")
+				+ (explanation ? `\nExplanation: ${explanation}` : ""),
 		};
 	});
 }
