@@ -2,7 +2,12 @@
  * Remote Mutations Guard
  *
  * Intercepts bash tool calls that would modify remote state and requires
- * explicit confirmation before proceeding. Covers:
+ * explicit confirmation before proceeding. Pressing `n` to deny shows a
+ * text input where you can type instructions for the agent (e.g. "use
+ * gt submit --dry-run instead"). Instructions are included in the block
+ * reason so the LLM can adjust its approach.
+ *
+ * Covers:
  *   - git push (any form)
  *   - gh pr edit / comment / create / merge / close / reopen / review / ready
  *   - gh issue create / close / reopen / edit / comment / delete
@@ -12,7 +17,8 @@
  *   - gt submit (and gt stack submit)
  */
 
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { DynamicBorder, type ExtensionAPI } from "@mariozechner/pi-coding-agent";
+import { Container, Input, matchesKey, Key, Spacer, Text } from "@mariozechner/pi-tui";
 
 interface RemoteMutationPattern {
 	pattern: RegExp;
@@ -69,13 +75,109 @@ export default function (pi: ExtensionAPI) {
 			.map((line) => `  ${line}`)
 			.join("\n");
 
-		const choice = await ctx.ui.select(
-			`🌐 Remote mutation detected (${matched.label})\n\n${formatted}\n\nProceed?`,
-			["Yes", "No"],
-		);
+		const result = await ctx.ui.custom<{ allowed: boolean; instructions?: string }>((tui, theme, _kb, done) => {
+			let mode: "decide" | "feedback" = "decide";
+			let resolved = false;
 
-		if (choice !== "Yes") {
-			return { block: true, reason: `Remote mutation blocked by user (${matched.label})` };
+			const b = () => new DynamicBorder((s: string) => theme.fg("borderAccent", s));
+
+			const container = new Container();
+			container.addChild(b());
+			container.addChild(new Spacer(1));
+			container.addChild(new Text("  " + theme.fg("accent", theme.bold(`🌐 Remote mutation (${matched.label})`)), 1, 0));
+			container.addChild(new Spacer(1));
+
+			// Show command lines
+			for (const line of formatted.split("\n")) {
+				container.addChild(new Text("  " + theme.fg("warning", line), 1, 0));
+			}
+
+			// Feedback input (created but not added to container until feedback mode)
+			const feedbackInput = new Input();
+			feedbackInput.onSubmit = (value: string) => {
+				if (resolved) return;
+				resolved = true;
+				done({ allowed: false, instructions: value || undefined });
+			};
+			feedbackInput.onEscape = () => {
+				if (resolved) return;
+				resolved = true;
+				done({ allowed: false });
+			};
+
+			// Footer components (stored for re-ordering when entering feedback mode)
+			const footerSpacer = new Spacer(1);
+			const hintsText = new Text(
+				"  " + theme.fg("dim", "y") + theme.fg("muted", " allow  ") +
+				theme.fg("dim", "n") + theme.fg("muted", " deny  ") +
+				theme.fg("dim", "esc") + theme.fg("muted", " dismiss"),
+				1, 0,
+			);
+			const bottomSpacer = new Spacer(1);
+			const bottomBorder = b();
+
+			container.addChild(footerSpacer);
+			container.addChild(hintsText);
+			container.addChild(bottomSpacer);
+			container.addChild(bottomBorder);
+
+			const repaint = () => { container.invalidate(); tui.requestRender(); };
+
+			const enterFeedbackMode = () => {
+				mode = "feedback";
+
+				container.removeChild(footerSpacer);
+				container.removeChild(hintsText);
+				container.removeChild(bottomSpacer);
+				container.removeChild(bottomBorder);
+
+				container.addChild(new Text("  " + theme.fg("muted", "Tell the agent what to do instead:"), 1, 0));
+				container.addChild(feedbackInput);
+				container.addChild(new Spacer(1));
+
+				hintsText.setText(
+					"  " + theme.fg("dim", "enter") + theme.fg("muted", " submit  ") +
+					theme.fg("dim", "esc") + theme.fg("muted", " skip"),
+				);
+				container.addChild(hintsText);
+				container.addChild(bottomSpacer);
+				container.addChild(bottomBorder);
+
+				feedbackInput.focused = true;
+				repaint();
+			};
+
+			return {
+				render: (w: number) => container.render(w),
+				invalidate: () => container.invalidate(),
+				handleInput: (data: string) => {
+					if (resolved) return;
+					if (mode === "feedback") {
+						feedbackInput.handleInput(data);
+						repaint();
+						return;
+					}
+					if (data === "y" || data === "Y") {
+						resolved = true;
+						done({ allowed: true });
+					} else if (data === "n" || data === "N") {
+						enterFeedbackMode();
+					} else if (matchesKey(data, Key.escape)) {
+						resolved = true;
+						done({ allowed: false });
+					}
+				},
+				// Focusable: propagate to Input for IME cursor positioning
+				get focused() { return feedbackInput.focused; },
+				set focused(v: boolean) { feedbackInput.focused = v; },
+			};
+		});
+
+		if (!result.allowed) {
+			const reason = result.instructions
+				? `Remote mutation blocked by user (${matched.label}).\n\nUser instructions: ${result.instructions}`
+				: `Remote mutation blocked by user (${matched.label})`;
+			return { block: true, reason };
 		}
 
 		return undefined;
