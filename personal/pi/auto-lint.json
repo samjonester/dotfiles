@@ -1,0 +1,19 @@
+[
+  {
+    "match": "dotfiles/",
+    "command": "npx prettier --write {{file}}",
+    "extensions": [
+      ".ts",
+      ".tsx",
+      ".js",
+      ".jsx",
+      ".mjs",
+      ".mts",
+      ".css",
+      ".md",
+      ".json",
+      ".yml",
+      ".yaml"
+    ]
+  }
+]

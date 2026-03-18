@@ -3,6 +3,78 @@
 
 ZSH_HOST_OS=$(uname | awk '{print tolower($0)}')
 
+# ── Pi agent configuration (shared across OS) ────────────────────────────────
+#
+# Links portable dotfiles config into ~/.pi/agent, then overlays any
+# extensions/agents from installed pi packages (e.g. shop-pi-fy).
+# Dotfiles never store symlinks to package clones — those are wired at
+# install time only.
+setup_pi() {
+  local pi_dir="$HOME/.pi/agent"
+  local dotfiles_pi="$HOME/$DOTFILES_DIRECTORY_NAME/personal/pi"
+
+  mkdir -p "$pi_dir/extensions"
+
+  # Dotfiles-owned config
+  ln -vsfn "$dotfiles_pi/AGENTS.md"       "$pi_dir/AGENTS.md"
+  ln -vsfn "$dotfiles_pi/settings.json"   "$pi_dir/settings.json"
+  ln -vsfn "$dotfiles_pi/skills"          "$pi_dir/skills"
+  ln -vsfn "$dotfiles_pi/prompts"         "$pi_dir/prompts"
+  ln -vsfn "$dotfiles_pi/auto-lint.json"  "$pi_dir/auto-lint.json"
+
+  # Dotfiles-owned extensions (portable, first-party only)
+  for ext_name in bash-guard git-safety.ts; do
+    [ -e "$dotfiles_pi/extensions/$ext_name" ] && \
+      ln -vsfn "$dotfiles_pi/extensions/$ext_name" "$pi_dir/extensions/$ext_name"
+  done
+
+  # Agents: real directory layering dotfiles + optional package agents
+  [ -L "$pi_dir/agents" ] && rm "$pi_dir/agents"
+  mkdir -p "$pi_dir/agents"
+
+  for f in "$dotfiles_pi/agents"/*.md; do
+    [ -e "$f" ] && ln -vsfn "$f" "$pi_dir/agents/$(basename "$f")"
+  done
+
+  # Overlay agents/extensions from shop-pi-fy if installed as a pi package
+  local pkg_dir="$pi_dir/git/github.com/shopify-playground/shop-pi-fy"
+  if [ -d "$pkg_dir" ]; then
+    # Package agents (review-* etc.)
+    for f in "$pkg_dir/agents"/*.md; do
+      [ -e "$f" ] && ln -vsfn "$f" "$pi_dir/agents/$(basename "$f")"
+    done
+
+    # Non-packaged extensions — skip ones already declared in package.json
+    # .pi.extensions (auto-loaded by pi) and web-search (conflicts with pi-web-access)
+    local skip="grokt observe perplexity-research shopify-data slack subagent vault web-search"
+    for f in "$pkg_dir/extensions"/*; do
+      [ -d "$f" ] || continue
+      local ext_name=$(basename "$f")
+      case " $skip " in *" $ext_name "*) continue ;; esac
+      ln -vsfn "$f" "$pi_dir/extensions/$ext_name"
+    done
+  fi
+
+  # Shopify-specific project AGENTS.md
+  if [ -d ~/src/shopify ]; then
+    ln -vsfn "$HOME/$DOTFILES_DIRECTORY_NAME/AGENTS.md.shopify" ~/src/shopify/AGENTS.md
+  fi
+}
+
+# ── Shopify-specific tooling (skipped on non-Shopify machines) ────────────────
+setup_shopify_tooling() {
+  # Worktree pool tooling
+  mkdir -p ~/src/github.com/shopify-playground
+  if [ ! -d ~/src/github.com/shopify-playground/wtp ]; then
+    git clone https://github.com/shopify-playground/wtp.git ~/src/github.com/shopify-playground/wtp || true
+  fi
+
+  # Install shop-pi-fy pi package (extensions, agents, skills for Shopify workflows)
+  if command -v pi >/dev/null 2>&1; then
+    pi install https://github.com/shopify-playground/shop-pi-fy 2>/dev/null || true
+  fi
+}
+
 case $ZSH_HOST_OS in
 darwin*)
   # Terminal
@@ -13,27 +85,14 @@ darwin*)
   git clone --depth 1 https://github.com/dexpota/kitty-themes.git ~/.config/kitty/kitty-themes
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
 
-  # Pi Configuration
-  mkdir -p ~/.pi/agent/extensions
-  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/AGENTS.md ~/.pi/agent/AGENTS.md
-  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/settings.json ~/.pi/agent/settings.json
-  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/skills ~/.pi/agent/skills
-  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/prompts ~/.pi/agent/prompts
-  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/subagent ~/.pi/agent/extensions/subagent
-  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/git-safety.ts ~/.pi/agent/extensions/git-safety.ts
-  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/bash-guard ~/.pi/agent/extensions/bash-guard
-  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/session-namer ~/.pi/agent/extensions/session-namer
-  # Set up Shopify-specific AGENTS.md per instructions in the file
-  if [ -d ~/src/shopify ]; then
-    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/AGENTS.md.shopify ~/src/shopify/AGENTS.md
-  fi
+  setup_pi
 
   # Terminal Tooling
   $BREW_EXECUTABLE install bat
   $BREW_EXECUTABLE install eza
   $BREW_EXECUTABLE install ranger
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/ranger ~/.config/
-  git clone https://github.com/alexanderjeurissen/ranger_devicons ~/.config/ranger/plugins/ranger_devicons
+  git clone https://github.com/alexanderjeurissen/ranger_devicons ~/.config/ranger/plugins/ranger_devtools
   $BREW_EXECUTABLE install zoxide
 
   # Git tooling
@@ -51,6 +110,9 @@ darwin*)
   $BREW_EXECUTABLE install fd
   $BREW_EXECUTABLE install ripgrep
   git clone https://github.com/junegunn/fzf-git.sh.git ~/src/github.com/junegunn/fzf-git.sh
+
+  # Shopify tooling (safe no-op if repos are inaccessible)
+  setup_shopify_tooling
 
   # ASDF Version Management
   $BREW_EXECUTABLE install asdf
@@ -85,20 +147,7 @@ linux*)
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
 
-    # Pi Configuration
-    mkdir -p ~/.pi/agent/extensions
-    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/AGENTS.md ~/.pi/agent/AGENTS.md
-    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/settings.json ~/.pi/agent/settings.json
-    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/skills ~/.pi/agent/skills
-    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/prompts ~/.pi/agent/prompts
-    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/subagent ~/.pi/agent/extensions/subagent
-    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/git-safety.ts ~/.pi/agent/extensions/git-safety.ts
-    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/bash-guard ~/.pi/agent/extensions/bash-guard
-    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/pi/extensions/session-namer ~/.pi/agent/extensions/session-namer
-    # Set up Shopify-specific AGENTS.md per instructions in the file
-    if [ -d ~/src/shopify ]; then
-      ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/AGENTS.md.shopify ~/src/shopify/AGENTS.md
-    fi
+    setup_pi
 
     # Terminal Tooling
     sudo apt-get install -y bat ranger
@@ -120,6 +169,9 @@ linux*)
     ~/.fzf/install --no-update-rc --key-bindings --completion
     sudo apt-get install -y fzy fd-find ripgrep
     git clone https://github.com/junegunn/fzf-git.sh.git ~/src/github.com/junegunn/fzf-git.sh
+
+    # Shopify tooling (safe no-op if repos are inaccessible)
+    setup_shopify_tooling
 
     # Setup Neovim
     sudo apt-get install -y neovim

@@ -2,7 +2,7 @@
   "defaultProvider": "anthropic",
   "defaultModel": "claude-opus-4-6",
   "defaultThinkingLevel": "high",
-  "theme": "dark",
+  "theme": "gruvbox-rainbow",
   "thinkingBudgets": {
     "minimal": 1024,
     "low": 4096,
@@ -25,7 +25,7 @@
     "gpt-5.3-codex"
   ],
   "enableSkillCommands": true,
-  "lastChangelogVersion": "0.58.1",
+  "lastChangelogVersion": "0.60.0",
   "packages": [
     "npm:pi-web-access",
     "npm:pi-messenger",

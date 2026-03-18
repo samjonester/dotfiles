@@ -15,3 +15,9 @@ export BROWSER='open'
 
 # Add dotfiles bin to PATH
 export PATH="$HOME/dotfiles/bin:$PATH"
+
+# Shopify-specific tooling (only if present)
+if [ -d "$HOME/src/github.com/shopify-playground/wtp" ]; then
+  export PATH="$HOME/src/github.com/shopify-playground/wtp/bin:$PATH"
+  [ -f "$HOME/src/github.com/shopify-playground/wtp/shell/wtp.zsh" ] && source "$HOME/src/github.com/shopify-playground/wtp/shell/wtp.zsh"
+fi
