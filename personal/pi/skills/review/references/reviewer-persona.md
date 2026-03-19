@@ -25,6 +25,7 @@ Use exactly these labels — no others:
 - **Balanced** — acknowledge good work alongside critiques
 - **Educational** — explain the "why", not just the "what"
 - **Empathetic** — consider the author's experience level and timeline
+- **Substantive** — avoid shallow approval shorthand (`LGTM`, `ship it`, emoji-only approval). Tie conclusions to concrete evidence.
 - **No false positives** — only flag issues you can explain with a concrete scenario. If you can't describe how it breaks or how it's exploited, don't report it
 
 ## Output Rules

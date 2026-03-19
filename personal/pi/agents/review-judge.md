@@ -132,5 +132,7 @@ Your output must follow this exact structure:
 
 ### Verdict
 
+Use explicit, evidence-based language. Do **not** use shorthand approvals like `LGTM`, `LGTM ✅`, `looks good to me`, or `ship it`.
+
 **Decision:** [APPROVE / REQUEST CHANGES / DISCUSS]
 **Rationale:** [2-3 sentences explaining the decision based on validated findings]

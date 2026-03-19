@@ -115,8 +115,7 @@ Include both in context passed to reviewers.
 
 Before dispatching reviewers, briefly tell the user what you found:
 
-> Reviewing [SOURCE_TYPE]: [title/branch name]
-> [N files, +X/-Y lines reviewable] — dispatching [M] reviewers...
+> Reviewing [SOURCE_TYPE]: [title/branch name] > [N files, +X/-Y lines reviewable] — dispatching [M] reviewers...
 
 This keeps the user informed during the parallel phase, which can take 30-60 seconds.
 
@@ -314,6 +313,12 @@ After presenting the review, offer to draft PR comments:
 > Want me to draft these? I'll format them for you to copy-paste (I won't submit them directly).
 
 If the user says yes, format:
+
+**Top-level comment style guard:**
+
+- Never use shallow approval shorthand such as `LGTM`, `LGTM ✅`, `looks good to me`, or `ship it`.
+- Always reference concrete review evidence (what was validated, what risk remains, and whether any suggestions are non-blocking).
+- Prefer explicit approval language tied to findings (e.g., "I reviewed this thoroughly and approve"), not emoji-only signals.
 
 **Top-level comment:**
 
