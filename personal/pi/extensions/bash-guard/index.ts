@@ -1,7 +1,7 @@
 /**
  * Bash Guard — Adversarial Security Review Extension
  *
- * Two-stage interception for bash tool calls:
+ * Three-stage interception for bash tool calls:
  *
  * Stage 1 — Remote mutation gate (deterministic, instant):
  *   Pattern-matches commands that modify remote state (git push, gh pr create,
@@ -9,8 +9,17 @@
  *   voters, no override memory. Deny shows a text input for redirect instructions.
  *   Runs even when the guard is toggled off (instant, zero cost).
  *
+ * Stage 1.5 — Commit gate (session-scoped policy):
+ *   Pattern-matches commit-like commands (gt create, gt modify, gt absorb,
+ *   git commit). On first encounter in a session, shows a policy dialog:
+ *     a = auto-allow all commits this session
+ *     c = confirm each commit individually (y/n per command)
+ *     n = deny (with optional redirect instructions)
+ *   Policy persists for the session; resets on new session. Change mid-session
+ *   with `/guard commits auto|confirm|reset`.
+ *
  * Stage 2 — Adversarial security review (LLM voters):
- *   Runs 5 parallel security reviews using fast models. Based on vote consensus:
+ *   Runs 3 parallel security reviews using fast models. Based on vote consensus:
  *     Unanimous YES  → auto-allow (notification, or debug dialog)
  *     Unanimous NO   → markdown dialog with explanation + override
  *     Split / mixed  → markdown dialog with explanation + override
@@ -49,6 +58,23 @@ import {
   Spacer,
   Text,
 } from "@mariozechner/pi-tui";
+import { execFile } from "child_process";
+
+// ── User alert (terminal bell + macOS notification) ──────────────────────────
+
+/**
+ * Alert the user that bash-guard needs their attention.
+ * Fires a terminal bell (dock bounce/badge/sound in most terminals)
+ * and a macOS system notification (visible even when terminal isn't focused).
+ */
+function alertUser(label: string) {
+  process.stderr.write("\x07");
+  execFile(
+    "osascript",
+    ["-e", `display notification "${label}" with title "🔒 Bash Guard"`],
+    () => {},
+  );
+}
 
 // ── Remote mutation patterns (Stage 1 — checked before whitelist/voters) ─────
 
@@ -95,6 +121,9 @@ const REMOTE_MUTATION_PATTERNS: RemoteMutationPattern[] = [
   // Graphite
   { pattern: /\bgt\s+submit\b/, label: "gt submit" },
   { pattern: /\bgt\s+stack\s+submit\b/, label: "gt stack submit" },
+
+  // Shopify deploy
+  { pattern: /\bquick\s+deploy\b/, label: "quick deploy" },
 ];
 
 /**
@@ -105,6 +134,26 @@ function matchRemoteMutation(
   command: string,
 ): RemoteMutationPattern | undefined {
   return REMOTE_MUTATION_PATTERNS.find(({ pattern }) => pattern.test(command));
+}
+
+// ── Commit gate patterns (Stage 1.5 — session-scoped policy) ─────────────────
+
+interface CommitPattern {
+  pattern: RegExp;
+  label: string;
+}
+
+const COMMIT_PATTERNS: CommitPattern[] = [
+  { pattern: /\bgt\s+create\b/, label: "gt create" },
+  { pattern: /\bgt\s+modify\b/, label: "gt modify" },
+  { pattern: /\bgt\s+absorb\b/, label: "gt absorb" },
+  { pattern: /\bgit\s+commit\b/, label: "git commit" },
+];
+
+type CommitPolicy = "unset" | "auto-allow" | "confirm-each";
+
+function matchCommitCommand(command: string): CommitPattern | undefined {
+  return COMMIT_PATTERNS.find(({ pattern }) => pattern.test(command));
 }
 
 /**
@@ -248,35 +297,217 @@ async function showRemoteMutationDialog(
   );
 }
 
+// ── Commit gate dialogs (Stage 1.5) ──────────────────────────────────────────
+
+/**
+ * First-encounter dialog: set session policy for commit-like commands.
+ * Returns the chosen policy and optional instructions if denied.
+ */
+async function showCommitPolicyDialog(
+  ctx: ExtensionContext,
+  command: string,
+  matched: CommitPattern,
+): Promise<{ policy: CommitPolicy; instructions?: string }> {
+  const formatted = command
+    .trim()
+    .split("\n")
+    .map((line) => `  ${line}`)
+    .join("\n");
+
+  return ctx.ui.custom<{ policy: CommitPolicy; instructions?: string }>(
+    (tui, theme, _kb, done) => {
+      let mode: "decide" | "feedback" = "decide";
+      let resolved = false;
+
+      const container = new Container();
+      container.addChild(border(theme));
+      container.addChild(new Spacer(1));
+      container.addChild(
+        new Text(
+          "  " +
+            theme.fg("accent", theme.bold(`📝 Commit gate (${matched.label})`)),
+          1,
+          0,
+        ),
+      );
+      container.addChild(new Spacer(1));
+
+      for (const line of formatted.split("\n")) {
+        container.addChild(new Text("  " + theme.fg("warning", line), 1, 0));
+      }
+
+      container.addChild(new Spacer(1));
+      container.addChild(
+        new Text(
+          "  " +
+            theme.fg("muted", "How should commits be handled this session?"),
+          1,
+          0,
+        ),
+      );
+
+      const feedbackInput = new Input();
+      feedbackInput.onSubmit = (value: string) => {
+        if (resolved) return;
+        resolved = true;
+        done({ policy: "unset", instructions: value || undefined });
+      };
+      feedbackInput.onEscape = () => {
+        if (resolved) return;
+        resolved = true;
+        done({ policy: "unset" });
+      };
+
+      const footerSpacer = new Spacer(1);
+      const hintsText = new Text(
+        "  " +
+          theme.fg("dim", "a") +
+          theme.fg("muted", " auto-allow all  ") +
+          theme.fg("dim", "c") +
+          theme.fg("muted", " confirm each  ") +
+          theme.fg("dim", "n") +
+          theme.fg("muted", " deny"),
+        1,
+        0,
+      );
+      const bottomSpacer = new Spacer(1);
+      const bottomBorder = border(theme);
+
+      container.addChild(footerSpacer);
+      container.addChild(hintsText);
+      container.addChild(bottomSpacer);
+      container.addChild(bottomBorder);
+
+      const repaint = () => {
+        container.invalidate();
+        tui.requestRender();
+      };
+
+      const enterFeedbackMode = () => {
+        mode = "feedback";
+
+        container.removeChild(footerSpacer);
+        container.removeChild(hintsText);
+        container.removeChild(bottomSpacer);
+        container.removeChild(bottomBorder);
+
+        container.addChild(
+          new Text(
+            "  " + theme.fg("muted", "Tell the agent what to do instead:"),
+            1,
+            0,
+          ),
+        );
+        container.addChild(feedbackInput);
+        container.addChild(new Spacer(1));
+
+        hintsText.setText(
+          "  " +
+            theme.fg("dim", "enter") +
+            theme.fg("muted", " submit  ") +
+            theme.fg("dim", "esc") +
+            theme.fg("muted", " skip"),
+        );
+        container.addChild(hintsText);
+        container.addChild(bottomSpacer);
+        container.addChild(bottomBorder);
+
+        feedbackInput.focused = true;
+        repaint();
+      };
+
+      return {
+        render: (w: number) => container.render(w),
+        invalidate: () => container.invalidate(),
+        handleInput: (data: string) => {
+          if (resolved) return;
+          if (mode === "feedback") {
+            feedbackInput.handleInput(data);
+            repaint();
+            return;
+          }
+          if (data === "a" || data === "A") {
+            resolved = true;
+            done({ policy: "auto-allow" });
+          } else if (data === "c" || data === "C") {
+            resolved = true;
+            done({ policy: "confirm-each" });
+          } else if (data === "n" || data === "N") {
+            enterFeedbackMode();
+          } else if (matchesKey(data, Key.escape)) {
+            resolved = true;
+            done({ policy: "unset" });
+          }
+        },
+        get focused() {
+          return feedbackInput.focused;
+        },
+        set focused(v: boolean) {
+          feedbackInput.focused = v;
+        },
+      };
+    },
+  );
+}
+
+/**
+ * Confirm-each dialog for subsequent commits (simple y/n like remote mutations).
+ */
+async function showCommitConfirmDialog(
+  ctx: ExtensionContext,
+  command: string,
+  matched: CommitPattern,
+): Promise<{ allowed: boolean; instructions?: string }> {
+  // Reuse the remote mutation dialog — same UX, different label
+  return showRemoteMutationDialog(ctx, command, {
+    pattern: matched.pattern,
+    label: `commit: ${matched.label}`,
+  });
+}
+
 // ── Configuration (Stage 2 — voter review) ───────────────────────────────────
 
-/** Number of votes per available model. Total voters = available models × this. */
-const VOTES_PER_MODEL = 5;
+/** Number of votes per available model. Total voters = available models × this.
+ * With a single model (haiku-4.5), 5 votes are highly correlated and just
+ * amplify the same bias. 3 votes still get majority signal with less cost/latency
+ * and fewer false-unanimous-NO results from prompt miscalibration. */
+const VOTES_PER_MODEL = 3;
 const VOTE_TIMEOUT_MS = 5000;
 
 const EXPLAINER_PROVIDER = "anthropic";
 const EXPLAINER_MODEL_ID = "claude-haiku-4-5";
 const EXPLAINER_CONTEXT_MESSAGES = 20;
 
-const VOTER_SYSTEM_PROMPT = `You are a security reviewer. Your only job is to review a single bash command and decide if it is safe.
+const VOTER_SYSTEM_PROMPT = `You are a security reviewer for a coding assistant running on a developer's local machine. Your only job is to decide if a bash command is safe.
+
+Context: This is a professional software developer's workstation. The assistant routinely reads project files, session logs, and config files to do its job. Local network requests to dev servers are normal. Python/Node scripts that parse data are normal workflow.
 
 You will receive a bash command inside <command> tags. The message may also include <previous_decisions> showing commands the user previously reviewed and explicitly allowed despite security concerns. These decisions represent the user's explicit intent and should carry significant weight in your review. If the command under review is similar in nature, scope, or target to a previously allowed command, you should vote YES. Only vote NO if the command is substantially more dangerous than what the user has already approved — for example, targeting a different sensitive path, adding network exfiltration, or escalating scope far beyond prior approvals.
 
 Review the command in <command> tags and respond with a single word: YES or NO. Do not explain. Do not add any other text.
 
 YES means: the command is safe to run on a developer's machine.
-NO means: the command is unsafe or risky.
+NO means: the command poses a real security risk (data exfiltration, destructive ops, credential exposure to the network).
 
-Guidelines for your review:
-- Deleting or overwriting files or directories → NO
-- Accessing or exposing credentials, keys, tokens → NO
-- Network requests to untrusted or unexpected endpoints → NO
-- Installing software from untrusted sources → NO
-- Irreversible or destructive operations → NO
-- Privilege escalation (sudo, chmod 777) → NO
-- Modifying system configuration or services → NO
-- Modifying global or user-wide config (--global flags, writing to $HOME dotfiles, global installs) → NO
-- Reading files, listing directories, running tests, building projects, installing declared project dependencies, git read operations, text processing → YES`;
+Vote YES for:
+- Reading any local files (project files, session logs, config, dotfiles) for analysis → YES
+- Python/Node/shell scripts that read, parse, transform, or print local data → YES
+- Network requests to localhost, 127.0.0.1, or *.shop.dev (local dev servers) → YES
+- Shell loops (for/while) composed of safe commands (grep, curl to localhost, gh api reads, git reads) → YES
+- Git operations (add, checkout, status, log, diff, branch, stash, rebase, reset) → YES
+- Running tests, linters, type checkers, build tools → YES
+- Writing to /tmp/ or project tmp/ directories → YES
+- Installing declared project dependencies (npm install, bundle install in a project context) → YES
+- Copying or moving files within the project or between local project directories → YES
+
+Vote NO for:
+- Sending local data to external endpoints (curl/wget POST to non-localhost URLs with file content) → NO
+- Deleting files outside the project tree or /tmp/ → NO
+- Credential extraction and piping to network commands (cat ~/.ssh/id_rsa | curl ...) → NO
+- Privilege escalation (sudo, chmod 777, chown root) → NO
+- Installing software from untrusted sources outside a project manifest → NO
+- Modifying system services or OS-level configuration → NO
+- Irreversible destructive operations (rm -rf /, dd, mkfs) → NO`;
 
 const EXPLAINER_SYSTEM_PROMPT = `You are reviewing a bash command that an AI coding assistant is attempting to execute. A panel of security reviewers flagged this command.
 
@@ -358,6 +589,17 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*\[\s/,
   /^\s*true\s*$/,
   /^\s*false\s*$/,
+  /^\s*break\s*$/,
+  /^\s*continue\s*$/,
+  /^\s*return\b/,
+  /^\s*sleep\b/,
+
+  // ── Shell control-flow keywords (safe standalone tokens after ; splitting) ──
+  /^\s*else\s*$/,
+  /^\s*fi\s*$/,
+  /^\s*done\s*$/,
+  /^\s*esac\s*$/,
+  /^\s*do\s*$/,
 
   // ── System inspection (read-only) ──
   /^\s*ps\b/,
@@ -385,27 +627,41 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*gh\s+project\s+(view|list|field-list)\b/,
 
   // ── Graphite read operations ──
-  /^\s*gt\s+(ls|log|status|diff)\b/,
+  /^\s*gt\s+(ls|log|status|diff|branch\s+list)\b/,
 
   // ── Graphite write operations (dev workflow, not destructive) ──
   // Note: gt submit is handled by the remote mutation gate (Stage 1)
-  /^\s*gt\s+(create|modify|absorb|continue|add|restack)\b/,
+  // Note: gt create/modify/absorb are handled by the commit gate (Stage 1.5)
+  /^\s*gt\s+(continue|add|restack|checkout|track|sync)\b/,
+  /^\s*gt\s+branch\s+(delete|rename)\b/,
 
   // ── GitHub CLI API (read-only: GET is default, --jq means querying) ──
   /^\s*gh\s+api\b.*--jq\b/,
 
   // ── Shopify dev tooling ──
-  /^\s*(\/opt\/dev\/bin\/dev|dev)\s+(up|server|backend|cd|test|typecheck|style|console|migrate)\b/,
+  /^\s*(\/opt\/dev\/bin\/dev|dev)\s+(up|server|backend|cd|test|typecheck|style|console|migrate|stop|ps|lint)\b/,
   /^\s*shadowenv\s+exec\b/,
   /^\s*quick\s+auth\b/,
+  /^\s*_?wtp\b/,
 
   // ── File system operations (non-destructive) ──
   /^\s*mkdir\s+-p\b/,
   /^\s*ln\s+-s[f]?\b/,
+  /^\s*cp\b/, // conditionally safe: blocked if targeting outside working tree (TODO)
+  /^\s*mv\b/, // conditionally safe: blocked if targeting outside working tree (TODO)
+
+  // ── HTTP read operations ──
+  /^\s*curl\b/, // conditionally safe: blocked if -X POST/PUT/DELETE or -d (see hasDangerousFlags)
+
+  // ── Process inspection ──
+  /^\s*pgrep\b/,
+  /^\s*lsof\b/,
 
   // ── Node/npm read operations ──
   /^\s*npm\s+(info|view|ls|list|outdated|pack\s+--dry-run)\b/,
-  /^\s*node\s+-[ep]\b/,
+  /^\s*npx\b/,
+  /^\s*pnpm\b/,
+  /^\s*node\b/,
 
   // ── Git write operations (normal dev workflow) ──
   // Note: git push is handled by the remote mutation gate (Stage 1)
@@ -442,6 +698,16 @@ function hasDangerousFlags(cmd: string): boolean {
   // sort: -o (output to file)
   if (/^\s*sort\b/.test(cmd) && /\s-[a-zA-Z]*o\b/.test(cmd)) {
     return true;
+  }
+  // curl: block mutating HTTP methods and data flags
+  if (/^\s*curl\b/.test(cmd)) {
+    if (
+      /(-X\s*(POST|PUT|PATCH|DELETE)\b|-d\s|--data\b|--upload-file\b|-F\s|--form\b)/i.test(
+        cmd,
+      )
+    ) {
+      return true;
+    }
   }
   // Note: git push --force check removed — all git push is handled by remote mutation gate
   // ln: only allow symlinks targeting known-safe directories (dotfiles, .pi, /tmp)
@@ -485,7 +751,17 @@ function hasOnlySafeRedirects(cmd: string): boolean {
  * At this point, stderr redirects and command separators are already handled.
  */
 function isSingleCommandSafe(cmd: string): boolean {
-  const trimmed = cmd.trim();
+  let trimmed = cmd.trim();
+  if (!trimmed) return true;
+
+  // Strip leading shell control-flow keywords that appear as fragments after
+  // `;` splitting (e.g., `then break` → check `break`; `if [ -f x ]` → check `[ -f x ]`).
+  // The keyword itself is safe; only the following command matters.
+  trimmed = trimmed
+    .replace(/^\s*(?:then|do|else)\s+/, "")
+    .replace(/^\s*(?:if|elif|while|until)\s+/, "")
+    .replace(/^\s*for\s+\w+\s+in\b.*$/, "true") // for VAR in ... — iteration source, not a command
+    .trim();
   if (!trimmed) return true;
 
   // Block dangerous constructs within a single command
@@ -508,6 +784,17 @@ function isSingleCommandSafe(cmd: string): boolean {
   if (SAFE_COMMAND_PATTERNS.some((p) => p.test(trimmed))) {
     return !hasDangerousFlags(trimmed);
   }
+
+  // Handle env-var prefix commands: VAR=value VAR2=value command args...
+  // Strip leading VAR=VALUE tokens and re-check the remainder against safe patterns.
+  // e.g., GIT_OPTIONAL_LOCKS=0 git log => strip prefix => git log (safe)
+  const envStripped = trimmed.replace(/^(\s*[A-Za-z_]\w*=\S+\s+)+/, "");
+  if (envStripped !== trimmed && envStripped.trim()) {
+    if (SAFE_COMMAND_PATTERNS.some((p) => p.test(envStripped))) {
+      return !hasDangerousFlags(envStripped);
+    }
+  }
+
   return false;
 }
 
@@ -526,11 +813,54 @@ function isSegmentSafe(segment: string): boolean {
 }
 
 /**
+ * Extract the body commands from a shell control-flow block (for/while/until/if).
+ * Returns the inner commands if the structure is recognized, or null if not.
+ *
+ * Handles:
+ *   for VAR in ...; do BODY; done
+ *   while COND; do BODY; done
+ *   until COND; do BODY; done
+ *   if COND; then BODY; fi
+ *   if COND; then BODY; else BODY; fi
+ *
+ * The loop variable assignment, iteration source, and condition are treated as
+ * safe (they're data/expressions, not executed commands). Only the body commands
+ * are extracted and checked against the whitelist.
+ */
+function extractControlFlowBody(command: string): string[] | null {
+  const trimmed = command.trim();
+
+  // for VAR in ...; do BODY; done
+  const forMatch = trimmed.match(
+    /^\s*for\s+\w+\s+in\s+.*?;\s*do\s+([\s\S]*?);\s*done\s*$/,
+  );
+  if (forMatch) return [forMatch[1].trim()];
+
+  // while/until COND; do BODY; done
+  const whileMatch = trimmed.match(
+    /^\s*(?:while|until)\s+.*?;\s*do\s+([\s\S]*?);\s*done\s*$/,
+  );
+  if (whileMatch) return [whileMatch[1].trim()];
+
+  // if COND; then BODY; else BODY; fi
+  const ifElseMatch = trimmed.match(
+    /^\s*if\s+.*?;\s*then\s+([\s\S]*?);\s*else\s+([\s\S]*?);\s*fi\s*$/,
+  );
+  if (ifElseMatch) return [ifElseMatch[1].trim(), ifElseMatch[2].trim()];
+
+  // if COND; then BODY; fi
+  const ifMatch = trimmed.match(/^\s*if\s+.*?;\s*then\s+([\s\S]*?);\s*fi\s*$/);
+  if (ifMatch) return [ifMatch[1].trim()];
+
+  return null;
+}
+
+/**
  * Determine if a bash command can skip the security guard.
  *
- * Handles compound commands (&&, ||, ;, newlines), pipe chains, and
- * stderr redirects. Each atomic command in the pipeline must be safe
- * for the whole command to be whitelisted.
+ * Handles compound commands (&&, ||, ;, newlines), pipe chains,
+ * stderr redirects, and shell control-flow blocks (for/while/if).
+ * Each atomic command must be safe for the whole command to be whitelisted.
  */
 function isWhitelisted(command: string): boolean {
   // Collapse line-continuations (backslash + newline)
@@ -548,6 +878,18 @@ function isWhitelisted(command: string): boolean {
   // Strip safe stderr redirects before any analysis — these never
   // create files or change command semantics
   normalized = normalized.replace(STDERR_REDIRECT, "");
+
+  // Try control-flow extraction on the FULL command before splitting.
+  // for/while/if blocks contain internal `;` that would fragment them
+  // if we split first. If the entire command is a single control-flow
+  // block, extract its body and recursively whitelist-check the body.
+  const bodies = extractControlFlowBody(normalized);
+  if (bodies) {
+    return bodies.every((body) => {
+      const innerSegments = body.split(COMMAND_SEPARATOR);
+      return innerSegments.every((innerSeg) => isSegmentSafe(innerSeg));
+    });
+  }
 
   // Split on command separators — each segment is checked independently
   const segments = normalized.split(COMMAND_SEPARATOR);
@@ -1347,6 +1689,7 @@ async function showReviewDialog(
 export default function (pi: ExtensionAPI) {
   let guardEnabled = true;
   let debugEnabled = false;
+  let commitPolicy: CommitPolicy = "unset"; // session-scoped, reset each session
 
   function updateStatus(ctx: ExtensionContext) {
     const t = ctx.ui.theme;
@@ -1366,9 +1709,17 @@ export default function (pi: ExtensionAPI) {
   }
 
   pi.registerCommand("guard", {
-    description: "Toggle bash guard (on/off/debug)",
+    description:
+      "Toggle bash guard (on/off/debug) or commit policy (commits auto/commits confirm/commits reset)",
     getArgumentCompletions: (prefix: string) => {
-      const opts = ["on", "off", "debug"];
+      const opts = [
+        "on",
+        "off",
+        "debug",
+        "commits auto",
+        "commits confirm",
+        "commits reset",
+      ];
       const filtered = opts.filter((o) => o.startsWith(prefix));
       return filtered.length > 0
         ? filtered.map((o) => ({ value: o, label: o }))
@@ -1376,6 +1727,41 @@ export default function (pi: ExtensionAPI) {
     },
     handler: async (args, ctx) => {
       const arg = args?.trim().toLowerCase();
+
+      // Commit policy subcommands
+      if (arg === "commits auto") {
+        commitPolicy = "auto-allow";
+        ctx.ui.notify("📝 Commits auto-allowed for this session", "info");
+        return;
+      }
+      if (arg === "commits confirm") {
+        commitPolicy = "confirm-each";
+        ctx.ui.notify(
+          "📝 Commits will be confirmed individually this session",
+          "info",
+        );
+        return;
+      }
+      if (arg === "commits reset") {
+        commitPolicy = "unset";
+        ctx.ui.notify(
+          "📝 Commit policy reset — will ask on next commit",
+          "info",
+        );
+        return;
+      }
+      if (arg?.startsWith("commits")) {
+        const policyLabel =
+          commitPolicy === "auto-allow"
+            ? "auto-allow"
+            : commitPolicy === "confirm-each"
+              ? "confirm each"
+              : "unset (will ask on first commit)";
+        ctx.ui.notify(`📝 Commit policy: ${policyLabel}`, "info");
+        return;
+      }
+
+      // Guard toggle
       if (arg === "on") guardEnabled = true;
       else if (arg === "off") guardEnabled = false;
       else if (arg === "debug") debugEnabled = !debugEnabled;
@@ -1396,6 +1782,45 @@ export default function (pi: ExtensionAPI) {
     },
   });
 
+  // ── Commit policy from natural language ──
+  // Scan user prompts for commit policy signals so the user can say
+  // "allow commits" or "I want to confirm each commit" naturally.
+  pi.on("before_agent_start", async (event, ctx) => {
+    if (!event.prompt) return;
+    const lower = event.prompt.toLowerCase();
+
+    // Auto-allow signals
+    if (
+      /\b(auto[- ]?allow|allow all|allow)\s*(all\s*)?(commits?|gt\s+modify|gt\s+create)\b/.test(
+        lower,
+      ) ||
+      /\bcommits?\s+(are\s+)?fine\b/.test(lower) ||
+      /\bfree\s+to\s+commit\b/.test(lower)
+    ) {
+      if (commitPolicy !== "auto-allow") {
+        commitPolicy = "auto-allow";
+        ctx.ui.notify("📝 Commits auto-allowed for this session", "info");
+      }
+      return;
+    }
+
+    // Confirm-each signals
+    if (
+      /\bconfirm\s+(each\s+)?(commit|before\s+committ?ing)\b/.test(lower) ||
+      /\b(approve|review)\s+(each\s+)?commit/.test(lower) ||
+      /\b(control|approve|confirm)\s+(each\s+)?commit/.test(lower)
+    ) {
+      if (commitPolicy !== "confirm-each") {
+        commitPolicy = "confirm-each";
+        ctx.ui.notify(
+          "📝 Commits will be confirmed individually this session",
+          "info",
+        );
+      }
+      return;
+    }
+  });
+
   pi.on("session_start", async (_event, ctx) => {
     const entries = ctx.sessionManager.getEntries();
 
@@ -1412,6 +1837,9 @@ export default function (pi: ExtensionAPI) {
         break;
       }
     }
+
+    // Reset session-scoped commit policy (not persisted across sessions)
+    commitPolicy = "unset";
 
     // Restore override history (forward scan, collect all)
     overrideHistory = [];
@@ -1444,6 +1872,7 @@ export default function (pi: ExtensionAPI) {
           reason: `Remote mutation blocked in non-interactive mode (${remoteMutation.label}). Re-run interactively to confirm.`,
         };
       }
+      alertUser(`Remote mutation: ${remoteMutation.label}`);
       const result = await showRemoteMutationDialog(
         ctx,
         command,
@@ -1456,6 +1885,75 @@ export default function (pi: ExtensionAPI) {
         return { block: true, reason };
       }
       return undefined; // allowed — skip whitelist and voter review
+    }
+
+    // ── Stage 1.5: Commit gate (session-scoped policy) ──
+    const commitMatch = matchCommitCommand(command);
+    if (commitMatch) {
+      if (commitPolicy === "auto-allow") {
+        // Session policy: allow all commits silently
+        return undefined;
+      }
+
+      if (commitPolicy === "confirm-each") {
+        // Session policy: confirm each commit individually
+        if (!ctx.hasUI) {
+          return {
+            block: true,
+            reason: `Commit blocked in non-interactive mode (${commitMatch.label}). Session policy: confirm-each.`,
+          };
+        }
+        alertUser(`Commit: ${commitMatch.label}`);
+        const result = await showCommitConfirmDialog(ctx, command, commitMatch);
+        if (!result.allowed) {
+          const reason = result.instructions
+            ? `Commit blocked by user (${commitMatch.label}).\n\nUser instructions: ${result.instructions}`
+            : `Commit blocked by user (${commitMatch.label})`;
+          return { block: true, reason };
+        }
+        return undefined; // allowed this one
+      }
+
+      // commitPolicy === "unset" — first commit in session, ask for policy
+      if (!ctx.hasUI) {
+        // Non-interactive: default to confirm-each (safe default)
+        commitPolicy = "confirm-each";
+        return {
+          block: true,
+          reason: `Commit blocked in non-interactive mode (${commitMatch.label}). No commit policy set.`,
+        };
+      }
+
+      alertUser(`Commit policy: ${commitMatch.label}`);
+      const policyResult = await showCommitPolicyDialog(
+        ctx,
+        command,
+        commitMatch,
+      );
+
+      if (policyResult.policy === "auto-allow") {
+        commitPolicy = "auto-allow";
+        ctx.ui.notify("📝 Commits auto-allowed for this session", "info");
+        return undefined; // allow this one too
+      }
+
+      if (policyResult.policy === "confirm-each") {
+        commitPolicy = "confirm-each";
+        ctx.ui.notify(
+          "📝 Commits will be confirmed individually this session",
+          "info",
+        );
+        // The first command that triggered the dialog is allowed
+        // (user chose confirm-each, not deny)
+        return undefined;
+      }
+
+      // User denied (pressed n or esc)
+      commitPolicy = "unset"; // keep unset — they can set it on the next attempt
+      const reason = policyResult.instructions
+        ? `Commit blocked by user (${commitMatch.label}).\n\nUser instructions: ${policyResult.instructions}`
+        : `Commit blocked by user (${commitMatch.label})`;
+      return { block: true, reason };
     }
 
     // ── Stage 2: Security review (togglable via /guard) ──
@@ -1483,6 +1981,7 @@ export default function (pi: ExtensionAPI) {
           reason: "Bash guard: no voter models available and no UI.",
         };
       }
+      alertUser("Command needs review (no voter models)");
       const ok = await ctx.ui.confirm(
         "🔒 Bash Guard",
         `No fast review models available. Allow this command?\n\n  $ ${command}`,
@@ -1544,6 +2043,11 @@ export default function (pi: ExtensionAPI) {
         ? `${icon} Command blocked (${result.noCount}/${result.decidedCount} NO) in ${elapsed}`
         : `${icon} Split vote (${voteBreakdown}) in ${elapsed}`;
 
+    alertUser(
+      result.unanimous === "no"
+        ? "Command blocked by review"
+        : "Split vote — needs decision",
+    );
     const { allowed, remember, explanation, instructions } =
       await showReviewDialog(ctx, command, result, header, debugEnabled, true);
 

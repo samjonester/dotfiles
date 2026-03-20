@@ -8,6 +8,36 @@
 - Prefer the native `grep`, `find`, and `ls` tools over their bash equivalents — they are faster, produce fewer tokens, respect .gitignore, and don't trigger bash-guard security reviews
 - When exploring code, batch related reads into a single request when the files are independent
 
+## Buildkite
+
+- When investigating CI/build failures, **always use the `bk_*` tools** (`bk_build_info`, `bk_failed_jobs`, `bk_job_failure`, `bk_job_logs`, `bk_failed_builds`, `bk_pipelines`). Never try to scrape Buildkite via `fetch_content`, `gh` CLI, or Chrome DevTools.
+- When the user posts a Buildkite URL, pass it directly to the appropriate `bk_*` tool via the `build_url` parameter — it handles URL parsing.
+- When the user asks about PR build failures, get the Buildkite build URL from `gh pr checks` output, then use `bk_failed_jobs` → `bk_job_failure` to triage.
+- Start triage with `bk_failed_jobs` to see the prioritized failure list, then `bk_job_failure` for specific job logs. Don't download all job logs (`bk_job_logs`) unless specifically needed.
+
+## Observe
+
+- When investigating metrics, errors, or production behavior, **always use the `observe_*` tools**. Never try to scrape Observe dashboards via `fetch_content` or Chrome DevTools.
+- When the user posts an Observe URL or asks about a dashboard, use the appropriate tool: `observe_metrics` to discover metric names, `observe_instant_query` / `observe_range_query` for PromQL, `observe_error_groups` for error investigation.
+- **Never query a metric you didn't discover via `observe_metrics` first.** Always verify the metric exists before writing PromQL.
+- Use `observe_metric_labels` and `observe_metric_label_values` to discover available dimensions before filtering.
+- For error investigation: `observe_error_groups` → `observe_error_group` (by hash) → trace correlation if trace_id is present.
+- Read `observe_ai_docs`, `observe_investigate_docs`, or `observe_metrics_docs` before writing complex queries you haven't done before.
+
+## Tone & Personality
+
+- Default tone is direct, concise, professional — keep this as the baseline
+- Sprinkle in dry, sarcastic asides when something is notably absurd, ironic, or deserves commentary
+- Brief exclamations are welcome when discovering something surprising, annoying, or satisfying
+- Never let humor slow down the work — asides should be parenthetical or one-liners, not multi-paragraph bits
+- Don't force it — if there's nothing funny to say, just be normal
+
+## Slack Messages
+
+- When drafting Slack messages, use standard markdown formatting (not Slack mrkdwn). The user has Slack's "Format messages with markup" setting enabled, so pasting markdown renders correctly.
+- Use `[text](url)` for links, `**bold**` or `*bold*` for emphasis, `` `code` `` for inline code, and `- ` for lists.
+- Automatically copy the final draft to clipboard via `pbcopy` — the user has a clipboard manager, so extra clipboard operations are fine.
+
 ## Model & Thinking Selection
 
 The goal is **speed and responsiveness** — use the fastest model that produces correct results for the task at hand.
@@ -32,19 +62,11 @@ The goal is **speed and responsiveness** — use the fastest model that produces
 - **Drafting commit messages**: generating conventional commit messages from staged changes
 - Do NOT use Haiku for code editing, reviews, PR descriptions, or anything requiring correctness judgment
 
-### Codex (gpt-5.3-codex) — break out of loops, get a fresh perspective
-
-- **If the same approach has failed twice, switch to Codex automatically.** Don't ask — just switch, explain why ("Switching to Codex for a fresh approach — same fix has failed twice"), try the problem from scratch, and switch back to Opus when resolved.
-- **Second opinion on tricky bugs**: when debugging is going in circles, Codex often spots what Claude misses (and vice versa)
-- **Polyglot strength**: Codex can be stronger on less common languages or frameworks where Claude may have less training data
-- **Large-scale code generation**: Codex has a 400K context window — useful when you need to ingest a huge codebase before generating code
-
 ### General rules
 
 - Default to Opus with high thinking — it's the primary model
 - Switch to Sonnet for speed during mechanical phases, switch back before editing
 - Consider Haiku when you're about to do a long stretch of trivial reads/lookups before the real work begins
-- Consider Codex when stuck or when working outside the Ruby/TypeScript comfort zone
 
 ### Multi-model planning workflow
 
@@ -66,31 +88,28 @@ Choose the proposer pair based on the problem type:
 
 **Minimal vs. clean-design** (default — for new features, refactors, greenfield work):
 
-- `planner-opus` (Opus): smallest correct change, low risk, ship fast
-- `planner-codex` (Codex): clean design, proper abstractions, future-proofed
+- `planner-opus`: smallest correct change, low risk, ship fast
+- `planner-design`: clean design, proper abstractions, future-proofed
 
 **Local vs. systemic** (for bugs, regressions, recurring issues):
 
-- `planner-local` (Opus): targeted fix scoped to the immediate problem area
-- `planner-systemic` (Codex): root-cause fix that addresses the underlying pattern
+- `planner-local`: targeted fix scoped to the immediate problem area
+- `planner-systemic`: root-cause fix that addresses the underlying pattern
 
-Why these model assignments:
-
-- **Opus for the contained proposals** (minimal, local): Opus excels at careful, restrained analysis — reading existing code precisely and finding the smallest correct intervention. Its conservatism is a feature here.
-- **Codex for the expansive proposals** (clean-design, systemic): Codex's 400K context window lets it ingest more of the codebase, which matters when the task is to read broadly, find patterns across files, and think about system-level design. A different model family also provides genuine cognitive diversity — not variety for its own sake, but because different training produces different blind spots.
+All planners use Opus. Diversity comes from the prompt framing (conservative vs. expansive), not the model.
 
 ```
 subagent({ tasks: [
   { agent: "planner-opus", task: "<refined problem statement>" },
-  { agent: "planner-codex", task: "<refined problem statement>" }
+  { agent: "planner-design", task: "<refined problem statement>" }
 ]})
 ```
 
 #### Step 2: Judge
 
-Feed both proposals AND the original problem statement into `plan-judge` (Opus).
+Feed both proposals AND the original problem statement into `plan-judge`.
 
-Why Opus for judging: The judge's core job is claim verification (spot-checking proposals against real code) and reasoning about tradeoffs — both are pure analytical tasks where Opus is strongest. The prompt explicitly forces it to assess local-vs-systemic fit from evidence, which counteracts any conservatism bias.
+The judge's core job is claim verification (spot-checking proposals against real code) and reasoning about tradeoffs.
 
 **Always include the original problem statement** so the judge evaluates proposals against the actual goal, not just against each other:
 
@@ -100,14 +119,7 @@ subagent({ agent: "plan-judge", task: "## Original problem\n<raw problem stateme
 
 #### Degraded mode: one planner fails
 
-If one planner fails (error, empty output, timeout), do NOT skip the judge or improvise. Instead:
-
-1. **Tell the user** which planner failed and why (if known)
-2. **Present options** and let the user decide:
-   - **Retry** the failed planner (transient failures are common with external models)
-   - **Run the judge on the single proposal** — it still adds value by verifying claims and checking for blind spots
-   - **Skip the judge** and present the single proposal directly
-3. Never substitute the questioner output for a missing proposal — the questioner defines the problem, it does not propose solutions
+If one planner fails, tell the user and run the judge on the single proposal — it still adds value by verifying claims and checking for blind spots.
 
 #### Step 3: Present & iterate
 
@@ -156,6 +168,15 @@ All pi configuration is versioned in `~/dotfiles/personal/pi/` and symlinked int
 
 When asked to review code, review a PR, or review current changes, load the `review` skill. It auto-discovers all `review-*` agents, dispatches them in parallel, validates findings with `review-judge`, and produces consolidated output.
 
+## PR Descriptions
+
+When writing or editing PR descriptions, follow these rules:
+
+- **Don't mention tests were added or changed.** That's assumed — every code change comes with tests. The diff speaks for itself.
+- **Don't include CI steps in the test plan.** Lint, typecheck, and unit test results are checked by CI. Reviewers don't need to see them in the description. The test plan section is for validation that goes **beyond** what CI does — live integration tests, manual QA steps, screenshots, etc.
+- **Inline validation steps.** Never reference local file paths (`tmp/validate-*.rb`, `tmp/validation-artifacts/`) that other reviewers won't have access to. Instead, inline the validation steps directly in the PR body. Use a folded `<details>` block for long scripts. The goal: any reviewer can reproduce the validation from the PR description alone.
+- **Be concise.** Reviewers skim. Lead with problem/solution, keep the changes table tight, and fold verbose validation behind `<details>`.
+
 ## PR Description Routing (Mozart)
 
 When asked to generate/draft/write a PR description in Mozart:
@@ -172,6 +193,10 @@ When asked to generate/draft/write a PR description in Mozart:
    - disposable script(s)
    - exact run commands and artifact/output paths
 
+## Mozart Plan & Implement
+
+When asked to plan and build a Mozart feature end-to-end, or to "give me options and implement them", load `mozart-plan-and-implement`. This orchestrates the full pipeline: planning (via the multi-model planning workflow), implementation (directly for N=1, or with parallel agent-teams for N>1), validation (dedicated validator teammate with dev server), and PR submission. It handles WTP slots, Graphite branch topology, and teammate coordination.
+
 ## Mozart Worktree Routing (WTP)
 
 When user asks to start fresh development in a new worktree or switch to isolated slot, load `mozart-wtp-new-worktree`.
@@ -179,6 +204,8 @@ When user asks to start fresh development in a new worktree or switch to isolate
 When user asks to review an existing PR by PR number or branch in an isolated slot, load `mozart-wtp-pr-review`.
 
 Always use WTP (`wtp` / `_wtp`) for these flows instead of ad-hoc `dev tree add` commands.
+
+When user asks to free a worktree, release a slot, or clean up worktrees, use `_wtp free <slot> [--force]` — never `dev tree remove`. Use `_wtp status` to check pool state first.
 
 ## PR Review & Feedback
 
@@ -219,3 +246,13 @@ Don't suggest loops for things that complete in seconds or where the user clearl
 
 - Always highlight local git/graphite commands after executing them.
 - Never use `git commit` directly — use `gt modify` to amend the current commit, or `gt create` to start a new branch in the Graphite stack. The world repo uses Graphite for all branch/commit management.
+- Never `git init` inside an existing git repository (creates nested repos). If a new standalone repo is needed, create it outside the current project tree first (e.g., `~/src/github.com/...`), then work there.
+- Commit commands (`gt create`, `gt modify`, `gt absorb`) are gated by the bash-guard commit gate (Stage 1.5). On first commit in a session, you'll be prompted for a session-scoped policy: auto-allow all, confirm each, or deny. Change mid-session with `/guard commits auto|confirm|reset`.
+- The commit gate listens for natural-language policy signals in user messages. Saying "allow commits", "auto-allow commits", or "commits are fine" at any point sets the policy to auto-allow. Saying "confirm commits" or "I want to approve each commit" sets it to confirm-each. You can also use `/guard commits auto|confirm|reset` directly.
+
+## Judgment & Autonomy
+
+- When user says "I'll do this separately" or "I'll handle that", stop immediately. Don't attempt the action in a different way.
+- When the user redirects with specific instructions (e.g., "move to X first", "use Y instead"), follow the redirect exactly — don't try to accomplish the original intent through a different path.
+- If a bash command is blocked and the user provides instructions, follow those instructions precisely. Don't retry the same command with minor modifications (like piping `echo "y"` into it).
+- When creating resources in external services (GitHub repos, deployments), confirm the target org/account/name with the user first. Don't assume defaults.

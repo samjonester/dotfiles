@@ -83,9 +83,9 @@ Agents versioned here (in `agents/`). Planner agents power the multi-model plann
 | ------------------ | ------ | ------------------------------------------------ |
 | `plan-questioner`  | Sonnet | Sharpen problem statement before planning begins |
 | `planner-opus`     | Opus   | Minimal / locally-scoped proposal                |
-| `planner-codex`    | Codex  | Clean-design / forward-looking proposal          |
+| `planner-design`   | Opus   | Clean-design / forward-looking proposal          |
 | `planner-local`    | Opus   | Targeted fix scoped to immediate problem area    |
-| `planner-systemic` | Codex  | Root-cause fix addressing underlying pattern     |
+| `planner-systemic` | Opus   | Root-cause fix addressing underlying pattern     |
 | `plan-judge`       | Opus   | Evaluate proposals, verify claims, synthesize    |
 
 ### Reviewers (custom — complement shop-pi-fy's `review-*` agents)

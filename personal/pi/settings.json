@@ -25,7 +25,7 @@
     "gpt-5.3-codex"
   ],
   "enableSkillCommands": true,
-  "lastChangelogVersion": "0.61.0",
+  "lastChangelogVersion": "0.62.0",
   "packages": [
     "npm:pi-web-access",
     "npm:pi-messenger",
