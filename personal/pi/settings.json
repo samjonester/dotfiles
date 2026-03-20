@@ -1,6 +1,6 @@
 {
   "defaultProvider": "anthropic",
-  "defaultModel": "claude-sonnet-4-5",
+  "defaultModel": "claude-opus-4-6",
   "defaultThinkingLevel": "high",
   "theme": "gruvbox-rainbow",
   "thinkingBudgets": {
