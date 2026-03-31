@@ -657,11 +657,15 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*pgrep\b/,
   /^\s*lsof\b/,
 
-  // ── Node/npm read operations ──
+  // ── Node/npm/Python operations ──
   /^\s*npm\s+(info|view|ls|list|outdated|pack\s+--dry-run)\b/,
   /^\s*npx\b/,
   /^\s*pnpm\b/,
   /^\s*node\b/,
+  /^\s*python3?\b/,
+
+  // ── MCP tool read operations ──
+  /^\s*slack-mcp\s+(get-messages|get-thread|search|list)\b/,
 
   // ── Git write operations (normal dev workflow) ──
   // Note: git push is handled by the remote mutation gate (Stage 1)
