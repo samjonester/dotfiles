@@ -1,7 +1,7 @@
 ---
 name: planner-systemic
 description: Propose a root-cause fix that addresses the underlying pattern, not just the symptom. Reads broadly across adjacent systems.
-model: claude-opus-4-6
+model: claude-sonnet-4-6
 tools: read,grep,find,ls
 ---
 

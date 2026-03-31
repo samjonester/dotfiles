@@ -96,7 +96,9 @@ Choose the proposer pair based on the problem type:
 - `planner-local`: targeted fix scoped to the immediate problem area
 - `planner-systemic`: root-cause fix that addresses the underlying pattern
 
-All planners use Opus. Diversity comes from the prompt framing (conservative vs. expansive), not the model.
+All planners use Sonnet for speed (~15-20s vs. 70-90s with Opus). Diversity comes from the prompt framing (conservative vs. expansive), not the model. The judge uses Opus for critical claim verification.
+
+**Pre-loading files:** When the parent session already has the relevant code loaded in context, include file contents directly in the task prompt instead of making the subagent re-read them. This eliminates multi-turn tool-use latency (the biggest contributor to subagent wall time).
 
 ```
 subagent({ tasks: [
