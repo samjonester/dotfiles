@@ -1016,8 +1016,9 @@ async function resolveVoterModels(
     try {
       const model = ctx.modelRegistry.find(candidate.provider, candidate.id);
       if (!model) continue;
-      const apiKey = await ctx.modelRegistry.getApiKey(model);
-      if (apiKey) available.push({ model, apiKey, label: candidate.label });
+      const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
+      if (auth.ok && auth.apiKey)
+        available.push({ model, apiKey: auth.apiKey, label: candidate.label });
     } catch {}
   }
   cachedVoterModels = available;
@@ -1396,8 +1397,9 @@ async function resolveExplainerModel(
   for (const model of candidates) {
     if (!model) continue;
     try {
-      const apiKey = await ctx.modelRegistry.getApiKey(model);
-      if (apiKey) return { model: { ...model, reasoning: false }, apiKey };
+      const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
+      if (auth.ok && auth.apiKey)
+        return { model: { ...model, reasoning: false }, apiKey: auth.apiKey };
     } catch {}
   }
   return null;
