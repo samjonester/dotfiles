@@ -8,6 +8,12 @@
 - Prefer the native `grep`, `find`, and `ls` tools over their bash equivalents — they are faster, produce fewer tokens, respect .gitignore, and don't trigger bash-guard security reviews
 - When exploring code, batch related reads into a single request when the files are independent
 
+## Prefer Dedicated Tools Over Direct Access
+
+Many external services have dedicated tools registered via MCP servers or pi extensions. **Always use a dedicated tool when one exists** instead of reaching for `fetch_content`, Chrome DevTools, `curl`, or direct API calls. Dedicated tools handle auth, pagination, rate limiting, and output formatting — direct access will usually fail or produce worse results.
+
+Shopify MCP servers are installed globally under `/opt/homebrew/lib/node_modules/@shopify-internal/`. **Before falling back to general-purpose tools to interact with any Shopify service, you must check there** (e.g. `ls /opt/homebrew/lib/node_modules/@shopify-internal/`) and check your available tool list for a matching tool. Do not use `fetch_content`, Chrome DevTools, or `curl` for a service that has a dedicated tool.
+
 ## Buildkite
 
 - When investigating CI/build failures, **always use the `bk_*` tools** (`bk_build_info`, `bk_failed_jobs`, `bk_job_failure`, `bk_job_logs`, `bk_failed_builds`, `bk_pipelines`). Never try to scrape Buildkite via `fetch_content`, `gh` CLI, or Chrome DevTools.
@@ -32,7 +38,7 @@
 - Never let humor slow down the work — asides should be parenthetical or one-liners, not multi-paragraph bits
 - Don't force it — if there's nothing funny to say, just be normal
 
-## Slack Messages
+## Slack Message Formatting
 
 - When drafting Slack messages, use standard markdown formatting (not Slack mrkdwn). The user has Slack's "Format messages with markup" setting enabled, so pasting markdown renders correctly.
 - Use `[text](url)` for links, `**bold**` or `*bold*` for emphasis, `` `code` `` for inline code, and `- ` for lists.
@@ -254,6 +260,7 @@ Don't suggest loops for things that complete in seconds or where the user clearl
 
 ## Judgment & Autonomy
 
+- When the user asks "can you...?", "could you...?", or "is it possible to...?" — treat it as a question, not an instruction. Respond with analysis, options, or a proposal. Do not execute changes until the user confirms.
 - When user says "I'll do this separately" or "I'll handle that", stop immediately. Don't attempt the action in a different way.
 - When the user redirects with specific instructions (e.g., "move to X first", "use Y instead"), follow the redirect exactly — don't try to accomplish the original intent through a different path.
 - If a bash command is blocked and the user provides instructions, follow those instructions precisely. Don't retry the same command with minor modifications (like piping `echo "y"` into it).
