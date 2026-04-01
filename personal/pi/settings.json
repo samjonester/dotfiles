@@ -29,6 +29,7 @@
   "packages": [
     "npm:pi-web-access",
     "npm:pi-messenger",
-    "npm:pi-tool-display"
+    "npm:pi-tool-display",
+    "git:github.com/shopify-playground/pi-tool-gateway-extension"
   ]
 }

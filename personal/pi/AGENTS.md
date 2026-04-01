@@ -10,9 +10,20 @@
 
 ## Prefer Dedicated Tools Over Direct Access
 
-Many external services have dedicated tools registered via MCP servers or pi extensions. **Always use a dedicated tool when one exists** instead of reaching for `fetch_content`, Chrome DevTools, `curl`, or direct API calls. Dedicated tools handle auth, pagination, rate limiting, and output formatting — direct access will usually fail or produce worse results.
+Many external services have dedicated tools registered via pi extensions. **Always use a dedicated tool when one exists** instead of reaching for `fetch_content`, Chrome DevTools, `curl`, or direct API calls. Dedicated tools handle auth, pagination, rate limiting, and output formatting — direct access will usually fail or produce worse results. Do not use `fetch_content`, Chrome DevTools, or `curl` for a service that has a dedicated tool.
 
-Shopify MCP servers are installed globally under `/opt/homebrew/lib/node_modules/@shopify-internal/`. **Before falling back to general-purpose tools to interact with any Shopify service, you must check there** (e.g. `ls /opt/homebrew/lib/node_modules/@shopify-internal/`) and check your available tool list for a matching tool. Do not use `fetch_content`, Chrome DevTools, or `curl` for a service that has a dedicated tool.
+## Google Workspace Tools
+
+Two sets of GWS tools are active — prefer based on operation type:
+
+- **Calendar reads**: use `gws_calendar_list` / `gws_calendar_get` / `gws_calendar_today`
+- **Calendar writes** (create/update/delete events, add/remove attendees): use `gcal_manage`
+- **Calendar availability** (free/busy check): use `gcal_availability`
+- **Gmail reads**: use `gws_gmail_list` / `gws_gmail_read` / `gws_gmail_search`
+- **Gmail writes** (mark read, star, archive, trash): use `gmail_manage`
+- **Drive search and metadata**: use `gws_drive_search` / `gws_drive_get`
+- **Drive file content** (reading a Google Doc as text/markdown): use `gworkspace_read_file`
+- **Docs, Sheets, Slides**: use `gws_docs_*` / `gws_sheets_*` / `gws_slides_*` exclusively
 
 ## Buildkite
 
