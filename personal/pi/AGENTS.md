@@ -142,7 +142,13 @@ If one planner fails, tell the user and run the judge on the single proposal —
 
 #### Step 3: Present & iterate
 
-Show the user the recommended plan with the verdict. If the user wants changes, re-run the judge with their feedback (no need to re-run both planners unless the problem statement changed significantly).
+Show the user the recommended plan with the verdict, including the **Implementation Steps** section. If the user wants changes, re-run the judge with their feedback (no need to re-run both planners unless the problem statement changed significantly).
+
+#### Step 4: Implement (optional)
+
+If the user says "implement", "build it", or "go", load the `implement` skill. The judge's Implementation Steps section is the input — each step runs as an isolated subagent with only the files it needs, preventing context explosion.
+
+For plans without the Implementation Steps section (legacy plans or external documents), the implement skill auto-decomposes via the `implementer-plan` agent.
 
 ## Session Hygiene
 

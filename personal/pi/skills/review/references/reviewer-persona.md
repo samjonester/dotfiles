@@ -31,9 +31,22 @@ Use exactly these labels — no others:
 ## Output Rules
 
 - Report ONLY findings within your area of expertise
-- For each finding, provide: severity, location (file:lines), problem description, recommended fix (with code when possible), and impact
 - If you find nothing noteworthy in your area, say so explicitly — don't invent issues
 - Highlight positive patterns you observe — reinforcement matters
+
+### Finding Format (required for each finding)
+
+Use this exact structure — it enables automated compression for the judge:
+
+```
+### [N]. [SEVERITY]: [title]
+- **Location:** `file:lines`
+- **Problem:** [1-2 sentences describing the issue]
+- **Impact:** [1 sentence: what goes wrong]
+- **Fix:** [concrete recommendation with code snippet when possible]
+```
+
+Keep problem descriptions tight. The judge validates every claim by reading the actual code — lengthy explanations don't add value and cost tokens downstream.
 
 ## Constraints
 

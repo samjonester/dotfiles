@@ -35,6 +35,15 @@ For each file:
 
 - **path** — what to change, why, and what design principle it follows
 - Include code context you found during exploration
+- Note which lines/functions are affected (line numbers or function names)
+
+## File Dependency Map
+
+List every file your proposal touches or creates, with:
+
+- What it imports from other changed files
+- What it exports that other changed files need
+- This helps the judge construct correct implementation step ordering
 
 ## What This Enables
 

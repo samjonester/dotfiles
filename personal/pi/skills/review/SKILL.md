@@ -206,15 +206,33 @@ If the user specified a subset, only include those agents.
 
 After ALL reviewers complete, feed their combined output to `review-judge`.
 
-### 5a. Prepare judge input
+### 5a. Compress reviewer output
 
-If the combined reviewer output is very large (rough estimate: >80K tokens when combined with the diff), **summarize** each reviewer's output before passing to the judge:
+**Always** compress reviewer output before passing to the judge. Raw reviewer output contains verbose explanations, full code snippets, and educational context that's valuable for the final report but wastes judge context. The judge needs findings, not essays.
 
-- Keep all findings with their severity, location, and description intact
-- Strip verbose code snippets, replacing with `[code at file:lines]` references the judge can look up
-- Keep positive observations as one-line summaries
+For each reviewer's output, extract into this compact format:
 
-This ensures the judge stays within effective context even for large PRs.
+```
+## [reviewer-name]
+Findings: [count] | Clean: [yes/no]
+
+1. [SEVERITY] [title] @ `file:lines`
+   Problem: [one sentence]
+   Fix: [one sentence or `[code at file:lines]`]
+2. ...
+
+Positive: [one-line summary of good observations, or "none"]
+```
+
+Rules:
+
+- Strip all code snippets — replace with `[code at file:lines]` references the judge can look up itself
+- Strip educational explanations ("this matters because...") — the judge doesn't need pedagogy
+- Preserve: severity, location, problem, fix direction — these are what the judge validates
+- Keep positive observations as a single line — the judge aggregates these
+- If a reviewer found nothing: `Findings: 0 | Clean: yes` (one line, no elaboration)
+
+This typically compresses 14 reviewer outputs from ~60-80KB to ~5-10KB — a 6-8x reduction that keeps the judge well within effective context even for large PRs.
 
 ### 5b. Compose the judge task
 
