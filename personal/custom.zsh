@@ -143,3 +143,6 @@ killport() {
     fi
 }
 
+# WTP shell integration (needs compdef from compinit, so must load after antigen apply)
+[ -f "$HOME/src/github.com/shopify-playground/wtp/shell/wtp.zsh" ] && source "$HOME/src/github.com/shopify-playground/wtp/shell/wtp.zsh"
+
