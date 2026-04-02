@@ -1,0 +1,11 @@
+{
+  "providers": {
+    "anthropic-250k-prefer-using-this-one": {
+      "modelOverrides": {
+        "claude-sonnet-4-6": {
+          "maxTokens": 128000
+        }
+      }
+    }
+  }
+}

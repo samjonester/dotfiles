@@ -1,5 +1,5 @@
 {
-  "defaultProvider": "anthropic",
+  "defaultProvider": "anthropic-250k-prefer-using-this-one",
   "defaultModel": "claude-opus-4-6",
   "defaultThinkingLevel": "high",
   "theme": "gruvbox-rainbow",
@@ -19,9 +19,11 @@
     "maxRetries": 3
   },
   "enabledModels": [
-    "claude-opus-4-6",
-    "claude-sonnet-4-6",
-    "claude-haiku-4-5",
+    "anthropic-250k-prefer-using-this-one/claude-opus-4-6",
+    "anthropic-250k-prefer-using-this-one/claude-sonnet-4-6",
+    "anthropic/claude-opus-4-6",
+    "anthropic/claude-sonnet-4-6",
+    "anthropic/claude-haiku-4-5",
     "gpt-5.3-codex"
   ],
   "enableSkillCommands": true,
