@@ -626,6 +626,7 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*continue\s*$/,
   /^\s*return\b/,
   /^\s*sleep\b/,
+  /^\s*read\b/, // shell builtin for reading input (not file modification)
 
   // ── Shell control-flow keywords (safe standalone tokens after ; splitting) ──
   /^\s*else\s*$/,
@@ -658,6 +659,7 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*gh\s+label\s+list\b/,
   /^\s*gh\s+repo\s+(view|list)\b/,
   /^\s*gh\s+project\s+(view|list|field-list)\b/,
+  /^\s*gh\s+auth\s+(status|token|refresh|login|setup-git)\b/,
 
   // ── Graphite read operations ──
   /^\s*gt\s+(ls|log|status|diff|branch\s+list)\b/,
@@ -672,16 +674,21 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*gh\s+api\b.*--jq\b/,
 
   // ── Shopify dev tooling ──
-  /^\s*(\/opt\/dev\/bin\/dev|dev)\s+(up|server|backend|cd|test|typecheck|style|console|migrate|stop|ps|lint)\b/,
+  /^\s*(\/opt\/dev\/bin\/dev|dev)\s+(up|server|backend|cd|test|typecheck|style|console|migrate|stop|ps|lint|github|tree)\b/,
   /^\s*shadowenv\s+exec\b/,
   /^\s*quick\s+auth\b/,
   /^\s*_?wtp\b/,
+  /^\s*\$\{?WTP_BIN\}?\b/, // variable-expanded WTP invocations
+  /^\s*\$\{?HOME\}?\/src\/.*\/wtp\/bin\/_wtp\b/, // full-path WTP invocations
+  /^\s*devx\s+(ci|pi|skill|config)\b/,
 
   // ── File system operations (non-destructive) ──
   /^\s*mkdir\s+-p\b/,
   /^\s*ln\s+-s[f]?\b/,
   /^\s*cp\b/, // conditionally safe: blocked if targeting outside working tree (TODO)
   /^\s*mv\b/, // conditionally safe: blocked if targeting outside working tree (TODO)
+  /^\s*chmod\s+\+[rwx]+\b/, // only additive permissions (no 777, no recursive)
+  /^\s*rm\s+-f\s+\S*\.lock\b/, // removing stale lock files only
 
   // ── HTTP read operations ──
   /^\s*curl\b/, // conditionally safe: blocked if -X POST/PUT/DELETE or -d (see hasDangerousFlags)
@@ -704,6 +711,12 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*pi\s+(tool|session|model|config|extension)\b/,
   /^\s*bk\b/,
 
+  // ── Terminal multiplexer (window management, not arbitrary execution) ──
+  /^\s*tmux\s+(new-window|split-window|select-window|list-windows|list-sessions|send-keys|select-pane|resize-pane|kill-pane|kill-window|display-message|set-option)\b/,
+
+  // ── Ruby/Gem read operations ──
+  /^\s*gem\s+(contents|list|search|info|spec|which|environment)\b/,
+
   // ── Git write operations (normal dev workflow) ──
   // Note: git push is handled by the remote mutation gate (Stage 1)
   /^\s*git\s+(add|checkout|switch|restore|stash|cherry-pick|rebase|reset)\b/,
@@ -711,7 +724,7 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   // ── Shell builtins that are always safe ──
   /^\s*set\s+-[euo]/,
   /^\s*export\s+\w+=/,
-  /^\s*[A-Z_]+=\S/, // variable assignment (no spaces — simple)
+  /^\s*[A-Za-z_]\w*=\S/, // variable assignment (no spaces — simple)
 ];
 
 /** Stderr redirects that are always safe to strip before analysis. */
@@ -805,16 +818,26 @@ function isSingleCommandSafe(cmd: string): boolean {
     .trim();
   if (!trimmed) return true;
 
+  // Shell comments are always safe — check before backtick/subshell guards
+  // since comments often contain backtick-quoted command names in prose.
+  if (/^\s*#/.test(trimmed)) return true;
+
   // Block dangerous constructs within a single command
   if (trimmed.includes("`")) return false; // backtick subshell
-  if (trimmed.includes("<(")) return false; // process substitution
 
-  // $() subshells: allow in variable assignments and echo/printf args,
-  // block in other contexts where they could be arbitrary execution
+  // Process substitution <(...): allow when the inner command is whitelisted
+  if (trimmed.includes("<(")) {
+    const innerMatch = trimmed.match(/<\(([^)]+)\)/);
+    if (!innerMatch || !isSingleCommandSafe(innerMatch[1])) return false;
+  }
+
+  // $() subshells: allow in variable assignments, echo/printf args, and
+  // commands whose outer verb is a read-only tool (grep, cat, head, etc.).
   if (trimmed.includes("$(")) {
     const isAssignment = /^\s*(?:export\s+)?[A-Za-z_]\w*=/.test(trimmed);
     const isEchoLike = /^\s*(?:echo|printf)\b/.test(trimmed);
-    if (!isAssignment && !isEchoLike) return false;
+    const isSafeOuter = /^\s*(?:grep|rg|cat|head|tail|wc|ls|file|stat|diff|basename|dirname)\b/.test(trimmed);
+    if (!isAssignment && !isEchoLike && !isSafeOuter) return false;
   }
 
   // Output redirects: allow > /tmp/* and > /dev/null, block everything else
@@ -871,15 +894,15 @@ function isSegmentSafe(segment: string): boolean {
 function extractControlFlowBody(command: string): string[] | null {
   const trimmed = command.trim();
 
-  // for VAR in ...; do BODY; done
+  // for VAR in ...; do BODY; done (semicolons or newlines as delimiters)
   const forMatch = trimmed.match(
-    /^\s*for\s+\w+\s+in\s+.*?;\s*do\s+([\s\S]*?);\s*done\s*$/,
+    /^\s*for\s+\w+\s+in\s+.*?[;\n]\s*do\s+([\s\S]*?)[;\n]\s*done\s*$/,
   );
   if (forMatch) return [forMatch[1].trim()];
 
-  // while/until COND; do BODY; done
+  // while/until COND; do BODY; done (semicolons or newlines as delimiters)
   const whileMatch = trimmed.match(
-    /^\s*(?:while|until)\s+.*?;\s*do\s+([\s\S]*?);\s*done\s*$/,
+    /^\s*(?:while|until)\s+.*?[;\n]\s*do\s+([\s\S]*?)[;\n]\s*done\s*$/,
   );
   if (whileMatch) return [whileMatch[1].trim()];
 
@@ -914,6 +937,14 @@ function isWhitelisted(command: string): boolean {
   normalized = normalized.replace(
     /<<\s*['"]?(\w+)['"]?\s*\n[\s\S]*?\n\1(?:\s*$|\s*\n)/gm,
     "<< $1_STRIPPED",
+  );
+
+  // Collapse multiline python3/node -c "..." and -c '...' arguments.
+  // The \n-based COMMAND_SEPARATOR would otherwise shatter these into
+  // fragments that individually fail whitelist matching.
+  normalized = normalized.replace(
+    /\b(python3?|node)\s+-c\s+(["'])((?:(?!\2)[\s\S])*?)\2/g,
+    (_, interpreter, quote) => `${interpreter} -c ${quote}COLLAPSED${quote}`,
   );
 
   // Strip safe stderr redirects before any analysis — these never
