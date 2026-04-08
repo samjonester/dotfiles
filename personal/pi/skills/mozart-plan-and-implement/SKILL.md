@@ -30,14 +30,14 @@ Run both planners in parallel:
 
 ```
 subagent({ tasks: [
-  { agent: "planner-opus", task: "<refined problem statement>" },
+  { agent: "planner-minimal", task: "<refined problem statement>" },
   { agent: "planner-design", task: "<refined problem statement>" }
 ]})
 ```
 
 Choose the planner pair per AGENTS.md:
 
-- **New features/refactors**: `planner-opus` (minimal) + `planner-design` (clean-design)
+- **New features/refactors**: `planner-minimal` (minimal) + `planner-design` (clean-design)
 - **Bugs/regressions**: `planner-local` (targeted) + `planner-systemic` (root-cause)
 
 ### Step 1.2: Judge

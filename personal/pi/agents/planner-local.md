@@ -1,7 +1,7 @@
 ---
 name: planner-local
 description: Propose a targeted fix scoped tightly to the immediate problem area. Treats the surrounding system as a given.
-model: claude-sonnet-4-6
+model: claude-opus-4-6
 tools: read,grep,find,ls
 ---
 

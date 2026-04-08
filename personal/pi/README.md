@@ -82,7 +82,7 @@ Agents versioned here (in `agents/`). Planner agents power the multi-model plann
 | Agent              | Model  | Role                                             |
 | ------------------ | ------ | ------------------------------------------------ |
 | `plan-questioner`  | Sonnet | Sharpen problem statement before planning begins |
-| `planner-opus`     | Opus   | Minimal / locally-scoped proposal                |
+| `planner-minimal`     | Opus   | Minimal / locally-scoped proposal                |
 | `planner-design`   | Opus   | Clean-design / forward-looking proposal          |
 | `planner-local`    | Opus   | Targeted fix scoped to immediate problem area    |
 | `planner-systemic` | Opus   | Root-cause fix addressing underlying pattern     |
@@ -93,7 +93,7 @@ Agents versioned here (in `agents/`). Planner agents power the multi-model plann
 | Agent                | Model  | Focus                                                         |
 | -------------------- | ------ | ------------------------------------------------------------- |
 | `review-design`      | Opus   | Reads beyond the diff — callers, callees, design context      |
-| `review-simplify`    | Sonnet | Reduce complexity, remove unnecessary abstractions            |
+| `review-simplify`    | Opus   | Reduce complexity, remove unnecessary abstractions            |
 | `review-consistency` | Sonnet | Flags patterns diverging from codebase majority               |
 | `review-naming`      | Sonnet | Variable, method, class naming quality and clarity            |
 | `review-readability` | Sonnet | Cognitive complexity, control flow, information density       |

@@ -274,7 +274,7 @@ or Pi spawns them as background processes. Close any right pane with <kbd class=
 <table>
   <tr><th>Phase</th><th>What happens</th></tr>
   <tr><td>Question</td><td><code>plan-questioner</code> probes for ambiguities — back-and-forth with you until the problem is tight.</td></tr>
-  <tr><td>Diverge</td><td>Two planners run in parallel: <code>planner-opus</code> (minimal change) + <code>planner-design</code> (clean architecture). For bugs: <code>planner-local</code> + <code>planner-systemic</code>.</td></tr>
+  <tr><td>Diverge</td><td>Two planners run in parallel: <code>planner-minimal</code> (minimal change) + <code>planner-design</code> (clean architecture). For bugs: <code>planner-local</code> + <code>planner-systemic</code>.</td></tr>
   <tr><td>Judge</td><td><code>plan-judge</code> (Opus) verifies claims against real code, picks the winner, outputs implementation steps.</td></tr>
   <tr><td>Implement</td><td>Say <em>"implement it"</em> — loads the <code>implement</code> skill. Each step runs as an isolated subagent to prevent context explosion.</td></tr>
 </table>
@@ -498,7 +498,7 @@ or Pi spawns them as background processes. Close any right pane with <kbd class=
 <table>
   <tr><th>Agent</th><th>Role</th></tr>
   <tr><td><code>plan-questioner</code></td><td>Probe for ambiguities before planning</td></tr>
-  <tr><td><code>planner-opus</code> / <code>planner-design</code></td><td>Minimal vs. clean-design proposals (features)</td></tr>
+  <tr><td><code>planner-minimal</code> / <code>planner-design</code></td><td>Minimal vs. clean-design proposals (features)</td></tr>
   <tr><td><code>planner-local</code> / <code>planner-systemic</code></td><td>Targeted vs. root-cause proposals (bugs)</td></tr>
   <tr><td><code>plan-judge</code></td><td>Verify claims, synthesize recommendation</td></tr>
   <tr><td><code>review-*</code> (6) + <code>review-judge</code></td><td>Specialized code reviewers + validator</td></tr>

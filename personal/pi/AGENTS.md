@@ -105,7 +105,7 @@ Choose the proposer pair based on the problem type:
 
 **Minimal vs. clean-design** (default — for new features, refactors, greenfield work):
 
-- `planner-opus`: smallest correct change, low risk, ship fast
+- `planner-minimal`: smallest correct change, low risk, ship fast
 - `planner-design`: clean design, proper abstractions, future-proofed
 
 **Local vs. systemic** (for bugs, regressions, recurring issues):
@@ -113,13 +113,13 @@ Choose the proposer pair based on the problem type:
 - `planner-local`: targeted fix scoped to the immediate problem area
 - `planner-systemic`: root-cause fix that addresses the underlying pattern
 
-All planners use Sonnet for speed (~15-20s vs. 70-90s with Opus). Diversity comes from the prompt framing (conservative vs. expansive), not the model. The judge uses Opus for critical claim verification.
+All planners and the judge use Opus for maximum proposal quality. Diversity comes from the prompt framing (conservative vs. expansive), not the model.
 
 **Pre-loading files:** When the parent session already has the relevant code loaded in context, include file contents directly in the task prompt instead of making the subagent re-read them. This eliminates multi-turn tool-use latency (the biggest contributor to subagent wall time).
 
 ```
 subagent({ tasks: [
-  { agent: "planner-opus", task: "<refined problem statement>" },
+  { agent: "planner-minimal", task: "<refined problem statement>" },
   { agent: "planner-design", task: "<refined problem statement>" }
 ]})
 ```
