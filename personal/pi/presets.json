@@ -31,7 +31,14 @@
       "github_issue_read",
       "github_list_issues",
       "github_pull_request_read",
-      "github_list_pull_requests"
+      "github_list_pull_requests",
+      "team_status",
+      "team_message",
+      "team_broadcast",
+      "team_spawn",
+      "team_request_shutdown",
+      "team_force_shutdown",
+      "team_cleanup"
     ]
   },
   "code+": {
@@ -137,7 +144,14 @@
       "gws_gmail_read",
       "gws_gmail_search",
       "gmail_read",
-      "gmail_manage"
+      "gmail_manage",
+      "team_status",
+      "team_message",
+      "team_broadcast",
+      "team_spawn",
+      "team_request_shutdown",
+      "team_force_shutdown",
+      "team_cleanup"
     ],
     "instructions": "Triage session \u2014 focus on communications, not code changes. No write/edit tools available."
   },
