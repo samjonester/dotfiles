@@ -1,6 +1,6 @@
 ---
 name: binks-review
-description: Address Binks automated code review comments on a PR. Fetches comments, assesses validity, fixes valid issues, replies with feedback, reacts with thumbs up/down, and resolves threads. Triggers on: 'address binks review', 'handle binks comments', 'binks reviewed PR #N', or when user asks to respond to binks-code-reviewer feedback.
+description: "Address Binks automated code review comments on a PR. Fetches comments, assesses validity, fixes valid issues, replies with feedback, reacts with thumbs up/down, and resolves threads. Triggers on: 'address binks review', 'handle binks comments', 'binks reviewed PR #N', or when user asks to respond to binks-code-reviewer feedback."
 ---
 
 # Binks Review Handler
@@ -14,16 +14,48 @@ Handles the full lifecycle of responding to binks-code-reviewer automated review
 
 ## Workflow
 
-### 1. Fetch review comments
+### 1. Identify unresolved Binks threads
+
+**Always start by checking thread resolution status.** Fetch review threads via GraphQL to get resolution state and the root comment ID for each thread, then cross-reference with the REST comments to filter down to only unresolved Binks findings.
 
 ```bash
+# Step 1a: Get thread resolution status and root comment IDs
+gh api graphql -f query='
+query {
+  repository(owner: "{owner}", name: "{repo}") {
+    pullRequest(number: {pr}) {
+      reviewThreads(first: 50) {
+        nodes {
+          id
+          isResolved
+          comments(first: 1) {
+            nodes {
+              databaseId
+              author { login }
+            }
+          }
+        }
+      }
+    }
+  }
+}'
+```
+
+From this response, build a set of **unresolved Binks comment IDs** — threads where `isResolved == false` AND the root comment author is `binks-code-reviewer`.
+
+```bash
+# Step 1b: Fetch full comment bodies only for unresolved threads
 gh api repos/{owner}/{repo}/pulls/{pr}/comments \
   --jq '.[] | select(.user.login == "binks-code-reviewer[bot]") | "ID: \(.id)\nPath: \(.path)\nLine: \(.line)\nBody:\n\(.body)\n---"'
 ```
 
-### 2. Assess each finding
+**Filter**: Only process comments whose ID appears in the unresolved set from step 1a. Skip all resolved threads entirely — they've already been addressed (either in this session or a previous one).
 
-For each Binks comment, **do not assume it's correct**. Read the relevant code and verify:
+If all Binks threads are already resolved, report that and stop.
+
+### 2. Assess each unresolved finding
+
+For each **unresolved** Binks comment, **do not assume it's correct**. Read the relevant code and verify:
 
 1. **Validity**: Is the claim actually correct? Check the code paths mentioned.
 2. **Importance**: Even if valid, does it matter? Distinguish real bugs from stylistic nitpicks or overstated severity.
@@ -70,30 +102,13 @@ gh api repos/{owner}/{repo}/pulls/{pr}/comments \
 
 ### 6. Resolve threads
 
-Get thread IDs via GraphQL, then resolve each:
+After replying, resolve each thread you addressed:
 
 ```bash
-# Get thread IDs
-gh api graphql -f query='
-query {
-  repository(owner: "{owner}", name: "{repo}") {
-    pullRequest(number: {pr}) {
-      reviewThreads(first: 20) {
-        nodes {
-          id
-          isResolved
-          comments(first: 1) {
-            nodes { databaseId }
-          }
-        }
-      }
-    }
-  }
-}'
-
-# Resolve each unresolved thread
 gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "{thread_id}"}) { thread { isResolved } } }'
 ```
+
+Use the thread IDs captured in step 1a — no need to re-fetch.
 
 ## Reply tone
 
