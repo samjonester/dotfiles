@@ -59,3 +59,4 @@ source ~/extra.zsh
 
 # Added by tec agent
 [[ -x /Users/sam/.local/state/tec/profiles/base/current/global/init ]] && eval "$(/Users/sam/.local/state/tec/profiles/base/current/global/init zsh)"
+
