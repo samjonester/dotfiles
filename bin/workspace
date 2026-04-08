@@ -1,0 +1,180 @@
+#!/usr/bin/env bash
+# workspace (aliased as `lfg`) - create or reattach tmux sessions
+#
+# Usage:
+#   lfg                    (interactive: pick session or create new)
+#   lfg <name>             (attach or create session with that name)
+#
+# Run in a fresh kitty tab. Execs into tmux so tab closes when session ends.
+# Requires: fzf, tmux, zoxide
+
+set -euo pipefail
+
+# Set kitty tab title via OSC escape sequence
+set_tab_title() {
+    printf '\033]2;%s\007' "$1"
+}
+
+# ─── Step 1: Session selection ────────────────────────────────────────────────
+
+pick_session() {
+    local fzf_input=""
+    if tmux list-sessions 2>/dev/null | grep -q .; then
+        while IFS='|' read -r name status windows; do
+            [[ -z "$name" ]] && continue
+            local icon="○"
+            [[ "$status" == "attached" ]] && icon="●"
+            fzf_input+="${icon} ${name}  (${status}, ${windows})"$'\n'
+        done < <(tmux list-sessions -F '#{session_name}|#{?session_attached,attached,detached}|#{session_windows} windows' 2>/dev/null)
+    fi
+
+    local result
+    result=$(printf '%s' "$fzf_input" | fzf \
+        --exact \
+        --prompt="session ❯ " \
+        --header="Enter: new · Alt-Enter: select" \
+        --header-first \
+        --height=~50% \
+        --reverse \
+        --no-info \
+        --bind 'enter:print-query' \
+        --bind 'alt-enter:accept' \
+        2>/dev/null) || true
+
+    [[ -z "$result" ]] && return 1
+
+    # Alt-Enter outputs a session entry (starts with ●/○)
+    if [[ "$result" == [●○]* ]]; then
+        echo "$result" | sed 's/^[●○] //; s/  (.*//' 
+        return 0
+    fi
+
+    # Enter outputs the typed query
+    echo "$result"
+    return 0
+}
+
+# ─── Step 2: Directory selection (new sessions only) ──────────────────────────
+
+pick_directory() {
+    # Frecency-ranked directory picker with raw-path fallback.
+    # Uses zoxide's database as the candidate list, but wraps in our own
+    # fzf so --print-query lets us capture typed input when nothing matches.
+    local result
+    result=$(zoxide query -l 2>/dev/null | fzf \
+        --print-query \
+        --prompt="dir ❯ " \
+        --header="Type path or pick from history" \
+        --header-first \
+        --height=~50% \
+        --reverse \
+        --no-info \
+        --scheme=path \
+        2>/dev/null) || true
+
+    local query selected
+    query=$(echo "$result" | head -1)
+    selected=$(echo "$result" | tail -1)
+
+    # User picked an existing entry from the list
+    if [[ -n "$selected" && "$selected" != "$query" ]]; then
+        echo "$selected"
+        return 0
+    fi
+
+    # User typed a raw path - expand tilde and validate
+    if [[ -n "$query" ]]; then
+        local expanded="${query/#\~/$HOME}"
+        if [[ -d "$expanded" ]]; then
+            echo "$expanded"
+            return 0
+        fi
+        # Last resort: let zoxide resolve it non-interactively
+        zoxide query -- "$query" 2>/dev/null && return 0
+    fi
+
+    return 1
+}
+
+# ─── Step 3: Pi preset selection (new sessions only) ──────────────────────────
+
+pick_preset() {
+    local presets_file="${HOME}/.pi/agent/presets.json"
+    local presets="code"
+
+    # Extract preset names from JSON
+    if [[ -f "$presets_file" ]] && command -v python3 &>/dev/null; then
+        presets=$(python3 -c "import json,sys; print('\n'.join(json.load(open(sys.argv[1])).keys()))" "$presets_file" 2>/dev/null) || presets="code"
+    fi
+
+    local selected
+    selected=$(printf '%s\n' $presets | fzf \
+        --prompt="preset ❯ " \
+        --header="Pick pi preset (Enter for code)" \
+        --header-first \
+        --height=~30% \
+        --reverse \
+        --no-info \
+        --query="code" \
+        2>/dev/null) || echo "code"
+
+    echo "${selected:-code}"
+}
+
+# ─── Step 4: Exec into tmux ──────────────────────────────────────────────────
+
+enter_session() {
+    local session_name="$1"
+    local dir="${2:-}"
+    local preset="${3:-}"
+
+    # Set kitty tab title before handing off to tmux
+    set_tab_title "$session_name"
+
+    # Build pi command for new sessions
+    local pi_cmd="devx pi"
+    [[ -n "$preset" ]] && pi_cmd="devx pi --preset $preset"
+
+    # Inside tmux already → switch client
+    if [[ -n "${TMUX:-}" ]]; then
+        if ! tmux has-session -t "=$session_name" 2>/dev/null; then
+            tmux new-session -d -s "$session_name" -c "${dir:-$HOME}"
+            tmux send-keys -t "=$session_name:" "$pi_cmd" Enter
+        fi
+        exec tmux switch-client -t "=$session_name"
+    fi
+
+    # Existing session → attach
+    if tmux has-session -t "=$session_name" 2>/dev/null; then
+        exec tmux attach-session -t "=$session_name"
+    fi
+
+    # New session - start tmux, launch pi, then attach
+    tmux new-session -d -s "$session_name" -c "${dir:-$HOME}"
+    tmux send-keys -t "=$session_name:" "$pi_cmd" Enter
+    exec tmux attach-session -t "=$session_name"
+}
+
+# ─── Main ────────────────────────────────────────────────────────────────────
+
+main() {
+    local session_name dir preset
+
+    if [[ $# -ge 1 ]]; then
+        session_name="$1"
+    else
+        session_name=$(pick_session) || exit 0
+    fi
+
+    # Existing session - just attach
+    if tmux has-session -t "=$session_name" 2>/dev/null; then
+        enter_session "$session_name"
+    fi
+
+    # New session - pick directory, then preset
+    dir=$(pick_directory) || exit 0
+    preset=$(pick_preset) || exit 0
+    enter_session "$session_name" "$dir" "$preset"
+}
+
+main "$@"
