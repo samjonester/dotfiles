@@ -60,20 +60,45 @@ import {
 } from "@mariozechner/pi-tui";
 import { execFile } from "child_process";
 
-// ── User alert (terminal bell + macOS notification) ──────────────────────────
+// ── User alert (macOS notification only) ──────────────────────────────────────
 
 /**
  * Alert the user that bash-guard needs their attention.
- * Fires a terminal bell (dock bounce/badge/sound in most terminals)
- * and a macOS system notification (visible even when terminal isn't focused).
+ * Uses macOS system notification (visible even when terminal isn't focused).
+ *
+ * NOTE: We intentionally do NOT write BEL (\x07) to the terminal. BEL causes
+ * kitty to activate the window (window_alert_on_bell), which triggers tmux
+ * focus events (\x1b[I). Under PTY read splitting, the focus event can arrive
+ * as bare \x1b (after the stdin buffer's 10ms timeout), which matchesKey()
+ * interprets as ESC — auto-dismissing the guard dialog. The agent then retries
+ * the command, firing another alert, creating an infinite bell→focus→ESC→retry
+ * loop that manifests as the scrollback "circling" without showing the prompt.
  */
 function alertUser(label: string) {
-  process.stderr.write("\x07");
   execFile(
     "osascript",
     ["-e", `display notification "${label}" with title "🔒 Bash Guard"`],
     () => {},
   );
+}
+
+/**
+ * Check if input data is a terminal control sequence (not a user keypress).
+ * Filters out focus events, mouse reports, device status responses, etc.
+ * These should never be interpreted as user input by guard dialogs.
+ */
+function isTerminalControlSequence(data: string): boolean {
+  // CSI sequences: ESC [ ... (focus events, mouse, device status)
+  if (data.startsWith("\x1b[") && data.length > 2) return true;
+  // SS3 sequences: ESC O ... (some function keys, but also SS3 prefix)
+  if (data.startsWith("\x1bO") && data.length > 2) return true;
+  // OSC sequences: ESC ] ...
+  if (data.startsWith("\x1b]")) return true;
+  // DCS sequences: ESC P ...
+  if (data.startsWith("\x1bP")) return true;
+  // APC sequences: ESC _ ...
+  if (data.startsWith("\x1b_")) return true;
+  return false;
 }
 
 // ── Remote mutation patterns (Stage 1 — checked before whitelist/voters) ─────
@@ -271,6 +296,7 @@ async function showRemoteMutationDialog(
         invalidate: () => container.invalidate(),
         handleInput: (data: string) => {
           if (resolved) return;
+          if (isTerminalControlSequence(data)) return;
           if (mode === "feedback") {
             feedbackInput.handleInput(data);
             repaint();
@@ -421,6 +447,7 @@ async function showCommitPolicyDialog(
         invalidate: () => container.invalidate(),
         handleInput: (data: string) => {
           if (resolved) return;
+          if (isTerminalControlSequence(data)) return;
           if (mode === "feedback") {
             feedbackInput.handleInput(data);
             repaint();
@@ -489,9 +516,14 @@ Review the command in <command> tags and respond with a single word: YES or NO. 
 YES means: the command is safe to run on a developer's machine.
 NO means: the command poses a real security risk (data exfiltration, destructive ops, credential exposure to the network).
 
+For multi-line or compound scripts: evaluate EACH command in the script individually. A script is safe if and only if every command in it is safe. Do not reject a script just because it is long or complex — read it carefully. But if even ONE command in the script is dangerous, vote NO for the whole script.
+
 Vote YES for:
 - Reading any local files (project files, session logs, config, dotfiles) for analysis → YES
 - Python/Node/shell scripts that read, parse, transform, or print local data → YES
+- Multi-line scripts combining grep, find, python3 -c, jq, etc. to process local files (session logs, jsonl, config) — assess each command, but these are normal data-processing workflows → YES
+- Reading from /nix/store/ (read-only Nix store), ~/.pi/ (pi config), or session log directories → YES
+- Local CLI tools: slack-mcp, pi, bk (Buildkite), gh, gt (Graphite) with read-only subcommands → YES
 - Network requests to localhost, 127.0.0.1, or *.shop.dev (local dev servers) → YES
 - Shell loops (for/while) composed of safe commands (grep, curl to localhost, gh api reads, git reads) → YES
 - Git operations (add, checkout, status, log, diff, branch, stash, rebase, reset) → YES
@@ -507,7 +539,8 @@ Vote NO for:
 - Privilege escalation (sudo, chmod 777, chown root) → NO
 - Installing software from untrusted sources outside a project manifest → NO
 - Modifying system services or OS-level configuration → NO
-- Irreversible destructive operations (rm -rf /, dd, mkfs) → NO`;
+- Irreversible destructive operations (rm -rf /, dd, mkfs) → NO
+- A multi-line script where ANY individual command is dangerous (even if the rest are safe) → NO`;
 
 const EXPLAINER_SYSTEM_PROMPT = `You are reviewing a bash command that an AI coding assistant is attempting to execute. A panel of security reviewers flagged this command.
 
@@ -665,7 +698,11 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*python3?\b/,
 
   // ── MCP tool read operations ──
-  /^\s*slack-mcp\s+(get-messages|get-thread|search|list)\b/,
+  /^\s*slack-mcp\s+(get-messages|get-thread|get-unreads|get-channel-sections|get-channel-info|get-status|get-user-profile|get-reactions|get-saved-items|get-file|search|list|test|mcp|auth)\b/,
+
+  // ── Pi and CI tooling ──
+  /^\s*pi\s+(tool|session|model|config|extension)\b/,
+  /^\s*bk\b/,
 
   // ── Git write operations (normal dev workflow) ──
   // Note: git push is handled by the remote mutation gate (Stage 1)
@@ -1371,6 +1408,7 @@ async function runVoteTracking(
       render: (w: number) => container.render(w),
       invalidate: () => container.invalidate(),
       handleInput: (data: string) => {
+        if (isTerminalControlSequence(data)) return;
         if (matchesKey(data, Key.escape) && !finished) {
           finished = true;
           abortController.abort();
@@ -1640,6 +1678,7 @@ async function showReviewDialog(
       invalidate: () => container.invalidate(),
       handleInput: (data: string) => {
         if (resolved) return;
+        if (isTerminalControlSequence(data)) return;
         if (mode === "feedback") {
           feedbackInput.handleInput(data);
           repaint();

@@ -193,6 +193,11 @@ All pi configuration is versioned in `~/dotfiles/personal/pi/` and symlinked int
 
 When asked to review code, review a PR, or review current changes, load the `review` skill. It auto-discovers all `review-*` agents, dispatches them in parallel, validates findings with `review-judge`, and produces consolidated output.
 
+## PR Links
+
+- When linking to PRs in the `shop/world` repo, **always use Graphite links** (`https://app.graphite.com/github/pr/shop/world/<number>`) instead of GitHub links (`https://github.com/shop/world/pull/<number>`). Graphite is the primary review interface.
+- For repos outside `shop/world` that don't use Graphite, GitHub links are fine.
+
 ## PR Descriptions
 
 When writing or editing PR descriptions, follow these rules:

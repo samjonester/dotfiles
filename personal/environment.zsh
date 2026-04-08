@@ -13,6 +13,13 @@ export VISUAL='nvim'
 export PAGER='less'
 export BROWSER='open'
 
+# pnpm global bin directory
+export PNPM_HOME="$HOME/.local/share/pnpm"
+case ":$PATH:" in
+  *":$PNPM_HOME:"*) ;;
+  *) export PATH="$PNPM_HOME:$PATH" ;;
+esac
+
 # Add dotfiles bin to PATH
 export PATH="$HOME/dotfiles/bin:$PATH"
 

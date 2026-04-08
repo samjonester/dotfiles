@@ -1,0 +1,707 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
+<title>Terminal Workflow Reference</title>
+<style>
+  :root {
+    --bg: #1d2021; --bg-soft: #282828; --bg-card: #32302f; --bg-hover: #3c3836;
+    --fg: #ebdbb2; --fg-dim: #a89984; --fg-muted: #7c6f64;
+    --accent: #fe8019; --accent-dim: #d65d0e;
+    --green: #b8bb26; --green-dim: #98971a;
+    --blue: #83a598; --blue-dim: #458588;
+    --purple: #d3869b; --purple-dim: #b16286;
+    --yellow: #fabd2f; --yellow-dim: #d79921;
+    --red: #fb4934; --aqua: #8ec07c; --aqua-dim: #689d6a;
+    --border: #504945; --radius: 8px;
+  }
+  * { margin: 0; padding: 0; box-sizing: border-box; }
+  body {
+    font-family: 'JetBrains Mono', 'SF Mono', monospace;
+    background: var(--bg); color: var(--fg); line-height: 1.6;
+    padding: 2rem; max-width: 1100px; margin: 0 auto;
+  }
+  h1 { font-size: 1.8rem; color: var(--accent); margin-bottom: 0.25rem; }
+  .subtitle { color: var(--fg-dim); font-size: 0.85rem; margin-bottom: 2rem; padding-bottom: 1.5rem; border-bottom: 1px solid var(--border); }
+  h2 { font-size: 1.2rem; color: var(--yellow); margin: 2.5rem 0 0.75rem; padding-bottom: 0.4rem; border-bottom: 1px solid var(--border); }
+  h3 { font-size: 0.95rem; color: var(--aqua); margin: 1.5rem 0 0.5rem; }
+  p, li { font-size: 0.85rem; color: var(--fg-dim); }
+  p { margin-bottom: 0.75rem; }
+  ul { list-style: none; margin-bottom: 0.75rem; }
+  ul li { padding: 0.2rem 0 0.2rem 1.2rem; position: relative; }
+  ul li::before { content: "›"; position: absolute; left: 0; color: var(--fg-muted); }
+
+  table { width: 100%; border-collapse: collapse; margin: 0.5rem 0 1.25rem; font-size: 0.82rem; }
+  th { text-align: left; color: var(--fg-muted); font-weight: 600; font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; padding: 0.4rem 0.75rem; border-bottom: 1px solid var(--border); }
+  td { padding: 0.4rem 0.75rem; border-bottom: 1px solid rgba(80,73,69,0.3); color: var(--fg-dim); vertical-align: top; }
+  tr:hover td { background: var(--bg-hover); }
+
+  kbd { display: inline-block; background: var(--bg-card); border: 1px solid var(--border); border-radius: 4px; padding: 1px 6px; font-size: 0.8rem; font-family: inherit; color: var(--fg); box-shadow: 0 1px 0 var(--border); white-space: nowrap; }
+  code { background: var(--bg-card); padding: 2px 6px; border-radius: 3px; font-size: 0.82rem; color: var(--green); }
+
+  .tag { display: inline-block; font-size: 0.6rem; text-transform: uppercase; letter-spacing: 0.5px; padding: 1px 5px; border-radius: 3px; margin-left: 0.3rem; vertical-align: middle; }
+  .t-k { background: var(--green-dim); color: var(--bg); }
+  .t-t { background: var(--blue-dim); color: var(--fg); }
+  .t-p { background: var(--purple-dim); color: var(--fg); }
+  .t-n { background: var(--yellow-dim); color: var(--bg); }
+  .t-g { background: var(--accent-dim); color: var(--fg); }
+
+  .tip { background: rgba(69,133,136,0.1); border-left: 3px solid var(--blue-dim); padding: 0.6rem 1rem; margin: 0.75rem 0; border-radius: 0 var(--radius) var(--radius) 0; font-size: 0.82rem; }
+  .tip strong { color: var(--blue); }
+  .warn { background: rgba(215,153,33,0.1); border-left: 3px solid var(--yellow-dim); padding: 0.6rem 1rem; margin: 0.75rem 0; border-radius: 0 var(--radius) var(--radius) 0; font-size: 0.82rem; }
+  .warn strong { color: var(--yellow); }
+
+  .diagram { background: var(--bg-soft); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem; margin: 1rem 0; font-size: 0.72rem; line-height: 1.35; overflow-x: auto; white-space: pre; color: var(--fg-muted); }
+  .diagram .a { color: var(--accent); } .diagram .g { color: var(--green); }
+  .diagram .b { color: var(--blue); } .diagram .p { color: var(--purple); }
+  .diagram .y { color: var(--yellow); } .diagram .d { color: var(--fg-muted); }
+
+  nav { background: var(--bg-card); border: 1px solid var(--border); border-radius: var(--radius); padding: 1rem 1.25rem; margin-bottom: 2rem; }
+  nav .label { font-size: 0.7rem; text-transform: uppercase; letter-spacing: 1px; color: var(--fg-muted); margin-bottom: 0.5rem; }
+  nav a { color: var(--blue); text-decoration: none; font-size: 0.82rem; margin-right: 1.25rem; white-space: nowrap; }
+  nav a:hover { color: var(--accent); }
+  hr { border: none; border-top: 1px solid var(--border); margin: 2rem 0; }
+  @media (max-width: 768px) { body { padding: 1rem; } }
+</style>
+</head>
+<body>
+
+<h1>Terminal Workflow Reference</h1>
+<p class="subtitle">Kitty · tmux · Neovim · lazygit · Pi — how they fit together</p>
+
+<nav>
+  <div class="label">Workflows</div>
+  <a href="#layers">Which Layer for What</a>
+  <a href="#day">Daily Arc</a>
+  <a href="#code">Coding</a>
+  <a href="#review">Review & Planning</a>
+  <a href="#fork">Forking & Parallel Work</a>
+  <a href="#teams">Agent Teams</a>
+  <a href="#monitor">Monitoring</a>
+  <a href="#nav">Navigation Quick Ref</a>
+  <a href="#skills">Skills & Agents</a>
+  <a href="#trouble">Troubleshooting</a>
+</nav>
+
+<!-- ================================================================== -->
+<h2 id="layers">Which Layer for What</h2>
+
+<p>Five tools, each owning a specific concern. The key decision is <strong>which one manages your splits</strong>.</p>
+
+<div style="border:1px solid var(--green-dim); border-radius:var(--radius); padding:0.75rem; margin:1rem 0; background:var(--bg-soft);">
+  <div style="font-size:0.82rem; margin-bottom:0.5rem;"><span style="color:var(--green); font-weight:600;">Kitty</span> <span style="color:var(--fg-muted);">&mdash; OS-level: windows, tabs, GPU rendering, keyboard</span></div>
+  <div style="border:1px solid var(--blue-dim); border-radius:6px; padding:0.6rem; background:var(--bg-card);">
+    <div style="font-size:0.82rem; margin-bottom:0.5rem;"><span style="color:var(--blue); font-weight:600;">tmux</span> <span style="color:var(--fg-muted);">&mdash; Session persistence, pane layout, process isolation</span></div>
+    <div style="display:flex; gap:0.5rem;">
+      <div style="flex:1; border:1px solid var(--border); border-radius:4px; padding:0.4rem 0.6rem;">
+        <div style="font-size:0.82rem; color:var(--purple); font-weight:600;">Pi</div>
+        <div style="font-size:0.72rem; color:var(--fg-muted);">AI agent + conversation</div>
+      </div>
+      <div style="flex:1; border:1px solid var(--border); border-radius:4px; padding:0.4rem 0.6rem;">
+        <div style="font-size:0.82rem; color:var(--yellow); font-weight:600;">Neovim</div>
+        <div style="font-size:0.72rem; color:var(--fg-muted);">Editor + LSP + lazygit float</div>
+      </div>
+      <div style="flex:1; border:1px solid var(--border); border-radius:4px; padding:0.4rem 0.6rem;">
+        <div style="font-size:0.82rem; color:var(--accent); font-weight:600;">lazygit</div>
+        <div style="font-size:0.72rem; color:var(--fg-muted);">Git TUI (standalone)</div>
+      </div>
+    </div>
+  </div>
+</div>
+
+<h3>The rule: Kitty tab = tmux session = activity. tmux owns everything inside.</h3>
+
+<p>Each Kitty tab maps 1:1 to a tmux session. Each session is an <strong>activity</strong> &mdash; coding a feature, triaging Slack, reviewing PRs, investigating an incident. You won't have all sessions open as tabs at once; <code>tmux a -t name</code> in any tab to bring one back.</p>
+
+<table>
+  <tr><th>Use this</th><th>For this</th><th>Why</th></tr>
+  <tr>
+    <td><span class="tag t-k">kitty</span> tab</td>
+    <td>One per <strong>activity</strong> &mdash; coding a feature, triaging Slack, reviewing PRs, investigating an incident</td>
+    <td>OS-level separation. Always renamed on creation (<kbd class="green">&#8984; &#8679; I</kbd>). Survives <code>tmux kill-server</code>.</td>
+  </tr>
+  <tr>
+    <td><span class="tag t-t">tmux</span> session</td>
+    <td>The <strong>persistent activity context</strong> inside each Kitty tab. Stays alive through disconnects.</td>
+    <td>Close a tab, <code>tmux a -t triage</code> in a new one to resume. Not all sessions need a tab at all times.</td>
+  </tr>
+  <tr>
+    <td><span class="tag t-t">tmux</span> windows</td>
+    <td>Separate <strong>tasks within the activity</strong> &mdash; Pi in one, nvim in another, shell in a third</td>
+    <td>Fullscreen per task. Switch with <kbd class="blue">C-Space</kbd> <kbd>1-9</kbd> or <kbd class="blue">C-Space</kbd> <kbd>s</kbd>.</td>
+  </tr>
+  <tr>
+    <td><span class="tag t-t">tmux</span> panes</td>
+    <td>Side-by-side views <strong>within a task</strong> &mdash; Pi + a log tail, agent team layout, Pi + nvim</td>
+    <td>Visible at the same time. Navigate with <kbd>C-h/j/k/l</kbd>. Zoom with <kbd class="blue">C-Space</kbd> <kbd>z</kbd>.</td>
+  </tr>
+  <tr>
+    <td><span class="tag t-k">kitty</span> splits</td>
+    <td><strong>Don't use inside tmux.</strong> They stack on top of tmux panes and create confusion.</td>
+    <td>tmux owns all splits. Kitty splits only if you ever need a non-tmux tab for a quick one-off.</td>
+  </tr>
+</table>
+
+<div class="tip">
+  <strong>Typical layout:</strong> 2&ndash;3 Kitty tabs open &mdash; one for coding, one for triage, maybe one for investigation.
+  Other tmux sessions stay detached; bring one back with <code>tmux a -t name</code> in a fresh tab.
+  Every new tab gets renamed immediately (<kbd class="green">&#8984; &#8679; I</kbd>) &mdash; the tab name <em>is</em> the activity name.
+</div>
+
+<h3>Morning: Start up and triage</h3>
+<table>
+  <tr><th>Step</th><th>What you do</th></tr>
+  <tr><td>Open Kitty</td><td><code>tmux a</code> — everything from yesterday is still running. Or open the workspace launcher: <kbd class="blue">C-Space</kbd> <kbd>f</kbd> (from tmux) or <code>lfg</code> (from shell). It shows existing sessions and lets you create new ones with directory + preset picker.</td></tr>
+  <tr><td>Triage Slack</td><td><code>devx pi --preset triage</code> then <em>"morning triage"</em>. Or from an existing Pi session: <code>/preset triage</code> then <em>"morning triage"</em>. Two steps, but the skill does 40+ channels automatically.</td></tr>
+  <tr><td>Fork workstreams</td><td><code>/tmux-fork PR Reviews</code>, <code>/tmux-fork-pane Meta API</code> for triage forks. <code>/pr 570491</code> to open a PR in its own worktree + window.</td></tr>
+  <tr><td>Switch to coding</td><td><kbd class="blue">C-Space</kbd> <kbd>f</kbd> → type a name → pick directory (zoxide) → pick preset. Or: new Kitty tab (<kbd class="green">Ctrl+⇧ T</kbd>), rename (<kbd class="green">⌘ ⇧ I</kbd>), <code>lfg feature-xyz</code>.</td></tr>
+</table>
+
+<h3>Coding: The split-pane layout</h3>
+<p>Wide monitor, vertical splits. Pi on the left, something contextual on the right. Open the right pane via Pi commands (<code>/nvim</code>, <code>/lazygit</code>, <code>/shell</code>, <code>/tmux-fork-pane</code>) or manually: <kbd class="blue">C-Space</kbd> <kbd>\</kbd>. Close with <kbd class="blue">C-Space</kbd> <kbd>x</kbd>.</p>
+<div style="display:flex; gap:1rem; margin:1rem 0;">
+  <div style="flex:1; background:var(--bg-soft); border:1px solid var(--border); border-radius:var(--radius); padding:0.75rem 1rem;">
+    <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--fg-muted); margin-bottom:0.5rem;">Window 1 — main work (two vertical panes)</div>
+    <div style="display:flex; gap:0.75rem;">
+      <div style="flex:1; background:var(--bg-card); border:1px solid var(--border); border-radius:4px; padding:0.5rem 0.75rem;">
+        <div style="font-size:0.82rem; color:var(--purple); font-weight:600;">Pi</div>
+        <div style="font-size:0.75rem; color:var(--fg-muted);">primary agent — always here</div>
+      </div>
+      <div style="flex:1; background:var(--bg-card); border:1px solid var(--border); border-radius:4px; padding:0.5rem 0.75rem;">
+        <div style="font-size:0.75rem; color:var(--fg-muted); margin-bottom:0.25rem;">right pane rotates:</div>
+        <div style="font-size:0.82rem;"><span style="color:var(--purple);">Pi</span> <span style="color:var(--fg-muted);">(forked)</span> <code style="font-size:0.65rem;">/tmux-fork-pane</code></div>
+        <div style="font-size:0.82rem;"><span style="color:var(--yellow);">Neovim</span> <span style="color:var(--fg-muted);">(code browsing)</span> <code style="font-size:0.65rem;">/nvim</code></div>
+        <div style="font-size:0.82rem;"><span style="color:var(--accent);">lazygit</span> <span style="color:var(--fg-muted);">(reviewing changes)</span> <code style="font-size:0.65rem;">/lazygit</code></div>
+        <div style="font-size:0.82rem;"><span style="color:var(--fg-dim);">Shell</span> <span style="color:var(--fg-muted);">(ad-hoc)</span> <code style="font-size:0.65rem;">/shell</code></div>
+      </div>
+    </div>
+  </div>
+</div>
+<div style="display:flex; gap:1rem; margin:0 0 1rem;">
+  <div style="flex:1; background:var(--bg-soft); border:1px solid var(--border); border-radius:var(--radius); padding:0.5rem 1rem;">
+    <div style="font-size:0.7rem; text-transform:uppercase; letter-spacing:1px; color:var(--fg-muted); margin-bottom:0.25rem;">Window 2 — background</div>
+    <div style="font-size:0.82rem; color:var(--fg-dim);">dev server, test watcher — if not a Pi background process</div>
+  </div>
+</div>
+
+<p>The left pane is always Pi. The right pane is whatever supports the current task &mdash;
+a second Pi (<code>/tmux-fork-pane</code>), neovim for browsing code and staging changes (<kbd>⎵gg</kbd> for lazygit float),
+standalone lazygit (<code>/lazygit</code>), nvim for browsing (<code>/nvim</code>), or a shell (<code>/shell</code>) — all auto-detect the right working directory. Servers run in a separate background window,
+or Pi spawns them as background processes. Close any right pane with <kbd class="blue">C-Space</kbd> <kbd>x</kbd> when done.</p>
+
+<h3>Investigation: its own activity</h3>
+<table>
+  <tr><th>Step</th><th>What you do</th></tr>
+  <tr><td>Alert fires</td><td>New Kitty tab (<kbd class="green">Ctrl+⇧ T</kbd>), rename it (<kbd class="green">⌘ ⇧ I</kbd>), <code>tmux new -s incident-meta-api</code>, <code>devx pi --preset investigate</code>.</td></tr>
+  <tr><td>Need code context</td><td><code>/nvim</code> for a side-by-side nvim pane, <code>/shell</code> for a quick terminal, or <kbd class="blue">C-Space</kbd> <kbd>c</kbd> for a new window. Close pane: <kbd class="blue">C-Space</kbd> <kbd>x</kbd>.</td></tr>
+  <tr><td>Monitor alongside</td><td><code>/tmux-fork-pane monitor</code> — spin up a second Pi to watch dashboards while you investigate in the main pane.</td></tr>
+  <tr><td>Resolved</td><td>Close the Kitty tab (<kbd class="blue">C-Space</kbd> <kbd>x</kbd> panes first, or just close tab). Session stays detached.</td></tr>
+</table>
+
+<h3>End of day</h3>
+<table>
+  <tr><th>Step</th><th>What you do</th></tr>
+  <tr><td>Name your sessions</td><td>Rename tmux session: <kbd class="blue">C-Space</kbd> <kbd>$</kbd>. Rename window: <kbd class="blue">C-Space</kbd> <kbd>,</kbd>.</td></tr>
+  <tr><td>Detach</td><td><kbd class="blue">C-Space</kbd> <kbd>d</kbd> — tmux keeps everything running. Close Kitty.</td></tr>
+  <tr><td>Tomorrow</td><td><code>tmux a</code> → everything is where you left it. <code>devx pi -c</code> to resume last conversation. Or <kbd class="blue">C-Space</kbd> <kbd>f</kbd> to use the workspace launcher.</td></tr>
+</table>
+
+<h3>Tearing down sessions</h3>
+<p>Sessions accumulate. Here's how to clean up — from gentle to nuclear.</p>
+<table>
+  <tr><th>Method</th><th>How</th><th>What dies</th></tr>
+  <tr><td>Clean exit</td><td><code>/exit</code> in Pi → <code>exit</code> in shell. If single-pane window, session dies.</td><td>That Pi process. Shell. Pane.</td></tr>
+  <tr><td>Kill one session</td><td><code>tmux kill-session -t name</code> (from another pane/terminal)</td><td>All windows, panes, and processes in that session.</td></tr>
+  <tr><td>Kill all except one</td><td><code>tmux kill-session -a -t main</code></td><td>Every session except <code>main</code>.</td></tr>
+  <tr><td>Kill pane only</td><td><kbd class="blue">C-Space</kbd> <kbd>x</kbd> (confirm)</td><td>Current pane and its process.</td></tr>
+  <tr><td>Kill window</td><td><kbd class="blue">C-Space</kbd> <kbd>&amp;</kbd> (confirm)</td><td>All panes in the window.</td></tr>
+  <tr><td>Nuclear</td><td><code>tmux kill-server</code></td><td>Everything. All sessions, all processes. Kitty tabs survive.</td></tr>
+</table>
+<div class="tip">
+  <strong>What survives teardown:</strong> Memory bank (persists to disk), WTP worktrees (just directories — free with <code>_wtp free &lt;slot&gt;</code>), Kitty tabs and OS state. Session-scoped Pi cron tasks and background jobs die with their session — they're meant to be ephemeral.
+</div>
+
+<!-- ================================================================== -->
+<h2 id="code">Coding Workflow</h2>
+
+<p>The loop: <strong>Pi writes code → you browse/review in nvim + lazygit → Pi commits and watches CI.</strong></p>
+
+<h3>Pi handles code changes</h3>
+<table>
+  <tr><th>Action</th><th>How</th></tr>
+  <tr><td>Submit a prompt</td><td><kbd>Enter</kbd>. Multi-line: <kbd>Shift+Enter</kbd>. Reference a file: <kbd>@</kbd> for fuzzy search.</td></tr>
+  <tr><td>Steer while working</td><td><kbd>Enter</kbd> queues a steering message (delivered after current tool calls).</td></tr>
+  <tr><td>Queue follow-up</td><td><kbd>Alt+Enter</kbd> — delivered after agent finishes all work.</td></tr>
+  <tr><td>Switch models mid-task</td><td><kbd>Ctrl+P</kbd> to cycle scoped models. <kbd>⇧ Tab</kbd> to adjust thinking level.</td></tr>
+  <tr><td>Compact long sessions</td><td><code>/compact</code> — summarize older messages when context gets heavy (50+ tool calls).</td></tr>
+  <tr><td>Side-by-side agent</td><td><code>/tmux-fork-pane</code> — second Pi in a split with full conversation context. One implements, you steer the other.</td></tr>
+</table>
+
+<h3>Neovim for manual editing and review</h3>
+<p>Open nvim alongside Pi: <code>/nvim</code> (auto-detects directory), <code>/nvim path/to/file.rb</code> (opens a specific file), or <code>/lazygit</code> for nvim+lazygit.</p>
+<table>
+  <tr><th>Action</th><th>How</th></tr>
+  <tr><td>Open lazygit</td><td><kbd>⎵gg</kbd> in nvim (Snacks float), or <code>/lazygit</code> in Pi (opens nvim+lazygit in a split, auto-finds dirty git root).</td></tr>
+  <tr><td>Open file explorer</td><td><kbd>⎵e</kbd> (neo-tree) or <kbd>⎵ef</kbd> (ranger)</td></tr>
+  <tr><td>Find files</td><td><kbd>⎵ff</kbd> (fzf) or <kbd>⎵⎵</kbd> (find files)</td></tr>
+  <tr><td>Live grep</td><td><kbd>⎵sg</kbd> or <kbd>⎵/</kbd></td></tr>
+  <tr><td>Copy file location</td><td><kbd>⎵fl</kbd> — copies <code>path:line</code> to clipboard (works in visual mode for ranges)</td></tr>
+  <tr><td>Go to definition</td><td><kbd>gd</kbd>. References: <kbd>gr</kbd>. Back: <kbd>C-o</kbd>.</td></tr>
+</table>
+
+<h3>Git workflow: lazygit + Graphite</h3>
+<p>Shell aliases: <code>lg</code> = lazygit, <code>dpi</code> = devx pi, <code>g</code> = git.</p>
+<table>
+  <tr><th>Action</th><th>How</th></tr>
+  <tr><td>Interactive git</td><td><kbd>⎵gg</kbd> in nvim, or <code>/lazygit</code> in Pi (splits a pane, auto-detects working directory)</td></tr>
+  <tr><td>Stage + commit (via Pi)</td><td>Pi uses <code>gt create</code> / <code>gt modify</code> — bash-guard gates commits, you approve.</td></tr>
+  <tr><td>Submit PR</td><td>Pi runs <code>gt submit</code> — Graphite handles the PR.</td></tr>
+  <tr><td>Watch CI</td><td><em>"watch CI for PR #524035"</em> — loads pr-ci-autofix skill, polls Buildkite, notifies on completion.</td></tr>
+</table>
+
+<div class="tip">
+  <strong>Pi or nvim?</strong> Pi for AI-driven changes (feature implementation, refactoring, reviews). Nvim for manual editing, navigation, and when you need LSP features. They share the filesystem — Pi edits and commits. Open the right pane with <code>/nvim</code>, <code>/lazygit</code>, or <code>/shell</code> — all auto-detect the working directory.
+</div>
+
+<!-- ================================================================== -->
+<h2 id="review">Review & Planning</h2>
+
+<p>Multi-agent workflows that run inside Pi. Subagents are invisible background processes; agent teams spawn visible tmux panes.</p>
+
+<h3>Planning a feature</h3>
+<p>Say <em>"plan this"</em> — the multi-model pipeline runs automatically:</p>
+<table>
+  <tr><th>Phase</th><th>What happens</th></tr>
+  <tr><td>Question</td><td><code>plan-questioner</code> probes for ambiguities — back-and-forth with you until the problem is tight.</td></tr>
+  <tr><td>Diverge</td><td>Two planners run in parallel: <code>planner-opus</code> (minimal change) + <code>planner-design</code> (clean architecture). For bugs: <code>planner-local</code> + <code>planner-systemic</code>.</td></tr>
+  <tr><td>Judge</td><td><code>plan-judge</code> (Opus) verifies claims against real code, picks the winner, outputs implementation steps.</td></tr>
+  <tr><td>Implement</td><td>Say <em>"implement it"</em> — loads the <code>implement</code> skill. Each step runs as an isolated subagent to prevent context explosion.</td></tr>
+</table>
+
+<h3>Reviewing code</h3>
+<p>Say <em>"review this"</em>, <em>"review PR #N"</em>, or <em>"review current branch"</em>. For a full isolated environment: <code>/pr 570491</code> sets up a WTP worktree + tmux window + dev up in one shot.</p>
+<table>
+  <tr><th>Phase</th><th>What happens</th></tr>
+  <tr><td>Dispatch</td><td>Six specialized reviewers run in parallel — consistency, design, intent, naming, readability, simplify.</td></tr>
+  <tr><td>Judge</td><td><code>review-judge</code> validates each finding against actual code, filters false positives.</td></tr>
+  <tr><td>Output</td><td>Consolidated findings: PR comment draft (for others' PRs) or fix plan (for your code).</td></tr>
+</table>
+
+<h3>Mozart: end-to-end</h3>
+<p>Say <em>"plan and implement"</em> — the <code>mozart-plan-and-implement</code> skill orchestrates everything:</p>
+<table>
+  <tr><th>Mode</th><th>What happens</th></tr>
+  <tr><td>N=1 (common)</td><td>Plans via the pipeline, then implements directly in your worktree. All in one tmux window.</td></tr>
+  <tr><td>N&gt;1 (comparison)</td><td>Plans N options, claims WTP worktree slots, spawns <strong>agent teams</strong> — implementer panes appear on the right side of your terminal, plus a validator teammate with dev server. All visible and navigable.</td></tr>
+</table>
+
+<!-- ================================================================== -->
+<h2 id="fork">Forking & Parallel Work</h2>
+
+<p>Two kinds of fork depending on whether you need parallel execution.</p>
+
+<h3>In-place fork — branch the conversation <span class="tag t-p">pi</span></h3>
+<p><kbd>Ctrl+⇧ F</kbd> or <code>/fork</code> — copies conversation history into a new session file. Same pane, same process. Good for <em>"let me try a different approach"</em> — go back with <kbd>Ctrl+⇧ R</kbd>.</p>
+
+<h3>tmux fork — parallel execution <span class="tag t-t">tmux</span> <span class="tag t-p">pi</span></h3>
+<table>
+  <tr><th>Command</th><th>Result</th></tr>
+  <tr><td><code>/tmux-fork [name]</code></td><td>New tmux <strong>window</strong> with a forked Pi. Full conversation context. Runs in parallel.</td></tr>
+  <tr><td><code>/tmux-fork-pane [name]</code></td><td>New tmux <strong>pane</strong> (side-by-side split). Full context. Both visible at once.</td></tr>
+</table>
+
+<div class="tip">
+  <strong>When to use which:</strong><br>
+  <code>/fork</code> — you want to explore a branch and might come back. No extra processes.<br>
+  <code>/tmux-fork</code> — you want two agents working simultaneously on different things.<br>
+  <code>/tmux-fork-pane</code> — same, but you want to see both at once (e.g., one investigates while the other monitors).
+</div>
+
+<!-- ================================================================== -->
+<h2 id="teams">Agent Teams</h2>
+
+<p>When Pi spawns teammates, it creates tmux panes. You (the lead) stay in the left ⅓, teammates stack on the right ⅔.</p>
+
+<div style="display:flex; gap:0.5rem; margin:1rem 0;">
+  <div style="flex:1; background:var(--bg-soft); border:1px solid var(--border); border-radius:var(--radius); padding:0.6rem 0.75rem; display:flex; flex-direction:column; justify-content:center;">
+    <div style="font-size:0.82rem; color:var(--accent); font-weight:600;">@team_lead</div>
+    <div style="font-size:0.75rem; color:var(--fg-muted);">you &mdash; coordinates</div>
+  </div>
+  <div style="flex:2; display:flex; flex-direction:column; gap:0.5rem;">
+    <div style="background:var(--bg-soft); border:1px solid var(--border); border-radius:var(--radius); padding:0.5rem 0.75rem;">
+      <div style="font-size:0.82rem; color:var(--purple); font-weight:600;">@implementer-a</div>
+      <div style="font-size:0.75rem; color:var(--fg-muted);">Building Option A in pool-1</div>
+    </div>
+    <div style="background:var(--bg-soft); border:1px solid var(--border); border-radius:var(--radius); padding:0.5rem 0.75rem;">
+      <div style="font-size:0.82rem; color:var(--purple); font-weight:600;">@implementer-b</div>
+      <div style="font-size:0.75rem; color:var(--fg-muted);">Building Option B in pool-2</div>
+    </div>
+    <div style="background:var(--bg-soft); border:1px solid var(--border); border-radius:var(--radius); padding:0.5rem 0.75rem;">
+      <div style="font-size:0.82rem; color:var(--purple); font-weight:600;">@validator</div>
+      <div style="font-size:0.75rem; color:var(--fg-muted);">Running dev server, testing both</div>
+    </div>
+  </div>
+</div>
+<div style="font-size:0.75rem; color:var(--fg-muted); margin-bottom:1rem;">Pane borders show agent names. Navigate: <kbd>C-h/j/k/l</kbd>. Zoom: <kbd>C-Space</kbd> <kbd>z</kbd>.</div>
+
+<table>
+  <tr><th>Action</th><th>How</th></tr>
+  <tr><td>Spawn a teammate</td><td>Natural language: <em>"Spawn a teammate to review PR #570491"</em></td></tr>
+  <tr><td>Message a teammate</td><td><em>"Tell @reviewer-1 to also check test coverage"</em></td></tr>
+  <tr><td>Check status</td><td><code>/team</code></td></tr>
+  <tr><td>Graceful shutdown</td><td><em>"Ask @reviewer-1 to wrap up"</em></td></tr>
+  <tr><td>Force kill</td><td><em>"Kill @reviewer-2"</em></td></tr>
+  <tr><td>Tear down everything</td><td><em>"Clean up the team"</em></td></tr>
+</table>
+
+<div class="tip">
+  <strong>When teams appear:</strong> Navigate with <kbd>C-h/j/k/l</kbd> (vim-tmux-navigator — no prefix). Zoom one pane to full screen with <kbd class="blue">C-Space</kbd> <kbd>z</kbd>. Resize the lead/teammate columns with <kbd class="blue">C-Space</kbd> <kbd>H/L</kbd>.
+</div>
+
+<!-- ================================================================== -->
+<h2 id="monitor">Monitoring & CI</h2>
+
+<table>
+  <tr><th>Workflow</th><th>How</th></tr>
+  <tr><td>Watch CI for a PR</td><td><em>"watch CI for PR #524035"</em> — loads pr-ci-autofix, polls Buildkite, notifies on success, triages + fixes failures.</td></tr>
+  <tr><td>Recurring alert check</td><td><code>/loop 5m check mozart-ops for new firing alerts</code></td></tr>
+  <tr><td>One-shot check</td><td><code>/loop 10m check if deploy finished</code></td></tr>
+  <tr><td>Dedicated monitor pane</td><td><code>/tmux-fork-pane monitor</code> — then start a loop. Work in adjacent pane. Notifications fire across panes.</td></tr>
+</table>
+
+<p>Loops run inside Pi. tmux keeps them alive when you switch focus or detach. Desktop notifications (via the <code>notify</code> extension) alert you when something needs attention.</p>
+
+<!-- ================================================================== -->
+<h2 id="nav">Navigation Quick Reference</h2>
+
+<p>Organized by scope — coarsest to finest.</p>
+
+<h3>Between activities <span class="tag t-t">tmux sessions</span></h3>
+<table>
+  <tr><td><kbd class="blue">C-Space</kbd> <kbd>f</kbd></td><td>Workspace launcher popup — pick existing session or create new (name → directory → preset)</td></tr>
+  <tr><td><kbd class="blue">C-Space</kbd> <kbd>s</kbd></td><td>Interactive session/window tree picker</td></tr>
+  <tr><td><kbd class="blue">C-Space</kbd> <kbd>S</kbd></td><td>New named tmux session</td></tr>
+  <tr><td><kbd class="blue">C-Space</kbd> <kbd>$</kbd></td><td>Rename session</td></tr>
+  <tr><td><kbd class="blue">C-Space</kbd> <kbd>d</kbd></td><td>Detach (session keeps running)</td></tr>
+  <tr><td><kbd class="blue">C-Space</kbd> <kbd>X</kbd></td><td>Kill current session (with confirmation)</td></tr>
+  <tr><td><code>tmux a -t name</code></td><td>Reattach to a session</td></tr>
+  <tr><td><code>lfg [name]</code></td><td>Workspace launcher from shell — same as <kbd class="blue">C-Space</kbd> <kbd>f</kbd></td></tr>
+</table>
+
+<h3>Between tasks <span class="tag t-t">tmux windows</span></h3>
+<table>
+  <tr><td><kbd class="blue">C-Space</kbd> <kbd>c</kbd></td><td>New window (inherits cwd)</td></tr>
+  <tr><td><kbd class="blue">C-Space</kbd> <kbd>,</kbd></td><td>Rename window</td></tr>
+  <tr><td><kbd class="blue">C-Space</kbd> <kbd>1-9</kbd></td><td>Jump to window by number</td></tr>
+</table>
+
+<h3>Between panes <span class="tag t-t">tmux</span></h3>
+<table>
+  <tr><td><kbd>C-h</kbd> <kbd>C-j</kbd> <kbd>C-k</kbd> <kbd>C-l</kbd></td><td>Navigate panes (vim-tmux-navigator, no prefix — also works from nvim)</td></tr>
+  <tr><td><kbd class="blue">C-Space</kbd> <kbd>z</kbd></td><td>Zoom/unzoom current pane</td></tr>
+  <tr><td><kbd class="blue">C-Space</kbd> <kbd>H/J/K/L</kbd></td><td>Resize pane (15 cells, repeatable)</td></tr>
+  <tr><td><kbd class="blue">C-Space</kbd> <kbd>\</kbd></td><td>Split vertical (side-by-side)</td></tr>
+  <tr><td><kbd class="blue">C-Space</kbd> <kbd>-</kbd></td><td>Split horizontal (top/bottom)</td></tr>
+  <tr><td><kbd class="blue">C-Space</kbd> <kbd>x</kbd></td><td>Close current pane</td></tr>
+</table>
+
+<h3>Between Kitty tabs <span class="tag t-k">kitty</span></h3>
+<table>
+  <tr><td><kbd class="green">Ctrl+⇧ →</kbd> / <kbd class="green">Ctrl+⇧ ←</kbd></td><td>Next / previous tab</td></tr>
+  <tr><td><kbd class="green">⇧ Ctrl+Cmd+j/l</kbd> / <kbd class="green">h/k</kbd></td><td>Next / previous tab (vim-style)</td></tr>
+  <tr><td><kbd class="green">Ctrl+⇧ T</kbd></td><td>New tab, then rename immediately</td></tr>
+  <tr><td><kbd class="green">⌘ ⇧ I</kbd></td><td>Rename tab</td></tr>
+</table>
+
+<h3>Between Pi sessions <span class="tag t-p">pi</span></h3>
+<table>
+  <tr><td><kbd>Ctrl+⇧ R</kbd></td><td>Resume a past session</td></tr>
+  <tr><td><kbd>Ctrl+⇧ T</kbd></td><td>Session tree (branches)</td></tr>
+  <tr><td><kbd>Ctrl+⇧ N</kbd></td><td>New session</td></tr>
+  <tr><td><kbd>Ctrl+⇧ F</kbd></td><td>Fork session (in-place)</td></tr>
+  <tr><td><kbd>Ctrl+⇧ U</kbd></td><td>Cycle presets</td></tr>
+</table>
+
+<h3>Cross-tool shortcuts <span class="tag t-p">pi</span> <span class="tag t-t">tmux</span></h3>
+<table>
+  <tr><td><code>/lazygit</code></td><td>Split pane → nvim + lazygit at auto-detected dirty repo</td></tr>
+  <tr><td><code>/nvim [path]</code></td><td>Split pane → nvim at auto-detected dir (or specific file)</td></tr>
+  <tr><td><code>/shell [dir]</code></td><td>Split pane → shell at the right working directory</td></tr>
+  <tr><td><code>/pr &lt;#/url/branch&gt;</code></td><td>New tmux window → WTP checkout → dev up → Pi session. Full PR review env.</td></tr>
+  <tr><td><code>/tmux-fork [name]</code></td><td>New window with forked Pi (parallel agent, full context)</td></tr>
+  <tr><td><code>/tmux-fork-pane [name]</code></td><td>Split pane with forked Pi (side-by-side, full context)</td></tr>
+  <tr><td><code>/loop 5m &lt;task&gt;</code></td><td>Recurring check — CI, deploys, alerts. tmux keeps it alive.</td></tr>
+  <tr><td><code>/preset &lt;name&gt;</code></td><td>Switch tool profile without restarting: <code>triage</code>, <code>investigate</code>, <code>code+</code></td></tr>
+  <tr><td><code>/compact</code></td><td>Summarize old context when sessions get long (50+ tool calls)</td></tr>
+  <tr><td><code>/copy</code></td><td>Copy last Pi response to clipboard</td></tr>
+</table>
+
+<h3>Within Neovim <span class="tag t-n">nvim</span></h3>
+<table>
+  <tr><td><kbd>⎵gg</kbd></td><td>Open lazygit (Snacks float)</td></tr>
+  <tr><td><code>/lazygit</code></td><td>Open lazygit in a tmux split (Pi prompt — auto-finds dirty repo)</td></tr>
+  <tr><td><kbd>⎵e</kbd></td><td>File tree (neo-tree)</td></tr>
+  <tr><td><kbd>⎵ef</kbd></td><td>File explorer (ranger)</td></tr>
+  <tr><td><kbd>⎵ff</kbd></td><td>Find files (fzf)</td></tr>
+  <tr><td><kbd>⎵sg</kbd> / <kbd>⎵/</kbd></td><td>Live grep</td></tr>
+  <tr><td><kbd>⎵fl</kbd></td><td>Copy file:line to clipboard</td></tr>
+</table>
+
+<h3>Search & copy</h3>
+<table>
+  <tr><td><kbd class="green">Ctrl+⇧ F</kbd></td><td>Search Kitty scrollback</td></tr>
+  <tr><td><kbd class="green">Ctrl+⇧ E</kbd></td><td>URL hints (click to open)</td></tr>
+  <tr><td><kbd class="green">Ctrl+⇧ P</kbd> → <kbd>F/H/L/W</kbd></td><td>Grab path / hash / line / word from screen</td></tr>
+  <tr><td><kbd class="blue">C-Space</kbd> <kbd>Enter</kbd></td><td>tmux copy mode (vim keys, <kbd>v</kbd> select, <kbd>y</kbd> yank to clipboard)</td></tr>
+  <tr><td><code>/copy</code></td><td>Copy last Pi response to clipboard</td></tr>
+</table>
+
+<h3>Shell aliases</h3>
+<table>
+  <tr><td><code>dpi</code></td><td><code>devx pi</code></td></tr>
+  <tr><td><code>lfg</code></td><td>Workspace launcher — fzf session picker, zoxide dir picker, preset picker</td></tr>
+  <tr><td><code>lg</code></td><td><code>lazygit</code></td></tr>
+  <tr><td><code>g</code></td><td><code>git</code></td></tr>
+  <tr><td><code>e</code> / <code>et</code></td><td><code>eza</code> / <code>eza --tree</code></td></tr>
+  <tr><td><code>cat</code></td><td><code>bat</code> (syntax highlighting)</td></tr>
+</table>
+
+<!-- ================================================================== -->
+<h2 id="skills">Skills & Agents</h2>
+
+<h3>Presets — tool profiles</h3>
+<table>
+  <tr><th>Preset</th><th>Use for</th><th>Start with</th></tr>
+  <tr><td><code>code</code></td><td>Coding (default) — read/write/edit, GitHub, web, subagents</td><td><code>devx pi</code></td></tr>
+  <tr><td><code>code+</code></td><td>Code + Chrome DevTools + Figma MCP (design-to-code, canvas edits) + agent teams</td><td><code>devx pi --preset code+</code></td></tr>
+  <tr><td><code>triage</code></td><td>Comms — Slack, Gmail, Calendar. No file writes.</td><td><code>devx pi --preset triage</code></td></tr>
+  <tr><td><code>investigate</code></td><td>Incidents — Observe, Buildkite, GCP, Grokt</td><td><code>/preset investigate</code></td></tr>
+  <tr><td><code>gworkspace</code></td><td>Google Docs, Sheets, Slides</td><td><code>/preset gworkspace</code></td></tr>
+  <tr><td><code>all</code></td><td>Everything — 150+ tools</td><td><code>/preset all</code></td></tr>
+</table>
+
+<h3>Skills — load on demand</h3>
+<table>
+  <tr><th>Skill</th><th>Trigger</th><th>Spawns agents?</th></tr>
+  <tr><td><code>slack-triage</code></td><td><em>"morning triage"</em></td><td>No</td></tr>
+  <tr><td><code>review</code></td><td><em>"review PR #N"</em> or <code>/pr &lt;#&gt;</code> (full env setup)</td><td>6 parallel reviewers + judge</td></tr>
+  <tr><td><code>implement</code></td><td><em>"implement the plan"</em></td><td>Per-step isolated subagents</td></tr>
+  <tr><td><code>mozart-plan-and-implement</code></td><td><em>"plan and implement"</em></td><td>Planners + judge, optionally team panes</td></tr>
+  <tr><td><code>pr-ci-autofix</code></td><td><em>"watch CI for PR"</em></td><td>No — uses loop scheduler</td></tr>
+  <tr><td><code>mozart-validate</code></td><td><em>"validate PR #N"</em></td><td>No — runs in WTP worktree</td></tr>
+  <tr><td><code>issue-from-comment</code></td><td><em>"create issue from this comment"</em> (PR review comment URL)</td><td>No</td></tr>
+  <tr><td><code>devx-skills</code></td><td><em>"add skill"</em>, <em>"install skill"</em>, <em>"browse skills"</em></td><td>No</td></tr>
+</table>
+
+<h3>Planning agents</h3>
+<table>
+  <tr><th>Agent</th><th>Role</th></tr>
+  <tr><td><code>plan-questioner</code></td><td>Probe for ambiguities before planning</td></tr>
+  <tr><td><code>planner-opus</code> / <code>planner-design</code></td><td>Minimal vs. clean-design proposals (features)</td></tr>
+  <tr><td><code>planner-local</code> / <code>planner-systemic</code></td><td>Targeted vs. root-cause proposals (bugs)</td></tr>
+  <tr><td><code>plan-judge</code></td><td>Verify claims, synthesize recommendation</td></tr>
+  <tr><td><code>review-*</code> (6) + <code>review-judge</code></td><td>Specialized code reviewers + validator</td></tr>
+</table>
+
+<!-- ================================================================== -->
+<h2 id="trouble">Troubleshooting</h2>
+
+<table>
+  <tr><th>Problem</th><th>Fix</th></tr>
+  <tr><td>Shift+Enter doesn't create newline</td><td><code>tmux show -g extended-keys</code> → must be <code>on</code>. <code>extended-keys-format</code> → <code>csi-u</code>. Requires <code>tmux kill-server</code>.</td></tr>
+  <tr><td>Colors wrong in tmux</td><td><code>echo $TERM</code> → <code>xterm-256color</code>. Check <code>terminal-overrides</code> has <code>Tc</code>.</td></tr>
+  <tr><td>Agent teams: "not in tmux"</td><td>Pi must be inside a tmux pane. Start tmux first, then <code>devx pi</code>.</td></tr>
+  <tr><td>Pane titles not showing</td><td><code>pane-border-status</code> must be <code>top</code>. Only visible with 2+ panes.</td></tr>
+  <tr><td>C-h/j/k/l does nothing</td><td>vim-tmux-navigator: passes through to vim if focused. Inside Pi editor, Pi handles them.</td></tr>
+  <tr><td>Images not rendering</td><td><code>allow-passthrough on</code> in tmux config.</td></tr>
+  <tr><td>Escape feels laggy</td><td><code>escape-time 0</code> in tmux config.</td></tr>
+  <tr><td>/tmux-fork fails</td><td>Must be in tmux with an active Pi session. <code>/reload</code> if extension not loaded.</td></tr>
+  <tr><td>Kitty splits inside tmux</td><td>Don't. Use tmux panes. Kitty splits only in non-tmux tabs.</td></tr>
+</table>
+
+<hr>
+<p style="color: var(--fg-muted); font-size: 0.72rem; text-align: center;">
+  Prefix: <kbd style="font-size:0.7rem">C-Space</kbd> (tmux) ·
+  <kbd style="font-size:0.7rem; border-color:var(--green-dim); color:var(--green)">Ctrl+⇧</kbd> (kitty_mod) ·
+  <kbd style="font-size:0.7rem">⎵</kbd> (nvim leader) ·
+  Config: <code>~/dotfiles/personal/tmux/</code> · <code>~/dotfiles/personal/pi/</code> · <code>~/dotfiles/personal/nvim/</code> · <code>~/dotfiles/personal/kitty/</code><br>
+  Generated 2026-04-08
+</p>
+
+
+<div id="search-overlay" style="display:none; position:fixed; inset:0; background:rgba(0,0,0,0.5); z-index:200;" onclick="closeSearch()"></div>
+<div id="search-box" style="display:none; position:fixed; top:15%; left:50%; transform:translateX(-50%); z-index:201; width:min(560px,90vw);">
+  <div style="background:var(--bg-card); border:1px solid var(--border); border-radius:var(--radius); box-shadow:0 8px 32px rgba(0,0,0,0.5); overflow:hidden;">
+    <div style="display:flex; align-items:center; padding:0.6rem 0.75rem; border-bottom:1px solid var(--border);">
+      <span style="color:var(--fg-muted); margin-right:0.5rem; font-size:0.8rem;">&#x1F50D;</span>
+      <input id="search-input" type="text" placeholder="Search shortcuts, workflows, tools…"
+        style="flex:1; background:transparent; color:var(--fg); border:none; font-family:inherit; font-size:0.85rem; outline:none;">
+      <kbd style="font-size:0.65rem; opacity:0.5; margin-left:0.5rem;">Esc</kbd>
+    </div>
+    <div id="search-results" style="max-height:360px; overflow-y:auto;"></div>
+    <div id="search-footer" style="display:none; padding:0.3rem 0.75rem; border-top:1px solid var(--border); font-size:0.65rem; color:var(--fg-muted);">
+      <kbd style="font-size:0.6rem;">↑↓</kbd> navigate &nbsp; <kbd style="font-size:0.6rem;">Enter</kbd> go &nbsp; <kbd style="font-size:0.6rem;">Esc</kbd> close
+    </div>
+  </div>
+</div>
+<script>
+(function() {
+  const overlay = document.getElementById('search-overlay');
+  const box = document.getElementById('search-box');
+  const input = document.getElementById('search-input');
+  const results = document.getElementById('search-results');
+  const footer = document.getElementById('search-footer');
+  let entries = [];
+  let activeIdx = -1;
+
+  // Build search index from the page content
+  function buildIndex() {
+    entries = [];
+    // Index table rows (shortcut → description)
+    document.querySelectorAll('table tr').forEach(tr => {
+      const tds = tr.querySelectorAll('td');
+      if (tds.length >= 2) {
+        const section = findSection(tr);
+        entries.push({
+          shortcut: tds[0].textContent.trim(),
+          text: tds[tds.length - 1].textContent.trim(),
+          section: section,
+          el: tr
+        });
+      }
+    });
+    // Index headings
+    document.querySelectorAll('h2, h3').forEach(h => {
+      if (h.closest('#search-box')) return;
+      entries.push({
+        shortcut: '',
+        text: h.textContent.trim(),
+        section: h.tagName === 'H2' ? h.textContent.trim() : findSection(h),
+        el: h,
+        isHeading: true
+      });
+    });
+    // Index tips and warnings
+    document.querySelectorAll('.tip, .warn').forEach(el => {
+      const section = findSection(el);
+      entries.push({
+        shortcut: '',
+        text: el.textContent.trim().slice(0, 150),
+        section: section,
+        el: el
+      });
+    });
+  }
+
+  function findSection(el) {
+    let node = el;
+    while (node && node !== document.body) {
+      node = node.previousElementSibling || node.parentElement;
+      if (node && (node.tagName === 'H2' || node.tagName === 'H3')) return node.textContent.trim();
+    }
+    return '';
+  }
+
+  function openSearch() {
+    if (!entries.length) buildIndex();
+    overlay.style.display = 'block';
+    box.style.display = 'block';
+    input.value = '';
+    results.innerHTML = '';
+    footer.style.display = 'none';
+    activeIdx = -1;
+    setTimeout(() => input.focus(), 10);
+  }
+
+  window.closeSearch = function() {
+    overlay.style.display = 'none';
+    box.style.display = 'none';
+    input.blur();
+  };
+
+  function renderResults(matches) {
+    activeIdx = -1;
+    if (!matches.length) {
+      results.innerHTML = '<div style="padding:1rem; color:var(--fg-muted); font-size:0.82rem; text-align:center;">No results</div>';
+      footer.style.display = 'none';
+      return;
+    }
+    footer.style.display = 'block';
+    results.innerHTML = matches.slice(0, 20).map((m, i) => {
+      const shortcut = m.shortcut ? '<span style="color:var(--green); font-size:0.78rem;">' + esc(m.shortcut) + '</span> &mdash; ' : '';
+      const badge = m.section ? '<span style="font-size:0.6rem; color:var(--fg-muted); text-transform:uppercase; letter-spacing:0.5px;">' + esc(m.section) + '</span><br>' : '';
+      const text = highlightMatch(esc(m.text.slice(0, 120)), input.value.trim());
+      return '<div class="sr" data-idx="' + i + '" style="padding:0.45rem 0.75rem; cursor:pointer; border-bottom:1px solid rgba(80,73,69,0.2);" ' +
+        'onmouseenter="this.style.background=\'#3c3836\';" onmouseleave="this.style.background=\'\';" ' +
+        'onclick="goResult(' + i + ')">' +
+        badge + shortcut + '<span style="color:var(--fg-dim); font-size:0.8rem;">' + text + '</span></div>';
+    }).join('');
+  }
+
+  function highlightMatch(text, term) {
+    if (!term) return text;
+    const re = new RegExp('(' + term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&') + ')', 'gi');
+    return text.replace(re, '<span style="color:var(--accent);font-weight:600;">$1</span>');
+  }
+
+  function esc(s) { const d = document.createElement('div'); d.textContent = s; return d.innerHTML; }
+
+  function setActive(idx) {
+    const items = results.querySelectorAll('.sr');
+    items.forEach(el => el.style.background = '');
+    if (idx >= 0 && idx < items.length) {
+      items[idx].style.background = '#3c3836';
+      items[idx].scrollIntoView({ block: 'nearest' });
+    }
+    activeIdx = idx;
+  }
+
+  let matchCache = [];
+  window.goResult = function(idx) {
+    if (matchCache[idx]) {
+      closeSearch();
+      matchCache[idx].el.scrollIntoView({ behavior: 'smooth', block: 'center' });
+      // Flash highlight
+      const el = matchCache[idx].el;
+      const orig = el.style.background;
+      el.style.background = 'rgba(254,128,25,0.15)';
+      el.style.borderRadius = '4px';
+      el.style.transition = 'background 0.6s';
+      setTimeout(() => { el.style.background = orig; }, 1500);
+    }
+  };
+
+  let debounce;
+  input.addEventListener('input', function() {
+    clearTimeout(debounce);
+    debounce = setTimeout(function() {
+      const term = input.value.trim().toLowerCase();
+      if (term.length < 2) { results.innerHTML = ''; footer.style.display = 'none'; return; }
+      matchCache = entries.filter(e =>
+        e.text.toLowerCase().includes(term) ||
+        e.shortcut.toLowerCase().includes(term) ||
+        e.section.toLowerCase().includes(term)
+      );
+      renderResults(matchCache);
+    }, 150);
+  });
+
+  input.addEventListener('keydown', function(e) {
+    const items = results.querySelectorAll('.sr');
+    if (e.key === 'ArrowDown') { e.preventDefault(); setActive(Math.min(activeIdx + 1, items.length - 1)); }
+    else if (e.key === 'ArrowUp') { e.preventDefault(); setActive(Math.max(activeIdx - 1, 0)); }
+    else if (e.key === 'Enter' && activeIdx >= 0) { e.preventDefault(); goResult(activeIdx); }
+    else if (e.key === 'Escape') { closeSearch(); }
+  });
+
+  document.addEventListener('keydown', function(e) {
+    if ((e.key === '/' && !['INPUT','TEXTAREA'].includes(document.activeElement.tagName)) || (e.key === 'k' && e.metaKey)) {
+      e.preventDefault();
+      if (box.style.display === 'block') closeSearch(); else openSearch();
+    }
+  });
+})();
+</script>
+</body>
+</html>
