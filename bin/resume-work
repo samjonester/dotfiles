@@ -107,7 +107,7 @@ fi
 # Open pi in the worktree
 echo ""
 echo "Opening pi in worktree..."
-pi -c
+TMPDIR=$HOME/.pi/tmp pi -c
 
 echo ""
 echo "✓ Resumed work in: $SELECTED_PATH"

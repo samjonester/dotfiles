@@ -17,41 +17,53 @@ set_tab_title() {
 
 # ─── Step 1: Session selection ────────────────────────────────────────────────
 
-pick_session() {
-    local fzf_input=""
-    if tmux list-sessions 2>/dev/null | grep -q .; then
-        while IFS='|' read -r name status windows; do
-            [[ -z "$name" ]] && continue
-            local icon="○"
-            [[ "$status" == "attached" ]] && icon="●"
-            fzf_input+="${icon} ${name}  (${status}, ${windows})"$'\n'
-        done < <(tmux list-sessions -F '#{session_name}|#{?session_attached,attached,detached}|#{session_windows} windows' 2>/dev/null)
-    fi
+_lfg_list_sessions() {
+    tmux list-sessions -F '#{session_name}|#{?session_attached,attached,detached}|#{session_windows} windows' 2>/dev/null | while IFS='|' read -r name status windows; do
+        [[ -z "$name" ]] && continue
+        local icon="○"
+        [[ "$status" == "attached" ]] && icon="●"
+        echo "${icon} ${name}  (${status}, ${windows})"
+    done
+}
 
-    local result
+pick_session() {
+    local fzf_input self
+    fzf_input=$(_lfg_list_sessions)
+    self="$0"
+
+    local fzf_exit=0 result
     result=$(printf '%s' "$fzf_input" | fzf \
+        --print-query \
         --exact \
         --prompt="session ❯ " \
-        --header="Enter: new · Alt-Enter: select" \
+        --header="Enter: select or type new  │  Del: kill session" \
         --header-first \
         --height=~50% \
         --reverse \
         --no-info \
-        --bind 'enter:print-query' \
-        --bind 'alt-enter:accept' \
-        2>/dev/null) || true
+        --bind "del:execute-silent($self --kill-session {})+reload($self --list-sessions)" \
+        2>/dev/null) || fzf_exit=$?
 
-    [[ -z "$result" ]] && return 1
+    # Error or interrupted (ctrl-c / ESC)
+    [[ $fzf_exit -ge 2 ]] && return 1
 
-    # Alt-Enter outputs a session entry (starts with ●/○)
-    if [[ "$result" == [●○]* ]]; then
-        echo "$result" | sed 's/^[●○] //; s/  (.*//' 
+    local query selected
+    query=$(head -1 <<< "$result")
+    selected=$(sed -n '2p' <<< "$result")
+
+    # User selected an existing session from the list
+    if [[ "$selected" == [●○]* ]]; then
+        echo "$selected" | sed 's/^[●○] //; s/  (.*//' 
         return 0
     fi
 
-    # Enter outputs the typed query
-    echo "$result"
-    return 0
+    # User typed a new session name
+    if [[ -n "$query" ]]; then
+        echo "$query"
+        return 0
+    fi
+
+    return 1
 }
 
 # ─── Step 2: Directory selection (new sessions only) ──────────────────────────
@@ -131,9 +143,9 @@ enter_session() {
     # Set kitty tab title before handing off to tmux
     set_tab_title "$session_name"
 
-    # Build pi command for new sessions
-    local pi_cmd="devx pi"
-    [[ -n "$preset" ]] && pi_cmd="devx pi --preset $preset"
+    # Build pi command for new sessions (TMPDIR for crash-safe temp files)
+    local pi_cmd="TMPDIR=$HOME/.pi/tmp devx pi"
+    [[ -n "$preset" ]] && pi_cmd="TMPDIR=$HOME/.pi/tmp devx pi --preset $preset"
 
     # Inside tmux already → switch client
     if [[ -n "${TMUX:-}" ]]; then
@@ -158,6 +170,18 @@ enter_session() {
 # ─── Main ────────────────────────────────────────────────────────────────────
 
 main() {
+    # Internal subcommands for fzf bindings
+    if [[ "${1:-}" == "--list-sessions" ]]; then
+        _lfg_list_sessions
+        return 0
+    fi
+    if [[ "${1:-}" == "--kill-session" ]]; then
+        local name
+        name=$(echo "${2:-}" | sed 's/^[●○] //; s/  (.*//')
+        [[ -n "$name" ]] && tmux kill-session -t "=$name" 2>/dev/null
+        return 0
+    fi
+
     local session_name dir preset
 
     if [[ $# -ge 1 ]]; then

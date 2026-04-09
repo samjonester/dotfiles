@@ -92,7 +92,7 @@ fi
 # Open pi in the worktree
 echo ""
 echo "Opening pi in worktree..."
-pi
+TMPDIR=$HOME/.pi/tmp pi
 
 echo ""
 echo "✓ Worktree created at: $WORKTREE_PATH"

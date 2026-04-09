@@ -32,7 +32,7 @@ fi
 ### 4. Open a new tmux window with Pi
 Name the tmux window after the PR (e.g., `PR-524035` or truncated title).
 ```bash
-tmux new-window -n "PR-<number>" -c "$TARGET_DIR" \; send-keys 'devx pi' Enter
+tmux new-window -n "PR-<number>" -c "$TARGET_DIR" \; send-keys 'TMPDIR=$HOME/.pi/tmp devx pi' Enter
 ```
 
 ### 5. Run dev up in the background
