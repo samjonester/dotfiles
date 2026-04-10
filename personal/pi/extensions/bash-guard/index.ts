@@ -1163,10 +1163,15 @@ async function resolveVoterModels(
 ): Promise<VoterModel[]> {
   if (cachedVoterModels) return cachedVoterModels;
 
+  // Ideal: diverse models (haiku, gemini-flash-lite, grok). But the Shopify
+  // proxy returns 401 for Google and xAI, so we fall back to 3× haiku.
+  // Same model ≠ real diversity, but 3 votes still catch non-determinism on
+  // borderline commands better than a single vote.
+  // TODO: swap back to multi-model once proxy supports google/xai voters.
   const candidates: Array<{ provider: string; id: string; label: string }> = [
-    { provider: "anthropic", id: "claude-haiku-4-5", label: "haiku-4.5" },
-    { provider: "google", id: "gemini-flash-lite-latest", label: "gemini-flash-lite" },
-    { provider: "xai", id: "grok-4-1-fast-non-reasoning", label: "grok-4.1-fast" },
+    { provider: "anthropic", id: "claude-haiku-4-5", label: "haiku-4.5-a" },
+    { provider: "anthropic", id: "claude-haiku-4-5", label: "haiku-4.5-b" },
+    { provider: "anthropic", id: "claude-haiku-4-5", label: "haiku-4.5-c" },
   ];
 
   const available: VoterModel[] = [];
