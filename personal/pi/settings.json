@@ -1,5 +1,5 @@
 {
-  "defaultProvider": "anthropic-250k-prefer-using-this-one",
+  "defaultProvider": "anthropic",
   "defaultModel": "claude-opus-4-6",
   "defaultThinkingLevel": "high",
   "theme": "gruvbox-rainbow",
@@ -27,7 +27,7 @@
     "gpt-5.3-codex"
   ],
   "enableSkillCommands": true,
-  "lastChangelogVersion": "0.65.0",
+  "lastChangelogVersion": "0.66.1",
   "packages": [
     "npm:pi-web-access",
     "npm:pi-messenger",
