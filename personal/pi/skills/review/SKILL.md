@@ -1,6 +1,6 @@
 ---
 name: review
-description: "Unified code review — supersedes code-review. Model-diverse specialized reviewers with a judge that validates findings. Triggers on: 'review this code', 'review PR #N', 'review PR <url>', 'review current branch', 'review uncommitted changes', 'code review', or any natural request to review code. Dispatches all review-* agents in parallel, validates findings with review-judge, and produces actionable output (PR comment drafts or fix plans)."
+description: "Unified code review — supersedes code-review. Classifies PRs by change type, size, and risk to select the right specialized reviewers (3-8 instead of all 15). Dispatches in sequential batches, validates findings with review-judge, and produces actionable output. Triggers on: 'review this code', 'review PR #N', 'review PR <url>', 'review current branch', 'review uncommitted changes', 'code review', or any natural request to review code."
 ---
 
 # Unified Code Review Orchestrator
@@ -119,19 +119,21 @@ Before dispatching reviewers, briefly tell the user what you found:
 
 This keeps the user informed during the parallel phase, which can take 30-60 seconds.
 
-## Step 3: Discover and Select Reviewers
+## Step 3: Classify and Select Reviewers
+
+Read [references/reviewer-matrix.md](references/reviewer-matrix.md) for the full classification rules and reviewer mapping.
 
 ### 3a. Auto-discover all `review-*` agents
 
 List all available agents and filter for names starting with `review-`. This picks up:
 
 - Built-in reviewers (scope, architecture, security, performance, correctness, nullsafety, testing, operations, shopify)
-- Craft reviewers (design, simplify, consistency, naming, readability)
+- Craft reviewers (design, simplify, consistency, naming, readability, intent)
 - Any user-defined `review-*` agents (e.g., `review-accessibility`, `review-i18n`)
 
 **Exclude `review-judge`** — the judge is dispatched separately in Step 5.
 
-For any discovered `review-*` agent NOT in the default set below, add it to the parallel dispatch and create a corresponding section in the output using its short name as the heading.
+Custom `review-*` agents not in the matrix are added to the optional set and get a dynamic section in the output.
 
 ### 3b. Handle user-specified subset
 
@@ -139,12 +141,35 @@ If the user specified reviewers (e.g., "review this code — just security and p
 
 - Map short names to agent names: `security` → `review-security`
 - Run ONLY those (do not force `review-scope` unless the user included it)
+- **Skip classification entirely** — the user's explicit selection overrides all heuristics
 
-### 3c. Model rationale
+### 3c. Classify the PR
+
+When no user subset is specified, classify the diff to determine which reviewers to run. Using the changed files list and PR metadata from Step 2:
+
+1. **Detect language** — from file extensions in the diff (see matrix)
+2. **Detect change type** — evaluate rules in order, first match wins (see matrix)
+3. **Detect size** — from reviewable line count (Step 2b)
+4. **Detect risk signals** — check all, additive (see matrix)
+
+Report the classification to the user:
+
+> Classification: **[change_type]** ([language], [size]) [risk signals if any]
+> Core reviewers: [list] | Optional: [list]
+
+5. **Map to reviewers** — look up the change type in the matrix to get core and optional sets
+6. **Apply risk escalation** — add risk-signal reviewers to core if not already present
+7. **Apply size adjustments** — per the matrix rules:
+   - **tiny**: core only, skip optional, skip judge if 0 findings
+   - **small**: core only, optional only if core produces 3+ findings
+   - **medium**: core + optional
+   - **large**: core + optional + always include `intent`
+
+### 3d. Model rationale
 
 Each reviewer's model is declared in its agent frontmatter — that is the source of truth. Do not override models here.
 
-**Design principle:** Most individual reviewers use Sonnet because (1) each covers a narrow domain where Sonnet is sufficient, (2) the judge (Opus) validates all findings downstream so no reviewer output reaches the user unchecked, and (3) 14+ parallel Opus calls would be prohibitively slow and expensive. The two exceptions — `review-design` (reads surrounding code broadly) and `review-judge` (validates every claim) — use Opus because they require the deepest reasoning.
+**Design principle:** Most individual reviewers use Sonnet because (1) each covers a narrow domain where Sonnet is sufficient, (2) the judge (Opus) validates all findings downstream so no reviewer output reaches the user unchecked, and (3) parallel Opus calls would be prohibitively slow and expensive. The two exceptions — `review-design` (reads surrounding code broadly) and `review-judge` (validates every claim) — use Opus because they require the deepest reasoning.
 
 ## Step 4: Dispatch Reviewers
 
@@ -174,33 +199,46 @@ Source: [PR #N / uncommitted changes / branch: feature-xyz]
 </code-changes>
 ```
 
-### 4b. Run ALL reviewers in parallel
+### 4b. Dispatch in sequential batches
 
-Dispatch all discovered `review-*` agents simultaneously (excluding `review-judge`):
+Dispatch reviewers in two batches to limit parallel subagent load. This prevents the instability seen when 15+ subagents run simultaneously.
+
+**Batch 1 — Core reviewers:**
 
 ```json
 {
   "tasks": [
     { "agent": "review-scope", "task": "<composed task>" },
-    { "agent": "review-architecture", "task": "<composed task>" },
-    { "agent": "review-security", "task": "..." },
-    { "agent": "review-performance", "task": "..." },
-    { "agent": "review-correctness", "task": "..." },
-    { "agent": "review-nullsafety", "task": "..." },
-    { "agent": "review-testing", "task": "..." },
-    { "agent": "review-operations", "task": "..." },
-    { "agent": "review-shopify", "task": "..." },
-    { "agent": "review-design", "task": "..." },
-    { "agent": "review-simplify", "task": "..." },
-    { "agent": "review-consistency", "task": "..." },
-    { "agent": "review-naming", "task": "..." },
-    { "agent": "review-readability", "task": "..." },
-    { "agent": "review-intent", "task": "..." }
+    { "agent": "review-correctness", "task": "<composed task>" },
+    { "agent": "review-architecture", "task": "..." }
   ]
 }
 ```
 
-If the user specified a subset, only include those agents.
+Run only the core reviewers identified in Step 3c (typically 3-5 agents). Wait for all to complete.
+
+**Evaluate early exit (tiny/small PRs only):**
+
+- If size is **tiny** and batch 1 produced 0 findings → skip batch 2 and judge. Report clean.
+- If size is **small** and batch 1 produced <3 findings → skip batch 2. Proceed to judge with batch 1 findings only.
+
+**Batch 2 — Optional reviewers:**
+
+```json
+{
+  "tasks": [
+    { "agent": "review-design", "task": "<composed task>" },
+    { "agent": "review-naming", "task": "..." },
+    { "agent": "review-simplify", "task": "..." }
+  ]
+}
+```
+
+Run the optional reviewers identified in Step 3c (typically 2-4 agents). Wait for all to complete.
+
+**Combine results** from both batches and proceed to Step 5 (Judge).
+
+If the user specified a subset (Step 3b), run all specified reviewers in a single batch — no core/optional split needed since the user has already curated the list.
 
 ## Step 5: Judge
 
@@ -340,18 +378,16 @@ If the user says yes, format:
 
 **Top-level comment:**
 
-```markdown
-## Code Review
+- Do NOT include a `## Code Review` header — the comment is a code review, the header is redundant.
+- Do NOT include a `### Verdict` section — the GitHub review action (approve/request changes) already communicates the verdict. Restating it in the body is noise.
+- Lead with the executive summary directly, then key findings.
 
+```markdown
 [Executive summary]
 
 ### Key Findings
 
 [Bulleted list of validated HIGH+ findings with file:line references]
-
-### Verdict: [APPROVE/REQUEST CHANGES/DISCUSS]
-
-[Rationale]
 ```
 
 **Line-level comments** — for each validated finding:
