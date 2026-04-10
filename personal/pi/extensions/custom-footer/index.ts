@@ -67,6 +67,12 @@ export default function (pi: ExtensionAPI) {
             pwdParts.push(theme.fg("muted", "\ue0a0 " + branch));
           }
 
+          const sessionId = ctx.sessionManager.getSessionId();
+          if (sessionId) {
+            const shortId = sessionId.slice(0, 8);
+            pwdParts.push(theme.fg("dim", "\u27D0 " + shortId));
+          }
+
           lines.push(
             truncateToWidth(pwdParts.join("  "), width, theme.fg("dim", "...")),
           );
