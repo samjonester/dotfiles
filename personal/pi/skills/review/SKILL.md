@@ -31,7 +31,40 @@ Extract the base and head branches, then get the diff:
 gh pr diff <number_or_url>
 ```
 
-Set `SOURCE_TYPE=pr` and save the PR metadata (title, URL, number) for output formatting.
+Set `SOURCE_TYPE=pr` and save the PR metadata (title, URL, number, headRefName) for output formatting.
+
+#### Checkout into a WTP worktree
+
+For PR reviews, always checkout the PR branch into an isolated WTP worktree so reviewers can `read`, `grep`, and `find` the full codebase — not just the diff. Follow the WTP checkout flow in [../_shared/wtp-checkout.md](../_shared/wtp-checkout.md):
+
+```bash
+WTP_BIN="$HOME/src/github.com/shopify-playground/wtp/bin/_wtp"
+BRANCH="<headRefName from PR metadata>"
+TARGET_DIR="$($WTP_BIN "$BRANCH")"
+cd "$TARGET_DIR"
+git fetch origin "$BRANCH"
+git checkout "$BRANCH" 2>/dev/null || git checkout -b "$BRANCH" "origin/$BRANCH"
+git reset --hard "origin/$BRANCH"
+```
+
+Set `REVIEW_CWD=$TARGET_DIR`. All subsequent tool calls (read, grep, find) and all reviewer subagent `cwd` fields should use this path. This ensures reviewers see the actual source code at the PR's HEAD, not just the diff.
+
+Report the worktree claim:
+
+> Checked out `[branch]` in `[TARGET_DIR]` (WTP slot: [slot name])
+
+**If WTP is unavailable** (not installed, no free slots): fall back to diff-only review. Warn the user:
+
+> ⚠️ WTP unavailable — reviewing from diff only. Reviewers cannot read surrounding code.
+
+**Cleanup:** After the review is complete and the user has finished acting on findings, free the WTP slot:
+
+```bash
+cd ~
+"$WTP_BIN" free
+```
+
+Or if running from a different directory, use `_wtp free <slot>` with the slot name.
 
 ### 1b. Uncommitted changes
 
@@ -199,6 +232,14 @@ Source: [PR #N / uncommitted changes / branch: feature-xyz]
 </code-changes>
 ```
 
+**Set reviewer working directory:** If `REVIEW_CWD` was set in Step 1a (WTP worktree checkout), pass it as `cwd` on every reviewer subagent task. This gives reviewers access to the full codebase via `read`, `grep`, and `find`:
+
+```json
+{ "agent": "review-correctness", "task": "<composed task>", "cwd": "<REVIEW_CWD>" }
+```
+
+For local reviews (`local_uncommitted`, `local_branch`), omit `cwd` — reviewers inherit the current working directory which already has the code.
+
 ### 4b. Dispatch in sequential batches
 
 Dispatch reviewers in two batches to limit parallel subagent load. This prevents the instability seen when 15+ subagents run simultaneously.
@@ -307,11 +348,12 @@ Source: [PR #N / uncommitted / branch]
 ```json
 {
   "agent": "review-judge",
-  "task": "<composed judge task>"
+  "task": "<composed judge task>",
+  "cwd": "<REVIEW_CWD if set, else omit>"
 }
 ```
 
-The judge validates, deduplicates, rates, and produces the consolidated findings.
+The judge validates, deduplicates, rates, and produces the consolidated findings. Pass `cwd` so the judge can `read` and `grep` the actual source files to verify reviewer claims.
 
 ### 5d. Degraded mode
 
@@ -411,6 +453,18 @@ After presenting the review, offer to plan fixes:
 > 1. **Fix them now** — I'll implement the validated fixes directly
 > 2. **Plan the fixes** — I'll create a step-by-step fix plan you can review first
 > 3. **Cherry-pick** — tell me which findings to fix and I'll do just those
+
+## Step 8: Cleanup
+
+After the user has finished acting on findings (submitted comments, approved, etc.), free the WTP worktree if one was claimed in Step 1a:
+
+```bash
+cd ~
+WTP_BIN="$HOME/src/github.com/shopify-playground/wtp/bin/_wtp"
+"$WTP_BIN" free
+```
+
+For local reviews, no cleanup is needed.
 
 ## Constraints
 
