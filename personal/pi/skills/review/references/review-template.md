@@ -1,4 +1,4 @@
-## Code Review: [PR Title/Number or Branch Name]
+## [PR Title/Number or Branch Name]
 
 [Source URL if PR]
 
@@ -139,6 +139,7 @@
 
 ### Decision
 
+<!-- Do NOT include a Verdict section in the top-level PR comment — the GitHub review action (approve/request changes) already communicates it. This section is for the internal review output only. -->
 **Verdict:** [APPROVE / REQUEST CHANGES / DISCUSS / BLOCK]
 **Confidence Level:** [High/Medium/Low — informed by judge validation rate]
 **Follow-up Required:** [Yes/No — specify what]
