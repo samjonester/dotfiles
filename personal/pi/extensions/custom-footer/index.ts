@@ -166,9 +166,19 @@ export default function (pi: ExtensionAPI) {
           // ── Line 3: Extension statuses + preset at end ─────
           if (extensionStatuses.size > 0) {
             const hiddenKeys = new Set(["preset", "voice", "worktree"]);
+            // Explicit ordering: listed keys appear first in this order,
+            // unlisted keys follow alphabetically after.
+            const keyOrder = ["bg-jobs", "bash-guard"];
             const sortedStatuses = Array.from(extensionStatuses.entries())
               .filter(([key]) => !hiddenKeys.has(key))
-              .sort(([a], [b]) => a.localeCompare(b))
+              .sort(([a], [b]) => {
+                const ai = keyOrder.indexOf(a);
+                const bi = keyOrder.indexOf(b);
+                if (ai !== -1 && bi !== -1) return ai - bi;
+                if (ai !== -1) return -1;
+                if (bi !== -1) return 1;
+                return a.localeCompare(b);
+              })
               .map(([, text]) => sanitizeStatusText(text));
 
             // Append preset at the end (always visible)
