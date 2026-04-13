@@ -191,7 +191,14 @@ All pi configuration is versioned in `~/dotfiles/personal/pi/` and symlinked int
 
 ## Code Review
 
-When asked to review code, review a PR, or review current changes, load the `review` skill. It auto-discovers all `review-*` agents, dispatches them in parallel, validates findings with `review-judge`, and produces consolidated output.
+When asked to review code, review a PR, or review current changes, load the `review` skill. It classifies the PR by change type, size, and risk to select 3-8 relevant reviewers (not all 15), dispatches them in sequential batches, validates findings with `review-judge`, and produces consolidated output. PR reviews are checked out into a WTP worktree so reviewers can read the full codebase.
+
+When asked to review **multiple PRs** ("review these PRs", "batch review #1 #2 #3"), load the `batch-review` skill instead. It classifies all PRs, groups them into batches, gathers diffs via `bg_run`, dispatches reviewers from the lead via `subagent`, and gates between batches so you can approve/comment/request-changes before the next batch starts.
+
+**Rules:**
+- Never dispatch the review skill from inside a teammate — always from the lead or via `batch-review`
+- Never use `team_spawn` for diff gathering — use `bg_run` (no tmux pane, no context overhead)
+- Never use cron polling for review progress — `subagent` calls are blocking and return results directly
 
 ## PR Links
 
