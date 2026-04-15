@@ -156,6 +156,9 @@ For plans without the Implementation Steps section (legacy plans or external doc
 - `/clear` causes full cache misses — the entire context must be re-sent and re-cached, adding seconds of latency to the next turn and slowing down every subsequent response as context rebuilds
 - Large accumulated context slows down every turn — the model processes more tokens, increasing latency. Keep sessions focused.
 - For long implementation sessions (>50 tool calls), suggest compacting with `/compact` to reduce context size and speed up responses
+- When spawning a new tmux window, always give it a short descriptive name (e.g., `tmux new-window -n 'dev-server'`)
+- When spawning a task into a separate tmux window (e.g., planning, investigation), treat that window as the user's workspace for that task. Don't pull results back into the parent session — it duplicates context and pollutes history, making it hard to scroll back to the original work (like a triage) that triggered the spawn. Just confirm the window is open and let the user work there directly.
+- When spawning teammates via `team_spawn`, consider whether the task needs tools outside the default `code` preset. The tool auto-infers from keywords, but pass `preset` explicitly when the task domain is clear: `triage` (Slack/calendar/email), `investigate` (Observe/vault/data), `workspace` (Docs/Sheets/Slides), `code+` (browser/Figma), `experiment` (feature flags/grokt), `all` (cross-domain). If the default preset lacks a required tool, the teammate will fail silently.
 
 ## Service Design
 
@@ -196,6 +199,7 @@ When asked to review code, review a PR, or review current changes, load the `rev
 When asked to review **multiple PRs** ("review these PRs", "batch review #1 #2 #3"), load the `batch-review` skill instead. It classifies all PRs, groups them into batches, gathers diffs via `bg_run`, dispatches reviewers from the lead via `subagent`, and gates between batches so you can approve/comment/request-changes before the next batch starts.
 
 **Rules:**
+
 - Never dispatch the review skill from inside a teammate — always from the lead or via `batch-review`
 - Never use `team_spawn` for diff gathering — use `bg_run` (no tmux pane, no context overhead)
 - Never use cron polling for review progress — `subagent` calls are blocking and return results directly
@@ -281,6 +285,7 @@ Don't suggest loops for things that complete in seconds or where the user clearl
 
 ## Git Safety
 
+- **Never revert, checkout, or discard unstaged changes without explicit user approval.** Unstaged changes may be intentional work from other active sessions. Always assume they are. If there are conflicts or ambiguity with your task, ask before touching them. This includes `git checkout -- <file>`, `git restore`, `git stash`, and any command that would discard working tree changes.
 - Always highlight local git/graphite commands after executing them.
 - Never use `git commit` directly — use `gt modify` to amend the current commit, or `gt create` to start a new branch in the Graphite stack. The world repo uses Graphite for all branch/commit management.
 - Never `git init` inside an existing git repository (creates nested repos). If a new standalone repo is needed, create it outside the current project tree first (e.g., `~/src/github.com/...`), then work there.
@@ -288,6 +293,21 @@ Don't suggest loops for things that complete in seconds or where the user clearl
 - The commit gate listens for natural-language policy signals in user messages. Saying "allow commits", "auto-allow commits", or "commits are fine" at any point sets the policy to auto-allow. Saying "confirm commits" or "I want to approve each commit" sets it to confirm-each. You can also use `/guard commits auto|confirm|reset` directly.
 - **Publishing PRs for review**: Never use `gh pr ready` — it only updates GitHub and doesn't sync to Graphite. Use `gt submit --publish` to move a PR from draft to published. This is the correct way to mark a PR ready for review in the Graphite workflow.
 - **New branch work requires explicit approval before commit and submit.** When implementing new features or changes on a new branch, always pause and present the completed work for review **while changes are still unstaged**. Do not run `git add`, `gt create`, `gt modify`, or `gt submit` until the user approves. Present a summary of changes (files modified, key decisions, anything noteworthy) and wait for explicit greenlight. This does not apply to amendments on existing branches where the user has already reviewed the direction (e.g., CI fixes, review feedback).
+
+## CI Triggering (shop/world)
+
+Pre-merge CI in shop/world no longer auto-runs on push (changed 4/13/2026). It auto-runs once when a PR moves from Draft → Ready. After that, trigger CI explicitly:
+
+- `devx ci run` — all pipelines
+- `devx ci run --pipeline <name>` — specific pipeline
+- `devx ci run --full` — Core full suite
+- `devx ci merge-when-ready` — final CI + auto-enqueue to merge queue
+
+**When to trigger:** After the final `gt submit` in a unit of work (fixing a CI failure, addressing review feedback, completing an implementation step). Run `devx ci run` after submit.
+
+**When to skip:** During intermediate submits within a multi-step activity where another submit is imminent (e.g., mid-implementation with more changes coming). Don't waste CI runs on work-in-progress.
+
+**Rule of thumb:** If you're about to wait (for CI, for review, for the user), trigger CI. If you're about to make more changes, skip it.
 
 ## Judgment & Autonomy
 
