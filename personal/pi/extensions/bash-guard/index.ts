@@ -88,6 +88,8 @@ function alertUser(label: string) {
  * These should never be interpreted as user input by guard dialogs.
  */
 function isTerminalControlSequence(data: string): boolean {
+  // Bare ESC from PTY read splitting (incomplete sequence, not a user keypress)
+  if (data === "\x1b") return true;
   // CSI sequences: ESC [ ... (focus events, mouse, device status)
   if (data.startsWith("\x1b[") && data.length > 2) return true;
   // SS3 sequences: ESC O ... (some function keys, but also SS3 prefix)
@@ -190,16 +192,14 @@ async function showRemoteMutationDialog(
   command: string,
   matched: RemoteMutationPattern,
 ): Promise<{ allowed: boolean; instructions?: string }> {
-  const formatted = command
-    .trim()
-    .split("\n")
-    .map((line) => `  ${line}`)
-    .join("\n");
-
   return ctx.ui.custom<{ allowed: boolean; instructions?: string }>(
     (tui, theme, _kb, done) => {
       let mode: "decide" | "feedback" = "decide";
       let resolved = false;
+      // Ignore keypresses for 500ms to prevent accidental input from typing
+      // or stray terminal control sequences (e.g. tmux focus events via PTY splitting)
+      const dialogOpenedAt = Date.now();
+      const INPUT_COOLDOWN_MS = 500;
 
       const container = new Container();
       container.addChild(border(theme));
@@ -216,10 +216,15 @@ async function showRemoteMutationDialog(
         ),
       );
       container.addChild(new Spacer(1));
-
-      for (const line of formatted.split("\n")) {
-        container.addChild(new Text("  " + theme.fg("warning", line), 1, 0));
-      }
+      container.addChild(
+        new Text(
+          "  " +
+            theme.fg("muted", "$ ") +
+            theme.fg("warning", truncateCmd(command)),
+          1,
+          0,
+        ),
+      );
 
       const feedbackInput = new Input();
       feedbackInput.onSubmit = (value: string) => {
@@ -297,6 +302,7 @@ async function showRemoteMutationDialog(
         handleInput: (data: string) => {
           if (resolved) return;
           if (isTerminalControlSequence(data)) return;
+          if (Date.now() - dialogOpenedAt < INPUT_COOLDOWN_MS) return;
           if (mode === "feedback") {
             feedbackInput.handleInput(data);
             repaint();
@@ -334,16 +340,14 @@ async function showCommitPolicyDialog(
   command: string,
   matched: CommitPattern,
 ): Promise<{ policy: CommitPolicy; instructions?: string }> {
-  const formatted = command
-    .trim()
-    .split("\n")
-    .map((line) => `  ${line}`)
-    .join("\n");
-
   return ctx.ui.custom<{ policy: CommitPolicy; instructions?: string }>(
     (tui, theme, _kb, done) => {
       let mode: "decide" | "feedback" = "decide";
       let resolved = false;
+      // Ignore keypresses for 500ms to prevent accidental input from typing
+      // or stray terminal control sequences (e.g. tmux focus events via PTY splitting)
+      const dialogOpenedAt = Date.now();
+      const INPUT_COOLDOWN_MS = 500;
 
       const container = new Container();
       container.addChild(border(theme));
@@ -357,10 +361,15 @@ async function showCommitPolicyDialog(
         ),
       );
       container.addChild(new Spacer(1));
-
-      for (const line of formatted.split("\n")) {
-        container.addChild(new Text("  " + theme.fg("warning", line), 1, 0));
-      }
+      container.addChild(
+        new Text(
+          "  " +
+            theme.fg("muted", "$ ") +
+            theme.fg("warning", truncateCmd(command)),
+          1,
+          0,
+        ),
+      );
 
       container.addChild(new Spacer(1));
       container.addChild(
@@ -448,6 +457,7 @@ async function showCommitPolicyDialog(
         handleInput: (data: string) => {
           if (resolved) return;
           if (isTerminalControlSequence(data)) return;
+          if (Date.now() - dialogOpenedAt < INPUT_COOLDOWN_MS) return;
           if (mode === "feedback") {
             feedbackInput.handleInput(data);
             repaint();
@@ -869,7 +879,10 @@ function isSingleCommandSafe(cmd: string): boolean {
   if (trimmed.includes("$(")) {
     const isAssignment = /^\s*(?:export\s+)?[A-Za-z_]\w*=/.test(trimmed);
     const isEchoLike = /^\s*(?:echo|printf)\b/.test(trimmed);
-    const isSafeOuter = /^\s*(?:grep|rg|cat|head|tail|wc|ls|file|stat|diff|basename|dirname)\b/.test(trimmed);
+    const isSafeOuter =
+      /^\s*(?:grep|rg|cat|head|tail|wc|ls|file|stat|diff|basename|dirname)\b/.test(
+        trimmed,
+      );
     if (!isAssignment && !isEchoLike && !isSafeOuter) return false;
   }
 
@@ -1041,7 +1054,13 @@ interface VoterContext {
  * Walks backward to find the most recent user message and counts the distance.
  */
 function extractVoterContext(
-  branch: ReadonlyArray<{ type: string; message?: { role?: string; content?: ReadonlyArray<{ type: string; text?: string }> } }>,
+  branch: ReadonlyArray<{
+    type: string;
+    message?: {
+      role?: string;
+      content?: ReadonlyArray<{ type: string; text?: string }>;
+    };
+  }>,
   maxTextLength = 200,
 ): VoterContext {
   let turnsSinceUserMessage = 0;
@@ -1054,9 +1073,10 @@ function extractVoterContext(
       if (content) {
         const text = extractText(content, " ").trim();
         if (text) {
-          lastUserMessage = text.length > maxTextLength
-            ? text.slice(0, maxTextLength - 1) + "…"
-            : text;
+          lastUserMessage =
+            text.length > maxTextLength
+              ? text.slice(0, maxTextLength - 1) + "…"
+              : text;
           break;
         }
       }
@@ -1181,7 +1201,11 @@ async function resolveVoterModels(
       if (!model) continue;
       const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
       if (auth.ok && auth.apiKey)
-        available.push({ model: { ...model, reasoning: false }, apiKey: auth.apiKey, label: candidate.label });
+        available.push({
+          model: { ...model, reasoning: false },
+          apiKey: auth.apiKey,
+          label: candidate.label,
+        });
     } catch {}
   }
   cachedVoterModels = available;
@@ -1213,7 +1237,8 @@ function buildVoterMessage(
         `<vote_outcome>${o.outcome === "no" ? "unanimous NO" : "split"} (${o.voteBreakdown})</vote_outcome>`,
       );
       parts.push(`<user_decision>${o.decision ?? "allowed"}</user_decision>`);
-      if (o.feedback) parts.push(`<user_feedback>${o.feedback}</user_feedback>`);
+      if (o.feedback)
+        parts.push(`<user_feedback>${o.feedback}</user_feedback>`);
       parts.push("</decision>");
     }
     parts.push("</previous_decisions>");
@@ -1221,8 +1246,12 @@ function buildVoterMessage(
   }
   if (voterContext?.lastUserMessage) {
     parts.push("<user_context>");
-    parts.push(`<last_user_message>${voterContext.lastUserMessage}</last_user_message>`);
-    parts.push(`<turns_since_request>${voterContext.turnsSinceUserMessage}</turns_since_request>`);
+    parts.push(
+      `<last_user_message>${voterContext.lastUserMessage}</last_user_message>`,
+    );
+    parts.push(
+      `<turns_since_request>${voterContext.turnsSinceUserMessage}</turns_since_request>`,
+    );
     parts.push("</user_context>");
     parts.push("");
   }
@@ -1342,7 +1371,7 @@ function formatVoterErrors(
       let msg = r.error;
       const statusMatch = msg.match(/"code":(\d+),"status":"([^"]+)"/);
       if (statusMatch) msg = `${statusMatch[2]} (${statusMatch[1]})`;
-      else if (msg.length > 60) msg = msg.slice(0, 57) + '...';
+      else if (msg.length > 60) msg = msg.slice(0, 57) + "...";
       errors.push(`[${r.label}] ${msg}`);
     }
   }
@@ -1483,7 +1512,9 @@ async function runVoteTracking(
   if (!ctx.hasUI) {
     const t0 = performance.now();
     const records = await Promise.all(
-      voters.map((voter) => castVote(voter, command, overrides, undefined, voterContext)),
+      voters.map((voter) =>
+        castVote(voter, command, overrides, undefined, voterContext),
+      ),
     );
     return computeVoteResult(records, false, performance.now() - t0);
   }
@@ -1535,15 +1566,19 @@ async function runVoteTracking(
     let remaining = voters.length;
     for (let i = 0; i < voters.length; i++) {
       const idx = i;
-      castVote(voters[idx], command, overrides, abortController.signal, voterContext).then(
-        (record) => {
-          if (finished) return;
-          records[idx] = record;
-          remaining--;
-          refresh();
-          if (remaining === 0) finalize();
-        },
-      );
+      castVote(
+        voters[idx],
+        command,
+        overrides,
+        abortController.signal,
+        voterContext,
+      ).then((record) => {
+        if (finished) return;
+        records[idx] = record;
+        remaining--;
+        refresh();
+        if (remaining === 0) finalize();
+      });
     }
 
     return {
@@ -1646,13 +1681,22 @@ function buildExplainerContext(ctx: ExtensionContext): string[] {
 }
 
 /** Parse explainer response — tries JSON first, falls back to plain text. */
-function parseExplainerResponse(text: string): { explanation: string; vote: "yes" | "no" } {
+function parseExplainerResponse(text: string): {
+  explanation: string;
+  vote: "yes" | "no";
+} {
   try {
-    const jsonMatch = text.match(/\{[\s\S]*"explanation"[\s\S]*"vote"[\s\S]*\}/);
+    const jsonMatch = text.match(
+      /\{[\s\S]*"explanation"[\s\S]*"vote"[\s\S]*\}/,
+    );
     if (jsonMatch) {
       const parsed = JSON.parse(jsonMatch[0]);
-      const explanation = typeof parsed.explanation === "string" ? parsed.explanation : text;
-      const vote = typeof parsed.vote === "string" && parsed.vote.toUpperCase() === "YES" ? "yes" as const : "no" as const;
+      const explanation =
+        typeof parsed.explanation === "string" ? parsed.explanation : text;
+      const vote =
+        typeof parsed.vote === "string" && parsed.vote.toUpperCase() === "YES"
+          ? ("yes" as const)
+          : ("no" as const);
       return { explanation, vote };
     }
   } catch {}
@@ -1755,45 +1799,93 @@ async function getExplanation(
   debugMode = false,
 ): Promise<ExplainerResult> {
   const contextLines = buildExplainerContext(ctx);
-  const noVoters = voters.filter((_, i) => voteResult.records[i]?.status === "no");
+  const noVoters = voters.filter(
+    (_, i) => voteResult.records[i]?.status === "no",
+  );
 
   if (noVoters.length === 0) {
     const explainer = await resolveExplainerModel(ctx);
-    if (!explainer) return { explanation: "Unable to generate explanation — no model available.", recastCount: 0, recastLabels: [] };
-    const result = await callExplainer(explainer.model, explainer.apiKey, command, voteResult, contextLines);
-    return { explanation: result?.explanation ?? "Unable to generate explanation.", recastCount: 0, recastLabels: [] };
+    if (!explainer)
+      return {
+        explanation: "Unable to generate explanation — no model available.",
+        recastCount: 0,
+        recastLabels: [],
+      };
+    const result = await callExplainer(
+      explainer.model,
+      explainer.apiKey,
+      command,
+      voteResult,
+      contextLines,
+    );
+    return {
+      explanation: result?.explanation ?? "Unable to generate explanation.",
+      recastCount: 0,
+      recastLabels: [],
+    };
   }
 
   // Have each NO voter explain with full context and recast their vote
   const results = await Promise.all(
     noVoters.map(async (voter) => {
-      const result = await callExplainer(voter.model, voter.apiKey, command, voteResult, contextLines);
+      const result = await callExplainer(
+        voter.model,
+        voter.apiKey,
+        command,
+        voteResult,
+        contextLines,
+      );
       return result ? { label: voter.label, ...result } : null;
     }),
   );
 
-  const validResults = results.filter((r): r is { label: string; explanation: string; vote: "yes" | "no" } => r !== null);
+  const validResults = results.filter(
+    (r): r is { label: string; explanation: string; vote: "yes" | "no" } =>
+      r !== null,
+  );
 
   if (validResults.length === 0) {
     const explainer = await resolveExplainerModel(ctx);
-    if (!explainer) return { explanation: "Unable to generate explanation — no model available.", recastCount: 0, recastLabels: [] };
-    const result = await callExplainer(explainer.model, explainer.apiKey, command, voteResult, contextLines);
-    return { explanation: result?.explanation ?? "Unable to generate explanation.", recastCount: 0, recastLabels: [] };
+    if (!explainer)
+      return {
+        explanation: "Unable to generate explanation — no model available.",
+        recastCount: 0,
+        recastLabels: [],
+      };
+    const result = await callExplainer(
+      explainer.model,
+      explainer.apiKey,
+      command,
+      voteResult,
+      contextLines,
+    );
+    return {
+      explanation: result?.explanation ?? "Unable to generate explanation.",
+      recastCount: 0,
+      recastLabels: [],
+    };
   }
 
   const recastVoters = validResults.filter((r) => r.vote === "yes");
   const recastCount = recastVoters.length;
   const recastLabels = recastVoters.map((r) => r.label);
-  const explanations = validResults.map((r) => ({ label: r.label, text: r.explanation }));
+  const explanations = validResults.map((r) => ({
+    label: r.label,
+    text: r.explanation,
+  }));
 
-  let finalText = explanations.length === 1
-    ? explanations[0].text
-    : await aggregateExplanations(ctx, command, explanations);
+  let finalText =
+    explanations.length === 1
+      ? explanations[0].text
+      : await aggregateExplanations(ctx, command, explanations);
 
   // In debug mode, append raw per-voter explanations + recast votes
   if (debugMode && validResults.length > 1) {
     const rawSection = validResults
-      .map((e) => `---\n\n**${e.label}** (recast: ${e.vote.toUpperCase()}):\n\n${e.explanation}`)
+      .map(
+        (e) =>
+          `---\n\n**${e.label}** (recast: ${e.vote.toUpperCase()}):\n\n${e.explanation}`,
+      )
       .join("\n\n");
     finalText += `\n\n${rawSection}`;
   }
@@ -1878,7 +1970,12 @@ async function showReviewDialog(
     feedbackInput.onEscape = () => {
       if (resolved) return;
       resolved = true;
-      done({ allowed: false, remember: false, explanation: explanationText, recastCount });
+      done({
+        allowed: false,
+        remember: false,
+        explanation: explanationText,
+        recastCount,
+      });
     };
 
     // Footer components (stored for re-ordering when entering feedback mode)
@@ -1946,36 +2043,50 @@ async function showReviewDialog(
     };
 
     // Get explanation with recast vote support
-    getExplanation(ctx, command, result, voters, debugEnabled).then(({ explanation, recastCount: rc, recastLabels }) => {
-      if (resolved) return;
-      explanationText = explanation;
-      recastCount = rc;
-      explanationMd.setText(explanation);
+    getExplanation(ctx, command, result, voters, debugEnabled).then(
+      ({ explanation, recastCount: rc, recastLabels }) => {
+        if (resolved) return;
+        explanationText = explanation;
+        recastCount = rc;
+        explanationMd.setText(explanation);
 
-      // Update dots: change recast voters from red to yellow
-      if (recastLabels.length > 0) {
-        for (const record of result.records) {
-          if (record.status === "no" && recastLabels.includes(record.label)) {
-            record.status = "recast";
+        // Update dots: change recast voters from red to yellow
+        if (recastLabels.length > 0) {
+          for (const record of result.records) {
+            if (record.status === "no" && recastLabels.includes(record.label)) {
+              record.status = "recast";
+            }
           }
+          voteIconsText.setText("  " + renderVoteIcons(result.records, theme));
+          voteSummaryText.setText(
+            "  " + renderVoteSummary(result.records, theme),
+          );
+          recastText.setText(
+            "\n  " +
+              theme.fg(
+                "success",
+                `↻ ${rc} reviewer${rc > 1 ? "s" : ""} changed vote to YES after seeing context`,
+              ),
+          );
         }
-        voteIconsText.setText("  " + renderVoteIcons(result.records, theme));
-        voteSummaryText.setText("  " + renderVoteSummary(result.records, theme));
-        recastText.setText(
-          "\n  " + theme.fg("success", `↻ ${rc} reviewer${rc > 1 ? "s" : ""} changed vote to YES after seeing context`),
-        );
-      }
 
-      // If ALL NO voters recast to YES, auto-allow and close the dialog
-      if (interactive && rc > 0 && rc >= result.noCount) {
-        resolved = true;
-        done({ allowed: true, remember: false, explanation, recastCount: rc, autoRecast: true });
-        return;
-      }
-      // Still needs user attention — notify now
-      onNeedsAttention?.();
-      repaint();
-    });
+        // If ALL NO voters recast to YES, auto-allow and close the dialog
+        if (interactive && rc > 0 && rc >= result.noCount) {
+          resolved = true;
+          done({
+            allowed: true,
+            remember: false,
+            explanation,
+            recastCount: rc,
+            autoRecast: true,
+          });
+          return;
+        }
+        // Still needs user attention — notify now
+        onNeedsAttention?.();
+        repaint();
+      },
+    );
 
     return {
       render: (w: number) => container.render(w),
@@ -2318,7 +2429,9 @@ export default function (pi: ExtensionAPI) {
     if (isWhitelisted(command)) return;
 
     // Check for previously allowed commands (decision field may be absent on legacy overrides — treat those as allowed)
-    const previousOverride = overrideHistory.find((o) => o.command === command && (o.decision === "allowed" || !o.decision));
+    const previousOverride = overrideHistory.find(
+      (o) => o.command === command && (o.decision === "allowed" || !o.decision),
+    );
     if (previousOverride) {
       if (ctx.hasUI) {
         ctx.ui.notify(
@@ -2350,7 +2463,13 @@ export default function (pi: ExtensionAPI) {
 
     const voters = distributeVoters(voterModels);
     const voterContext = extractVoterContext(ctx.sessionManager.getBranch());
-    const result = await runVoteTracking(ctx, command, voters, overrideHistory, voterContext);
+    const result = await runVoteTracking(
+      ctx,
+      command,
+      voters,
+      overrideHistory,
+      voterContext,
+    );
 
     // Surface voter errors inline
     const voterErrors = formatVoterErrors(result.records);
@@ -2371,7 +2490,15 @@ export default function (pi: ExtensionAPI) {
     if (result.unanimous === "yes") {
       if (ctx.hasUI && debugEnabled) {
         const header = `✅ Security review passed (${result.decidedCount}/${result.records.length}) in ${elapsed}`;
-        await showReviewDialog(ctx, command, result, header, true, false, voters);
+        await showReviewDialog(
+          ctx,
+          command,
+          result,
+          header,
+          true,
+          false,
+          voters,
+        );
       } else if (ctx.hasUI) {
         const detail =
           result.abstentions > 0
@@ -2408,10 +2535,26 @@ export default function (pi: ExtensionAPI) {
           : "Split vote — needs decision",
       );
     };
-    const { allowed, remember, explanation, instructions, recastCount, autoRecast } =
-      await showReviewDialog(ctx, command, result, header, debugEnabled, true, voters, onNeedsAttention);
+    const {
+      allowed,
+      remember,
+      explanation,
+      instructions,
+      recastCount,
+      autoRecast,
+    } = await showReviewDialog(
+      ctx,
+      command,
+      result,
+      header,
+      debugEnabled,
+      true,
+      voters,
+      onNeedsAttention,
+    );
 
-    const outcomeType = result.unanimous === "no" ? "no" as const : "split" as const;
+    const outcomeType =
+      result.unanimous === "no" ? ("no" as const) : ("split" as const);
     const voteBreakdownStr = `${result.yesCount} YES / ${result.noCount} NO`;
 
     // Dialog auto-closed because all NO voters recast to YES
@@ -2435,7 +2578,8 @@ export default function (pi: ExtensionAPI) {
         overrideHistory.push(override);
         pi.appendEntry("bash-guard-override", override);
 
-        const recastNote = recastCount > 0 ? ` (${recastCount} recast to YES)` : "";
+        const recastNote =
+          recastCount > 0 ? ` (${recastCount} recast to YES)` : "";
         ctx.ui.notify(
           `⚠️ User override — allowed despite ${voteBreakdown}${recastNote} (remembered)`,
           "warning",

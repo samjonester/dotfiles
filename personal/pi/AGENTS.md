@@ -51,39 +51,10 @@ Two sets of GWS tools are active — prefer based on operation type:
 
 ## Slack Message Formatting
 
-- When drafting Slack messages, use standard markdown formatting (not Slack mrkdwn). The user has Slack's "Format messages with markup" setting enabled, so pasting markdown renders correctly.
-- Use `[text](url)` for links, `**bold**` or `*bold*` for emphasis, `` `code` `` for inline code, and `- ` for lists.
-- Automatically copy the final draft to clipboard via `pbcopy` — the user has a clipboard manager, so extra clipboard operations are fine.
+- Use standard markdown (not Slack mrkdwn) — user has "Format messages with markup" enabled.
+- Auto-copy final drafts to clipboard via `pbcopy`.
 
-## Model & Thinking Selection
-
-The goal is **speed and responsiveness** — use the fastest model that produces correct results for the task at hand.
-
-### Opus (claude-opus-4-6) — deep reasoning, code correctness
-
-- **Code editing** (write, edit, refactor, implement features, fix bugs): always use Opus with high thinking
-- **Code reviews and architectural planning**: use Opus with high thinking
-- **Debugging subtle issues**: use Opus with high thinking
-- **Simple substitutions and small edits** (renaming a variable, fixing a typo): Opus is fine since it's already loaded, but drop to medium thinking — high thinking adds latency with no quality gain
-
-### Sonnet (claude-sonnet-4-6) — fast, correct for straightforward work
-
-- **Mechanical tasks** (grep, find, read, file exploration, running tests, git operations, renaming across files): use Sonnet with medium thinking — significantly faster than Opus for these and produces identical results
-- When entering a long stretch of mechanical work (>10 sequential tool calls of grep/read/find/test runs), suggest switching to Sonnet for speed
-- After the mechanical stretch, suggest switching back to Opus before code editing resumes
-
-### Haiku (claude-haiku-4-5) — near-instant responses for trivial tasks
-
-- **Quick lookups and summaries**: reading a file and answering a factual question about it, summarizing grep results, listing what changed in a diff
-- **Bulk simple operations**: when doing 20+ repetitive tool calls that need no reasoning (e.g., checking file existence, reading configs, collecting data across many files before doing real work)
-- **Drafting commit messages**: generating conventional commit messages from staged changes
-- Do NOT use Haiku for code editing, reviews, PR descriptions, or anything requiring correctness judgment
-
-### General rules
-
-- Default to Opus with high thinking — it's the primary model
-- Switch to Sonnet for speed during mechanical phases, switch back before editing
-- Consider Haiku when you're about to do a long stretch of trivial reads/lookups before the real work begins
+## Multi-Model Planning
 
 ### Multi-model planning workflow
 
@@ -155,6 +126,8 @@ For plans without the Implementation Steps section (legacy plans or external doc
 - Prefer starting new sessions (`/session new`) for unrelated tasks rather than using `/clear`
 - `/clear` causes full cache misses — the entire context must be re-sent and re-cached, adding seconds of latency to the next turn and slowing down every subsequent response as context rebuilds
 - Large accumulated context slows down every turn — the model processes more tokens, increasing latency. Keep sessions focused.
+- **Use `/btw` for quick lookups** — syntax checks, API questions, "how does X work?" queries that are informational, not action-driving. Zero trace in conversation history. Press `p` to promote if the answer reveals something actionable, `n` to break out to a full session.
+- **Use `/fork` + `/back` for tangents** — when a question turns into substantial work, `/fork` (or `Ctrl+Shift+F`) creates a new session from the current branch. Use `/back` to return to the parent session when done. When selecting a fork point, always pick a message **after** the first assistant response — forking from before the first response triggers a pi bug where the parent link isn't persisted.
 - For long implementation sessions (>50 tool calls), suggest compacting with `/compact` to reduce context size and speed up responses
 - When spawning a new tmux window, always give it a short descriptive name (e.g., `tmux new-window -n 'dev-server'`)
 - When spawning a task into a separate tmux window (e.g., planning, investigation), treat that window as the user's workspace for that task. Don't pull results back into the parent session — it duplicates context and pollutes history, making it hard to scroll back to the original work (like a triage) that triggered the spawn. Just confirm the window is open and let the user work there directly.
@@ -163,14 +136,8 @@ For plans without the Implementation Steps section (legacy plans or external doc
 ## Service Design
 
 - Prefer pure service objects over shared behavior via inheritance, base classes, mixins, modules, or concerns. Each service should be self-contained and explicit about its dependencies.
-- Services should return a Result object (e.g., `Result.success(...)` / `Result.failure(...)`) rather than raising exceptions. Raising should be reserved for callers that need it (e.g., Temporal activities), not the services themselves.
-
-## Temporal Activities
-
-- Only Temporal activities should raise Temporal errors (e.g., `ApplicationError`). Services used by activities may also be called from GraphQL resolvers, jobs, or other contexts — they must not raise Temporal-specific errors.
-- When handling failures in Temporal activities, differentiate between retryable and non-retryable errors:
-  - **Retryable**: intermittent issues like network timeouts, rate limits, transient API errors — let these propagate or raise a retryable `ApplicationError`
-  - **Non-retryable**: permanent failures like auth errors (401/403), not found (404), invalid input, missing files — raise `Temporal::Error::ApplicationError.new("...", non_retryable: true)` so Temporal does not waste retries
+- Services should return a Result object (e.g., `Result.success(...)` / `Result.failure(...)`) rather than raising exceptions.
+- Temporal activity patterns: see knowledge file `temporal-patterns.md` (auto-loaded when relevant).
 
 ## Workflow
 
@@ -206,11 +173,9 @@ When asked to review **multiple PRs** ("review these PRs", "batch review #1 #2 #
 
 ### Submitting review comments
 
-When submitting a PR review with both a top-level comment and line-level (inline) comments, **do not duplicate content between the two**. The top-level comment and inline comments are visible together — reviewers see both.
-
-- **Top-level comment**: narrative context that doesn't belong on any single line — executive summary, validation results, docs/description update requests, roadmap suggestions, overall impressions. Reference inline findings by number or short title ("see inline comment on `translate.ts:384`") but do NOT repeat the problem description, code snippets, or fix suggestions.
-- **Inline comments**: the full detailed finding — problem, impact, suggested fix with code. These are self-contained; a reader should understand the issue without reading the top-level comment.
-- **Numbered summary list** in the top-level comment is fine for orientation ("I left 6 inline comments: 1. Index-based matching... 2. Token gate...") — keep each to ONE line with just the title and severity. No elaboration.
+- Don't duplicate between top-level comment and inline comments — they're visible together.
+- Top-level: executive summary, validation results, numbered one-line finding list for orientation.
+- Inline: self-contained full findings (problem, impact, suggested fix).
 
 ## PR Links
 
@@ -219,12 +184,9 @@ When submitting a PR review with both a top-level comment and line-level (inline
 
 ## PR Descriptions
 
-When writing or editing PR descriptions, follow these rules:
-
-- **Don't mention tests were added or changed.** That's assumed — every code change comes with tests. The diff speaks for itself.
-- **Don't include CI steps in the test plan.** Lint, typecheck, and unit test results are checked by CI. Reviewers don't need to see them in the description. The test plan section is for validation that goes **beyond** what CI does — live integration tests, manual QA steps, screenshots, etc.
-- **Inline validation steps.** Never reference local file paths (`tmp/validate-*.rb`, `tmp/validation-artifacts/`) that other reviewers won't have access to. Instead, inline the validation steps directly in the PR body. Use a folded `<details>` block for long scripts. The goal: any reviewer can reproduce the validation from the PR description alone.
-- **Be concise.** Reviewers skim. Lead with problem/solution, keep the changes table tight, and fold verbose validation behind `<details>`.
+- Don't mention tests — assumed. Don't include CI steps in test plan — CI handles those.
+- Inline all validation steps (no local file paths). Use `<details>` for verbose scripts.
+- Be concise. Lead with problem/solution.
 
 ## PR Description Routing (Mozart)
 
@@ -258,38 +220,20 @@ When user asks to free a worktree, release a slot, or clean up worktrees, use `_
 
 ## PR Review & Feedback
 
-### Responding to Binks automated reviews
-
-When responding to a Binks (`binks-code-reviewer`) review comment, don't assume the finding is correct or worth acting on. First assess validity and importance (see below), then include **feedback on the finding** in your reply. This helps calibrate the automated reviewer over time. Structure your response as:
-
-1. **Assessment**: Is the finding valid? Is it important enough to address? If not, say so and explain why.
-2. **What you did**: describe the fix, or explain why no change is needed
-3. **Feedback on the finding**: assess the quality of Binks' analysis — was the conclusion correct? Was the explanation precise or did it miss the real issue? Call out red herrings, imprecise reasoning, or cases where the finding was spot-on
-
-Example response to a Binks comment:
-
-> Fixed — replaced the command with one that correctly shows remaining commits.
->
-> Feedback on this finding: The conclusion was correct (the command does not work as described), but the explanation was imprecise. You said "`REBASE_HEAD` is typically not an ancestor/descendant in the normal commit graph" — the real issue is simpler: `REBASE_HEAD` is a single commit, not the tip of a branch, so using it as the end of a `..` range is wrong by construction. The topology concern is a red herring.
-
-### Assessing PR feedback
-
-When asked to review or assess PR comments (from any reviewer — human or automated), be critical. Don't assume feedback is correct or worth acting on. For each comment, assess:
-
-1. **Validity**: Is the reviewer's claim actually correct? Read the relevant code and verify. Reviewers (especially automated ones) can misunderstand context, miss nuance, or be flat-out wrong.
-2. **Importance**: Even if valid, does it matter? Distinguish between comments that point to real bugs or maintenance risks vs. stylistic nitpicks, hypothetical concerns, or low-probability edge cases.
-3. **Recommendation**: Explicitly state whether the comment should be addressed, acknowledged but skipped, or pushed back on — with reasoning.
+When responding to Binks or assessing PR feedback, load the `binks-review` skill — it has the full response format, calibration feedback structure, and validity assessment framework.
 
 ## Loop Scheduler
 
-Suggest using `/loop` or the `CronCreate` tool when recurring monitoring would be more effective than a one-shot command. Good candidates:
+Suggest `/loop` or `CronCreate` for: long-running deploys/builds, waiting on CI/PR state, periodic health checks, test watch loops. Don't suggest for things that complete in seconds.
 
-- **Long-running processes**: after starting a deploy, migration, or build — suggest `/loop 2m check deploy status` rather than making the user ask repeatedly
-- **Waiting for external state**: CI builds, PR reviews, staging claims, dependency updates — suggest a loop that checks and reports back when the condition is met
-- **Periodic health checks**: when debugging a flaky issue, suggest looping to catch it when it recurs
-- **Test/typecheck watch**: when iterating on a fix, suggest a loop that re-runs the failing test
+## Autoresearch
 
-Don't suggest loops for things that complete in seconds or where the user clearly wants a single answer.
+Suggest autoresearch (`/skill:autoresearch-create`) for iterative optimization loops with a **measurable metric**: test speed, bundle size, build time, validation scores, memory usage. The agent loops autonomously: edit code → run benchmark → measure → keep improvements (git commit) / discard regressions (git revert) → repeat.
+
+- Key tools: `init_experiment`, `run_experiment`, `log_experiment`. Dashboard: `Ctrl+X`.
+- Key files: `autoresearch.md` (session playbook), `autoresearch.sh` (benchmark script), `autoresearch.checks.sh` (optional correctness gate)
+- Don't suggest for: one-off bug fixes, non-measurable changes, changes requiring visual-only validation
+- Use `/skill:autoresearch-finalize` to cherry-pick winning experiments into PRs after the session
 
 ## Git Safety
 
@@ -304,18 +248,7 @@ Don't suggest loops for things that complete in seconds or where the user clearl
 
 ## CI Triggering (shop/world)
 
-Pre-merge CI in shop/world no longer auto-runs on push (changed 4/13/2026). It auto-runs once when a PR moves from Draft → Ready. After that, trigger CI explicitly:
-
-- `devx ci run` — all pipelines
-- `devx ci run --pipeline <name>` — specific pipeline
-- `devx ci run --full` — Core full suite
-- `devx ci merge-when-ready` — final CI + auto-enqueue to merge queue
-
-**When to trigger:** After the final `gt submit` in a unit of work (fixing a CI failure, addressing review feedback, completing an implementation step). Run `devx ci run` after submit.
-
-**When to skip:** During intermediate submits within a multi-step activity where another submit is imminent (e.g., mid-implementation with more changes coming). Don't waste CI runs on work-in-progress.
-
-**Rule of thumb:** If you're about to wait (for CI, for review, for the user), trigger CI. If you're about to make more changes, skip it.
+CI no longer auto-runs on push (changed 4/13). Trigger explicitly with `devx ci run` after final submit. Full details in knowledge file `graphite-workflow.md` (auto-loaded when relevant).
 
 ## Judgment & Autonomy
 

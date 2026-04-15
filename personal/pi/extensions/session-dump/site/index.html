@@ -1,0 +1,1919 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>pi dump</title>
+  <link rel="icon" href="/favicon.ico" sizes="48x48">
+  <link rel="apple-touch-icon" href="/apple-touch-icon.png">
+  <script src="/client/quick.js"></script>
+  <script src="https://cdn.jsdelivr.net/npm/marked/marked.min.js"></script>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=JetBrains+Mono:wght@400;500&family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+  <style>
+    :root {
+      --bg: #0d1117;
+      --surface: #161b22;
+      --surface-2: #1c2129;
+      --border: #30363d;
+      --border-light: #21262d;
+      --text: #e6edf3;
+      --text-muted: #8b949e;
+      --text-dim: #484f58;
+      --accent: #58a6ff;
+      --accent-dim: #1f6feb33;
+      --user-bg: #1a1f2b;
+      --assistant-bg: #161b22;
+      --green: #3fb950;
+      --yellow: #d29922;
+      --red: #f85149;
+      --purple: #bc8cff;
+      --pink: #f778ba;
+      --orange: #f0883e;
+    }
+
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+
+    body {
+      background: var(--bg);
+      color: var(--text);
+      font-family: 'Inter', -apple-system, BlinkMacSystemFont, sans-serif;
+      line-height: 1.6;
+      overflow: hidden;
+      height: 100vh;
+    }
+
+    .app { display: flex; height: 100vh; }
+
+    /* ── Sidebar ── */
+    .sidebar {
+      width: 320px;
+      min-width: 320px;
+      background: var(--surface);
+      border-right: 1px solid var(--border);
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .sidebar-header {
+      padding: 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .sidebar-header h1 {
+      font-size: 1.25rem;
+      font-weight: 600;
+      letter-spacing: 0.05em;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .sidebar-header .pi-icon { font-size: 1.1rem; opacity: 0.6; }
+
+    .user-info {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      margin-top: 10px;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+    }
+
+    .user-avatar {
+      width: 22px;
+      height: 22px;
+      border-radius: 50%;
+      object-fit: cover;
+    }
+
+    .add-dump {
+      padding: 12px 20px;
+      border-bottom: 1px solid var(--border);
+    }
+
+    .add-dump-form {
+      display: flex;
+      gap: 8px;
+    }
+
+    .add-dump-form input {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 6px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-size: 0.8rem;
+      font-family: 'JetBrains Mono', monospace;
+      outline: none;
+      transition: border-color 0.2s;
+    }
+
+    .add-dump-form input::placeholder { color: var(--text-dim); }
+    .add-dump-form input:focus { border-color: var(--accent); }
+
+    .add-dump-form button, .btn {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 6px;
+      padding: 8px 14px;
+      font-size: 0.8rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.2s;
+      white-space: nowrap;
+    }
+
+    .add-dump-form button:hover, .btn:hover { opacity: 0.85; }
+
+    .view-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 8px 10px;
+      font-size: 0.75rem;
+    }
+
+    .dump-list {
+      flex: 1;
+      overflow-y: auto;
+      padding: 8px;
+    }
+
+    .dump-list-label {
+      padding: 8px 14px 4px;
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.1em;
+      color: var(--text-dim);
+    }
+
+    .dump-item {
+      padding: 12px 14px;
+      border-radius: 8px;
+      cursor: pointer;
+      transition: background 0.15s;
+      margin-bottom: 2px;
+      position: relative;
+    }
+
+    .dump-item:hover { background: var(--surface-2); }
+
+    .dump-item.active {
+      background: var(--accent-dim);
+      outline: 1px solid var(--accent);
+    }
+
+    .dump-item.active .dump-uuid { color: var(--accent); }
+
+    .dump-item.saved-from {
+      border-left: 3px solid var(--purple);
+    }
+
+    .dump-item.saved-from .dump-uuid span { color: var(--purple); }
+    .dump-item.saved-from.active .dump-uuid span { color: var(--purple); }
+    .dump-item.saved-from.active { outline-color: var(--purple); background: #bc8cff15; }
+
+    .saved-from-label {
+      font-size: 0.65rem;
+      color: var(--purple);
+      margin-top: 2px;
+    }
+
+    .dump-uuid {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.82rem;
+      font-weight: 500;
+      color: var(--text);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .dump-meta {
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      margin-top: 3px;
+      display: flex;
+      align-items: center;
+      gap: 8px;
+    }
+
+    .dump-meta .tag {
+      background: var(--bg);
+      padding: 1px 6px;
+      border-radius: 4px;
+      font-size: 0.68rem;
+    }
+
+    .dump-actions {
+      display: flex;
+      gap: 4px;
+    }
+
+    .dump-action-btn {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 0.7rem;
+      padding: 2px 5px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+
+    .dump-action-btn:hover { background: var(--surface); color: var(--text-muted); }
+    .dump-action-btn.delete:hover { background: #f8514922; color: var(--red); }
+
+    /* ── Main Content ── */
+    .main {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      overflow: hidden;
+    }
+
+    .main-header {
+      padding: 16px 24px;
+      border-bottom: 1px solid var(--border);
+      background: var(--surface);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      gap: 12px;
+    }
+
+    .main-header h2 {
+      font-size: 0.9rem;
+      font-weight: 500;
+      color: var(--text-muted);
+      font-family: 'JetBrains Mono', monospace;
+    }
+
+    .main-header-right {
+      display: flex;
+      align-items: center;
+      gap: 10px;
+    }
+
+    .main-header .session-info {
+      font-size: 0.75rem;
+      color: var(--text-dim);
+    }
+
+    .share-btn {
+      background: var(--surface-2);
+      border: 1px solid var(--border);
+      color: var(--text-muted);
+      padding: 5px 10px;
+      border-radius: 5px;
+      font-size: 0.72rem;
+      cursor: pointer;
+      transition: all 0.15s;
+      display: flex;
+      align-items: center;
+      gap: 5px;
+    }
+
+    .share-btn:hover { border-color: var(--accent); color: var(--accent); }
+
+    .share-btn.copied {
+      border-color: var(--green);
+      color: var(--green);
+    }
+
+    .empty-state {
+      flex: 1;
+      display: flex;
+      flex-direction: column;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-dim);
+      gap: 12px;
+    }
+
+    .empty-state .icon { font-size: 3rem; opacity: 0.3; }
+    .empty-state p { font-size: 0.9rem; }
+
+    .empty-state code {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--surface);
+      padding: 4px 10px;
+      border-radius: 4px;
+      font-size: 0.8rem;
+      color: var(--text-muted);
+    }
+
+    /* ── Chat ── */
+    .chat {
+      flex: 1;
+      overflow-y: auto;
+      padding: 0;
+    }
+
+    .message {
+      padding: 16px 32px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .message.user { background: var(--user-bg); }
+    .message.assistant { background: var(--assistant-bg); }
+
+    .message-role {
+      font-size: 0.72rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      margin-bottom: 8px;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .message.user .message-role { color: var(--green); }
+    .message.assistant .message-role { color: var(--purple); }
+
+    .message-role .dot {
+      width: 6px;
+      height: 6px;
+      border-radius: 50%;
+      display: inline-block;
+    }
+
+    .message.user .dot { background: var(--green); }
+    .message.assistant .dot { background: var(--purple); }
+
+    .message-content {
+      font-size: 0.9rem;
+      line-height: 1.7;
+      max-width: 900px;
+    }
+
+    .message-content p { margin-bottom: 0.75em; }
+    .message-content p:last-child { margin-bottom: 0; }
+    .message-content h1, .message-content h2, .message-content h3 { margin: 1em 0 0.5em; font-weight: 600; }
+    .message-content h3 { font-size: 1rem; }
+    .message-content hr { border: none; border-top: 1px solid var(--border); margin: 1em 0; }
+    .message-content ul, .message-content ol { padding-left: 1.5em; margin-bottom: 0.75em; }
+    .message-content li { margin-bottom: 0.25em; }
+    .message-content strong { color: #fff; font-weight: 600; }
+    .message-content em { color: var(--text-muted); }
+    .message-content a { color: var(--accent); text-decoration: none; }
+    .message-content a:hover { text-decoration: underline; }
+
+    .message-content code {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--bg);
+      padding: 2px 6px;
+      border-radius: 4px;
+      font-size: 0.82em;
+      color: var(--orange);
+    }
+
+    .message-content pre {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 14px 18px;
+      overflow-x: auto;
+      margin: 0.75em 0;
+    }
+
+    .message-content pre code {
+      background: none;
+      padding: 0;
+      color: var(--text);
+      font-size: 0.8rem;
+    }
+
+    /* ── Tool Calls ── */
+    .tool-call {
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      overflow: hidden;
+      margin-bottom: 6px;
+    }
+
+    .tool-call-header {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 14px;
+      cursor: pointer;
+      transition: background 0.15s;
+      user-select: none;
+    }
+
+    .tool-call-header:hover { background: var(--surface-2); }
+    .tool-call-icon { font-size: 0.75rem; color: var(--yellow); }
+
+    .tool-call-name {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.78rem;
+      font-weight: 500;
+      color: var(--yellow);
+    }
+
+    .tool-call-summary {
+      font-size: 0.72rem;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      flex: 1;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      white-space: nowrap;
+    }
+
+    .tool-call-chevron {
+      font-size: 0.65rem;
+      color: var(--text-dim);
+      transition: transform 0.2s;
+    }
+
+    .tool-call.expanded .tool-call-chevron { transform: rotate(90deg); }
+    .tool-call-body { display: none; border-top: 1px solid var(--border); }
+    .tool-call.expanded .tool-call-body { display: block; }
+
+    .tool-call-section {
+      padding: 10px 14px;
+      border-bottom: 1px solid var(--border-light);
+    }
+
+    .tool-call-section:last-child { border-bottom: none; }
+
+    .tool-call-section-label {
+      font-size: 0.65rem;
+      font-weight: 600;
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+      color: var(--text-dim);
+      margin-bottom: 6px;
+    }
+
+    .tool-call-section pre {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      color: var(--text-muted);
+      white-space: pre-wrap;
+      word-break: break-word;
+      max-height: 300px;
+      overflow-y: auto;
+      line-height: 1.5;
+    }
+
+    .tool-call-section.result pre { color: var(--text-dim); }
+
+    /* ── Message Anchors ── */
+    .msg-anchor {
+      color: var(--text-dim);
+      text-decoration: none;
+      font-size: 0.68rem;
+      font-weight: 400;
+      margin-left: 6px;
+      opacity: 0;
+      transition: opacity 0.15s;
+    }
+
+    .message:hover .msg-anchor { opacity: 1; }
+    .msg-anchor:hover { color: var(--accent); text-decoration: none; }
+
+    .message.anchored {
+      outline: 1px solid var(--accent);
+      outline-offset: -1px;
+    }
+
+    /* ── Diff View ── */
+    .diff-view {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      line-height: 1.6;
+      overflow-x: auto;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .diff-file-header {
+      padding: 6px 14px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.72rem;
+      color: var(--text-muted);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .diff-file-header .diff-file-icon { color: var(--yellow); }
+
+    .diff-line {
+      padding: 0 14px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      line-height: 1.6;
+      display: flex;
+    }
+
+    .diff-line .diff-marker {
+      user-select: none;
+      width: 16px;
+      flex-shrink: 0;
+      text-align: center;
+    }
+
+    .diff-line .diff-code {
+      flex: 1;
+      min-width: 0;
+    }
+
+    .diff-line .diff-code span { font-family: inherit !important; }
+
+    .diff-line.diff-remove {
+      background: #f851491a;
+    }
+
+    .diff-line.diff-remove .diff-marker { color: var(--red); }
+
+    .diff-line.diff-add {
+      background: #3fb9501a;
+    }
+
+    .diff-line.diff-add .diff-marker { color: var(--green); }
+
+    .diff-line.diff-separator {
+      background: var(--surface-2);
+      color: var(--text-dim);
+      padding: 2px 14px;
+      font-size: 0.68rem;
+      border-top: 1px solid var(--border);
+      border-bottom: 1px solid var(--border);
+    }
+
+    /* ── Write View ── */
+    .write-view {
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      line-height: 1.6;
+      overflow-x: auto;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .write-line {
+      padding: 0 14px;
+      white-space: pre-wrap;
+      word-break: break-word;
+      background: #3fb9501a;
+      font-family: 'JetBrains Mono', monospace;
+      font-size: 0.75rem;
+      line-height: 1.6;
+      display: flex;
+    }
+
+    .write-line .diff-marker { color: var(--green); user-select: none; width: 16px; flex-shrink: 0; text-align: center; }
+    .write-line .diff-code { flex: 1; min-width: 0; }
+    .write-line .diff-code span { font-family: inherit !important; }
+
+    /* ── System Events ── */
+    .system-event {
+      padding: 6px 32px;
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .system-event .event-dot {
+      width: 4px;
+      height: 4px;
+      border-radius: 50%;
+      background: var(--text-dim);
+    }
+
+    /* ── Thinking ── */
+    .thinking-block {
+      margin: 8px 0;
+      padding: 10px 14px;
+      background: var(--bg);
+      border-left: 3px solid var(--pink);
+      border-radius: 0 6px 6px 0;
+      cursor: pointer;
+      transition: background 0.15s;
+    }
+
+    .thinking-block:hover { background: var(--surface-2); }
+
+    .thinking-label {
+      font-size: 0.7rem;
+      font-weight: 500;
+      color: var(--pink);
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .thinking-content {
+      display: none;
+      margin-top: 8px;
+      font-size: 0.78rem;
+      color: var(--text-dim);
+      font-style: italic;
+      line-height: 1.6;
+      white-space: pre-wrap;
+      max-height: 400px;
+      overflow-y: auto;
+    }
+
+    .thinking-block.expanded .thinking-content { display: block; }
+
+    /* ── Custom message ── */
+    .custom-message {
+      padding: 12px 32px;
+      background: var(--accent-dim);
+      border-left: 3px solid var(--accent);
+    }
+
+    .custom-message .message-content { font-size: 0.85rem; }
+
+    /* ── Loading ── */
+    .loading {
+      flex: 1;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      color: var(--text-muted);
+      gap: 10px;
+    }
+
+    .spinner {
+      width: 18px;
+      height: 18px;
+      border: 2px solid var(--border);
+      border-top-color: var(--accent);
+      border-radius: 50%;
+      animation: spin 0.8s linear infinite;
+    }
+
+    @keyframes spin { to { transform: rotate(360deg); } }
+
+    /* ── Viewing someone else's dump banner ── */
+    .viewing-banner {
+      padding: 10px 24px;
+      background: var(--accent-dim);
+      border-bottom: 1px solid var(--accent);
+      font-size: 0.78rem;
+      color: var(--accent);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+    }
+
+    .viewing-banner .back-link {
+      color: var(--accent);
+      cursor: pointer;
+      text-decoration: underline;
+      font-size: 0.75rem;
+    }
+
+    /* ── Toast ── */
+    .toast {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 10px 18px;
+      font-size: 0.8rem;
+      color: var(--text);
+      z-index: 100;
+      animation: toastIn 0.2s ease-out;
+      box-shadow: 0 4px 20px rgba(0,0,0,0.4);
+    }
+
+    @keyframes toastIn { from { opacity: 0; transform: translateY(10px); } }
+
+    /* ── Token Breakdown ── */
+    .token-bar {
+      padding: 10px 24px;
+      background: var(--surface-2);
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      flex-wrap: wrap;
+    }
+
+    .token-stat {
+      font-size: 0.7rem;
+      color: var(--text-dim);
+      font-family: 'JetBrains Mono', monospace;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .token-stat .token-value {
+      color: var(--text-muted);
+      font-weight: 500;
+    }
+
+    .token-stat.cost .token-value {
+      color: var(--green);
+    }
+
+    .token-stat .token-label {
+      color: var(--text-dim);
+    }
+
+    .git-link {
+      font-size: 0.7rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--accent);
+      text-decoration: none;
+      display: flex;
+      align-items: center;
+      gap: 4px;
+    }
+
+    .git-link:hover { text-decoration: underline; }
+
+    .models-list {
+      font-size: 0.68rem;
+      font-family: 'JetBrains Mono', monospace;
+      color: var(--text-dim);
+      display: flex;
+      gap: 6px;
+    }
+
+    .models-list .model-tag {
+      background: var(--bg);
+      padding: 1px 6px;
+      border-radius: 4px;
+      color: var(--text-muted);
+    }
+
+    /* ── Chat Widget FAB ── */
+    .chat-fab {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 52px;
+      height: 52px;
+      border-radius: 50%;
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      cursor: pointer;
+      font-size: 1.4rem;
+      display: flex;
+      align-items: center;
+      justify-content: center;
+      box-shadow: 0 4px 16px rgba(0,0,0,0.4);
+      z-index: 200;
+      transition: transform 0.15s, opacity 0.15s;
+    }
+
+    .chat-fab:hover { transform: scale(1.08); }
+    .chat-fab.hidden { display: none; }
+
+    /* ── Chat Dock ── */
+    .chat-dock {
+      position: fixed;
+      bottom: 24px;
+      right: 24px;
+      width: 420px;
+      height: 520px;
+      background: var(--surface);
+      border: 1px solid var(--border);
+      border-radius: 12px;
+      display: none;
+      flex-direction: column;
+      overflow: hidden;
+      z-index: 200;
+      box-shadow: 0 8px 32px rgba(0,0,0,0.5);
+    }
+
+    .chat-dock.open { display: flex; }
+
+    .chat-dock-header {
+      padding: 12px 16px;
+      border-bottom: 1px solid var(--border);
+      display: flex;
+      align-items: center;
+      justify-content: space-between;
+      background: var(--surface-2);
+    }
+
+    .chat-dock-header h3 {
+      font-size: 0.82rem;
+      font-weight: 600;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+    }
+
+    .chat-dock-header h3 .dock-icon { color: var(--accent); }
+
+    .chat-dock-close {
+      background: none;
+      border: none;
+      color: var(--text-dim);
+      cursor: pointer;
+      font-size: 1rem;
+      padding: 2px 6px;
+      border-radius: 4px;
+      transition: all 0.15s;
+    }
+
+    .chat-dock-close:hover { background: var(--bg); color: var(--text-muted); }
+
+    .chat-dock-messages {
+      flex: 1;
+      overflow-y: auto;
+      padding: 12px 16px;
+      display: flex;
+      flex-direction: column;
+      gap: 10px;
+    }
+
+    .dock-msg {
+      max-width: 90%;
+      padding: 8px 12px;
+      border-radius: 10px;
+      font-size: 0.82rem;
+      line-height: 1.5;
+      word-wrap: break-word;
+    }
+
+    .dock-msg.dock-user {
+      align-self: flex-end;
+      background: var(--accent);
+      color: #fff;
+      border-bottom-right-radius: 3px;
+    }
+
+    .dock-msg.dock-ai {
+      align-self: flex-start;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      color: var(--text);
+      border-bottom-left-radius: 3px;
+    }
+
+    .dock-msg.dock-ai p { margin-bottom: 0.4em; }
+    .dock-msg.dock-ai p:last-child { margin-bottom: 0; }
+    .dock-msg.dock-ai code {
+      font-family: 'JetBrains Mono', monospace;
+      background: var(--surface-2);
+      padding: 1px 4px;
+      border-radius: 3px;
+      font-size: 0.78em;
+      color: var(--orange);
+    }
+    .dock-msg.dock-ai pre {
+      background: var(--surface-2);
+      border-radius: 6px;
+      padding: 8px 10px;
+      overflow-x: auto;
+      margin: 0.4em 0;
+    }
+    .dock-msg.dock-ai pre code {
+      background: none;
+      padding: 0;
+      color: var(--text);
+      font-size: 0.76rem;
+    }
+
+    .dock-msg.dock-system {
+      align-self: center;
+      background: none;
+      color: var(--text-dim);
+      font-size: 0.72rem;
+      font-style: italic;
+      padding: 4px 0;
+    }
+
+    .chat-dock-input {
+      padding: 10px 12px;
+      border-top: 1px solid var(--border);
+      display: flex;
+      gap: 8px;
+    }
+
+    .chat-dock-input textarea {
+      flex: 1;
+      background: var(--bg);
+      border: 1px solid var(--border);
+      border-radius: 8px;
+      padding: 8px 12px;
+      color: var(--text);
+      font-size: 0.82rem;
+      font-family: 'Inter', sans-serif;
+      outline: none;
+      resize: none;
+      min-height: 38px;
+      max-height: 100px;
+      line-height: 1.4;
+      transition: border-color 0.2s;
+    }
+
+    .chat-dock-input textarea::placeholder { color: var(--text-dim); }
+    .chat-dock-input textarea:focus { border-color: var(--accent); }
+
+    .chat-dock-input button {
+      background: var(--accent);
+      color: #fff;
+      border: none;
+      border-radius: 8px;
+      padding: 0 14px;
+      font-size: 0.82rem;
+      font-weight: 500;
+      cursor: pointer;
+      transition: opacity 0.15s;
+      align-self: flex-end;
+      height: 38px;
+    }
+
+    .chat-dock-input button:hover { opacity: 0.85; }
+    .chat-dock-input button:disabled { opacity: 0.4; cursor: not-allowed; }
+
+    /* ── Scrollbar ── */
+    ::-webkit-scrollbar { width: 6px; }
+    ::-webkit-scrollbar-track { background: transparent; }
+    ::-webkit-scrollbar-thumb { background: var(--border); border-radius: 3px; }
+    ::-webkit-scrollbar-thumb:hover { background: var(--text-dim); }
+
+    @media (max-width: 768px) {
+      .sidebar { width: 100%; min-width: unset; position: absolute; z-index: 10; height: 100vh; transform: translateX(-100%); transition: transform 0.2s; }
+      .sidebar.open { transform: translateX(0); }
+      .message { padding: 12px 16px; }
+    }
+  </style>
+</head>
+<body>
+  <div class="app">
+    <div class="sidebar" id="sidebar">
+      <div class="sidebar-header">
+        <h1><span class="pi-icon">π</span> pi dump</h1>
+        <div class="user-info" id="userInfo">loading…</div>
+      </div>
+      <div class="add-dump">
+        <form class="add-dump-form" id="addForm">
+          <input type="text" id="uuidInput" placeholder="paste uuid or url…" />
+          <button type="submit" class="btn">View</button>
+        </form>
+      </div>
+      <div class="dump-list" id="dumpList"></div>
+    </div>
+    <div class="main" id="main">
+      <div class="empty-state" id="emptyState">
+        <div class="icon">π</div>
+        <p>No dumps yet</p>
+        <p>Run <code>/session-dump</code> in pi, then paste the UUID here</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- Chat Widget -->
+  <button class="chat-fab" id="chatFab" title="Chat about this dump">π</button>
+  <div class="chat-dock" id="chatDock">
+    <div class="chat-dock-header">
+      <h3><span class="dock-icon">π</span> Ask about this dump</h3>
+      <button class="chat-dock-close" id="chatDockClose" title="Close">✕</button>
+    </div>
+    <div class="chat-dock-messages" id="dockMessages">
+      <div class="dock-msg dock-system">Ask anything about the current session dump.</div>
+    </div>
+    <div class="chat-dock-input">
+      <textarea id="dockInput" placeholder="Ask a question…" rows="1"></textarea>
+      <button id="dockSend">Send</button>
+    </div>
+  </div>
+
+  <script type="module">
+    import OpenAI from "https://cdn.jsdelivr.net/npm/openai/+esm";
+    import { codeToHtml } from "https://esm.sh/shiki@3.0.0";
+
+    // ── Shiki helpers ──
+    const extToLang = {
+      rb: "ruby", js: "javascript", ts: "typescript", jsx: "jsx", tsx: "tsx",
+      py: "python", rs: "rust", go: "go", java: "java", kt: "kotlin",
+      swift: "swift", css: "css", scss: "scss", html: "html", vue: "vue",
+      svelte: "svelte", json: "json", jsonl: "json", yaml: "yaml", yml: "yaml",
+      toml: "toml", md: "markdown", mdx: "mdx", sql: "sql", sh: "bash",
+      bash: "bash", zsh: "bash", fish: "bash", dockerfile: "dockerfile",
+      graphql: "graphql", gql: "graphql", xml: "xml", erb: "erb",
+      ex: "elixir", exs: "elixir", c: "c", cpp: "cpp", h: "c", hpp: "cpp",
+    };
+
+    function langFromPath(path) {
+      if (!path) return "text";
+      const ext = path.split(".").pop()?.toLowerCase();
+      return extToLang[ext] || "text";
+    }
+
+    async function highlightCode(code, lang) {
+      if (!code?.trim()) return "";
+      try {
+        return await codeToHtml(code, { lang, theme: "github-dark" });
+      } catch {
+        // fallback if lang not supported
+        try {
+          return await codeToHtml(code, { lang: "text", theme: "github-dark" });
+        } catch {
+          return `<pre>${escapeHtml(code)}</pre>`;
+        }
+      }
+    }
+
+    // Extract lines from shiki HTML output — shiki wraps in <pre><code>...lines with \n...</code></pre>
+    function shikiHtmlToLines(html) {
+      // Strip the outer <pre><code> wrapper
+      const inner = html
+        .replace(/^<pre[^>]*><code[^>]*>/, "")
+        .replace(/<\/code><\/pre>$/, "");
+      // Split on newlines — shiki uses \n between lines inside the <code>
+      return inner.split("\n");
+    }
+
+    const aiClient = new OpenAI({
+      baseURL: `${window.location.origin}/api/ai`,
+      apiKey: "not-needed",
+      dangerouslyAllowBrowser: true,
+    });
+
+    // ── State ──
+    const dumpsDb = quick.db.collection("dumps");
+    let currentUser = null;
+    let activeDump = null;
+    let currentEntries = null; // raw JSONL entries for the active dump
+    let dockChatHistory = [];  // chat messages for the dock
+    let pendingHighlights = []; // queued shiki highlight jobs
+
+    async function applyShikiHighlight(job) {
+      const el = document.getElementById(job.uid);
+      if (!el) return;
+
+      try {
+        const lang = langFromPath(job.path);
+
+        if (job.type === "edit") {
+          const [oldHtml, newHtml] = await Promise.all([
+            highlightCode(job.oldText, lang),
+            highlightCode(job.newText, lang),
+          ]);
+
+          const oldLines = shikiHtmlToLines(oldHtml);
+          const newLines = shikiHtmlToLines(newHtml);
+
+          let html = "";
+          oldLines.forEach(line => {
+            html += `<div class="diff-line diff-remove"><span class="diff-marker">-</span><span class="diff-code">${line}</span></div>`;
+          });
+          newLines.forEach(line => {
+            html += `<div class="diff-line diff-add"><span class="diff-marker">+</span><span class="diff-code">${line}</span></div>`;
+          });
+          el.innerHTML = html;
+
+        } else if (job.type === "write") {
+          const lines = job.content.split("\n");
+          const displayLines = job.isLarge ? lines.slice(0, 50).join("\n") : job.content;
+          const highlighted = await highlightCode(displayLines, lang);
+          const hLines = shikiHtmlToLines(highlighted);
+
+          let html = "";
+          hLines.forEach(line => {
+            html += `<div class="write-line"><span class="diff-marker">+</span><span class="diff-code">${line}</span></div>`;
+          });
+          if (job.isLarge) {
+            html += `<div class="diff-line diff-separator">… ${job.totalLines - 50} more lines</div>`;
+          }
+          el.innerHTML = html;
+        }
+      } catch (err) {
+        console.warn("Shiki highlight failed:", err);
+        // fallback already rendered, just leave it
+      }
+    }
+
+    // ── Parse NDJSON ──
+    function parseNDJSON(text) {
+      return text.trim().split("\n").filter(Boolean).map(line => {
+        try { return JSON.parse(line); } catch { return null; }
+      }).filter(Boolean);
+    }
+
+    // ── Extract UUID from input (handles raw UUID, full URL, or ?dump= URL) ──
+    function extractUUID(input) {
+      input = input.trim();
+      // ?dump=xxx
+      const dumpParam = input.match(/[?&]dump=([a-f0-9]+)/i);
+      if (dumpParam) return dumpParam[1];
+      // /files/xxx.jsonl
+      const filePath = input.match(/([a-f0-9]+)\.jsonl/i);
+      if (filePath) return filePath[1];
+      // raw hex string
+      if (/^[a-f0-9]+$/i.test(input)) return input;
+      return input;
+    }
+
+    // ── Fetch dump metadata from file ──
+    async function fetchDumpMeta(uuid) {
+      const resp = await fetch(`/files/${uuid}.jsonl`);
+      if (!resp.ok) throw new Error(`Dump not found (${resp.status})`);
+      const text = await resp.text();
+      const entries = parseNDJSON(text);
+      const sessionEntry = entries.find(e => e.type === "session");
+      const modelEntry = entries.find(e => e.type === "model_change");
+      const userMsgs = entries.filter(e => e.type === "message" && e.message?.role === "user");
+      // Build preview from first user message
+      const firstUserMsg = userMsgs[0];
+      let preview = "";
+      if (firstUserMsg) {
+        preview = extractText(firstUserMsg.message.content).substring(0, 120);
+      }
+      return {
+        preview,
+        messageCount: userMsgs.length,
+        project: sessionEntry?.cwd?.split("/").pop() || "",
+      };
+    }
+
+    // ── User Info ──
+    async function loadUser() {
+      currentUser = await quick.id.waitForUser();
+      const el = document.getElementById("userInfo");
+      el.innerHTML = `
+        ${currentUser.slackImageUrl ? `<img class="user-avatar" src="${currentUser.slackImageUrl}" alt="">` : ""}
+        <span>${currentUser.fullName || currentUser.email}</span>
+      `;
+    }
+
+    // ── Render dump list (current user's dumps) ──
+    async function loadDumpList() {
+      if (!currentUser) return;
+
+      const all = await dumpsDb
+        .where({ owner: currentUser.email })
+        .orderBy("created_at", "desc")
+        .find();
+
+      const list = document.getElementById("dumpList");
+      list.innerHTML = "";
+
+      if (all.length === 0) {
+        list.innerHTML = `
+          <div class="dump-list-label">Your dumps</div>
+          <div style="padding:20px;color:var(--text-dim);font-size:0.8rem;text-align:center;">
+            No dumps yet.<br>Use <code>/session-dump</code> in pi,<br>then paste the UUID above.
+          </div>`;
+        return;
+      }
+
+      list.innerHTML = `<div class="dump-list-label">Your dumps (${all.length})</div>`;
+
+      all.forEach(d => {
+        const el = document.createElement("div");
+        const isSaved = !!d.saved_from;
+        el.className = `dump-item${activeDump === d.uuid ? " active" : ""}${isSaved ? " saved-from" : ""}`;
+        const date = d.created_at
+          ? new Date(d.created_at).toLocaleDateString("en-US", { month: "short", day: "numeric", hour: "2-digit", minute: "2-digit" })
+          : "";
+
+        el.innerHTML = `
+          <div class="dump-uuid">
+            <span>${d.uuid}</span>
+            <div class="dump-actions">
+              <button class="dump-action-btn" onclick="event.stopPropagation(); copyShareUrl('${d.uuid}')" title="Copy share link">🔗</button>
+              <button class="dump-action-btn delete" onclick="event.stopPropagation(); deleteDump('${d.id}', '${d.uuid}')" title="Delete">✕</button>
+            </div>
+          </div>
+          ${isSaved ? `<div class="saved-from-label">from ${escapeHtml(d.saved_from.replace(/@shopify\.com$/, ""))}</div>` : ""}
+          ${d.preview ? `<div style="font-size:0.72rem;color:var(--text-muted);margin-top:3px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${escapeHtml(d.preview)}</div>` : ""}
+          <div class="dump-meta">
+            ${date ? `<span>${date}</span>` : ""}
+            <span class="tag">${d.messageCount || "?"} msgs</span>
+          </div>
+          ${(() => {
+            const label = d.worldArea || (d.gitRepo ? d.gitRepo.replace(/^https?:\/\/github\.com\/.*\//, "") : "");
+            return label ? `<div class="dump-meta" style="margin-top:2px"><span class="tag">${escapeHtml(label)}</span></div>` : "";
+          })()}
+        `;
+        el.addEventListener("click", () => viewDump(d.uuid, true));
+        list.appendChild(el);
+      });
+    }
+
+    // ── Save dump to current user's list ──
+    async function saveDump(uuid) {
+      if (!currentUser) return;
+
+      // Check if already saved by this user
+      const existing = await dumpsDb.where({ uuid, owner: currentUser.email }).find();
+      if (existing.length > 0) {
+        toast("Already in your dumps");
+        return;
+      }
+
+      try {
+        const meta = await fetchDumpMeta(uuid);
+
+        // Check if this dump was originally created by someone else
+        const originalRecords = await dumpsDb.where({ uuid }).find();
+        const originalOwner = originalRecords.find(r => r.owner !== currentUser.email);
+
+        await dumpsDb.create({
+          uuid,
+          owner: currentUser.email,
+          saved_from: originalOwner?.owner || null,
+          ...meta,
+        });
+        toast("Saved to your dumps");
+        await loadDumpList();
+      } catch (err) {
+        toast(`Error: ${err.message}`);
+      }
+    }
+
+    // ── Delete dump ──
+    async function deleteDump(id, uuid) {
+      if (!confirm("Remove this dump from your list?")) return;
+      await dumpsDb.delete(id);
+      if (activeDump === uuid) {
+        activeDump = null;
+        showEmptyState();
+        updateURL(null);
+      }
+      await loadDumpList();
+      toast("Dump removed");
+    }
+
+    // ── View dump (loads and renders, optionally updates sidebar) ──
+    async function viewDump(uuid, isOwned = false) {
+      activeDump = uuid;
+      updateURL(uuid);
+
+      // Update sidebar highlight
+      document.querySelectorAll(".dump-item").forEach(el => {
+        const uuidEl = el.querySelector(".dump-uuid span");
+        el.classList.toggle("active", uuidEl?.textContent === uuid);
+      });
+
+      const main = document.getElementById("main");
+      main.innerHTML = `<div class="loading"><div class="spinner"></div> Loading session…</div>`;
+
+      try {
+        const resp = await fetch(`/files/${uuid}.jsonl`);
+        if (!resp.ok) throw new Error(`Dump not found (${resp.status})`);
+        const text = await resp.text();
+        const entries = parseNDJSON(text);
+        currentEntries = entries;
+        dockChatHistory = []; // reset chat when dump changes
+        pendingHighlights = []; // reset highlight jobs
+        resetDockMessages();
+        // Fetch the DB record for metadata (tokens, git, etc.)
+        const dbRecords = await dumpsDb.where({ uuid }).limit(1).find();
+        const dumpMeta = dbRecords[0] || null;
+        renderSession(entries, uuid, isOwned, dumpMeta);
+      } catch (err) {
+        main.innerHTML = `<div class="empty-state"><div class="icon">⚠️</div><p>Failed to load dump</p><code>${err.message}</code></div>`;
+      }
+    }
+
+    // ── URL management ──
+    function updateURL(uuid) {
+      const url = new URL(window.location);
+      if (uuid) {
+        url.searchParams.set("dump", uuid);
+      } else {
+        url.searchParams.delete("dump");
+      }
+      url.hash = window.location.hash;
+      window.history.replaceState({}, "", url);
+    }
+
+    function getURLDump() {
+      const params = new URLSearchParams(window.location.search);
+      return params.get("dump");
+    }
+
+    // ── Copy share URL ──
+    function copyShareUrl(uuid) {
+      const url = `${window.location.origin}?dump=${uuid}`;
+      navigator.clipboard.writeText(url).then(() => toast("Share link copied!"));
+    }
+
+    // ── Toast notification ──
+    function toast(msg) {
+      const existing = document.querySelector(".toast");
+      if (existing) existing.remove();
+      const el = document.createElement("div");
+      el.className = "toast";
+      el.textContent = msg;
+      document.body.appendChild(el);
+      setTimeout(() => el.remove(), 2500);
+    }
+
+    // ── Anchor highlighting ──
+    function highlightAnchor() {
+      // Clear any existing
+      document.querySelectorAll(".message.anchored").forEach(el => el.classList.remove("anchored"));
+
+      const hash = window.location.hash;
+      if (hash) {
+        const target = document.querySelector(hash);
+        if (target) {
+          target.classList.add("anchored");
+          setTimeout(() => target.scrollIntoView({ behavior: "smooth", block: "start" }), 100);
+        }
+      }
+    }
+
+    // Listen for hash changes (clicking # links)
+    window.addEventListener("hashchange", highlightAnchor);
+
+    // ── Empty state ──
+    function showEmptyState() {
+      document.getElementById("main").innerHTML = `
+        <div class="empty-state">
+          <div class="icon">π</div>
+          <p>No dumps yet</p>
+          <p>Run <code>/session-dump</code> in pi, then paste the UUID above</p>
+        </div>`;
+    }
+
+    // ── Render session ──
+    function formatTokens(n) {
+      if (n == null) return null;
+      if (n >= 1000000) return (n / 1000000).toFixed(1) + "M";
+      if (n >= 1000) return (n / 1000).toFixed(0) + "k";
+      return String(n);
+    }
+
+    function formatCost(n) {
+      if (n == null) return null;
+      return "$" + Number(n).toFixed(2);
+    }
+
+    function shortModel(m) {
+      if (!m) return m;
+      // "anthropic/claude-sonnet-4-20250514" → "sonnet-4"
+      return m.replace(/^.*\//, "").replace(/^claude-/, "").replace(/-\d{8}$/, "");
+    }
+
+    function renderSession(entries, uuid, isOwned, dumpMeta) {
+      const main = document.getElementById("main");
+      const sessionEntry = entries.find(e => e.type === "session");
+      const modelEntry = entries.find(e => e.type === "model_change");
+
+      // Build tool result map
+      const toolResults = {};
+      entries.forEach(e => {
+        if (e.type === "message" && e.message?.role === "toolResult") {
+          const content = e.message.content;
+          let text = "";
+          if (Array.isArray(content)) {
+            text = content.map(c => c.text || "").join("\n");
+          } else if (typeof content === "string") {
+            text = content;
+          }
+          toolResults[e.message.toolCallId] = { text, toolName: e.message.toolName, isError: e.message.isError };
+        }
+      });
+
+      let html = "";
+
+      // If viewing someone else's dump (not in sidebar), show a banner
+      if (!isOwned) {
+        html += `
+          <div class="viewing-banner">
+            <span>Viewing shared dump <strong>${uuid}</strong></span>
+            <span>
+              <button class="btn" style="font-size:0.72rem;padding:4px 10px;" onclick="saveDump('${uuid}')">Save to my dumps</button>
+            </span>
+          </div>`;
+      }
+
+      html += `
+        <div class="main-header">
+          <h2>π ${uuid}</h2>
+          <div class="main-header-right">
+            <div class="session-info">
+              ${sessionEntry?.cwd || ""}${modelEntry ? ` · ${modelEntry.modelId}` : ""}${sessionEntry?.timestamp ? ` · ${new Date(sessionEntry.timestamp).toLocaleString()}` : ""}
+            </div>
+            <button class="share-btn" onclick="copyShareUrl('${uuid}')">🔗 Share</button>
+          </div>
+        </div>
+      `;
+
+      // Token breakdown / git info bar
+      if (dumpMeta) {
+        const hasTokens = dumpMeta.totalTokens || dumpMeta.inputTokens || dumpMeta.outputTokens;
+        const hasCost = dumpMeta.totalCost != null;
+        const hasGit = dumpMeta.gitBranchUrl || dumpMeta.gitRepo;
+        const hasWorld = !!dumpMeta.worldArea;
+        const hasModels = dumpMeta.models?.length > 0;
+
+        if (hasTokens || hasCost || hasGit || hasWorld || hasModels) {
+          html += `<div class="token-bar">`;
+
+          if (hasWorld) {
+            html += `<span class="token-stat"><span class="token-value" style="color:var(--pink)">⬡</span> <span class="token-label">${escapeHtml(dumpMeta.worldArea)}</span></span>`;
+          }
+
+          if (hasGit) {
+            const gitLabel = dumpMeta.gitBranch
+              ? `${(dumpMeta.gitRepo || "").replace(/^https?:\/\/github\.com\//, "")} @ ${dumpMeta.gitBranch}`
+              : (dumpMeta.gitRepo || "").replace(/^https?:\/\/github\.com\//, "");
+            const gitUrl = dumpMeta.gitBranchUrl || dumpMeta.gitRepo;
+            html += `<a class="git-link" href="${escapeHtml(gitUrl)}" target="_blank" rel="noopener">⎇ ${escapeHtml(gitLabel)}</a>`;
+          }
+
+          if (hasModels) {
+            html += `<div class="models-list">${dumpMeta.models.map(m => `<span class="model-tag">${escapeHtml(shortModel(m))}</span>`).join("")}</div>`;
+          }
+
+          if (hasCost) {
+            html += `<div class="token-stat cost"><span class="token-value">${formatCost(dumpMeta.totalCost)}</span></div>`;
+          }
+
+          if (dumpMeta.totalTokens) {
+            html += `<div class="token-stat"><span class="token-value">${formatTokens(dumpMeta.totalTokens)}</span> <span class="token-label">total</span></div>`;
+          }
+          if (dumpMeta.inputTokens) {
+            html += `<div class="token-stat"><span class="token-value">${formatTokens(dumpMeta.inputTokens)}</span> <span class="token-label">in</span></div>`;
+          }
+          if (dumpMeta.outputTokens) {
+            html += `<div class="token-stat"><span class="token-value">${formatTokens(dumpMeta.outputTokens)}</span> <span class="token-label">out</span></div>`;
+          }
+          if (dumpMeta.cacheReadTokens) {
+            html += `<div class="token-stat"><span class="token-value">${formatTokens(dumpMeta.cacheReadTokens)}</span> <span class="token-label">cache↓</span></div>`;
+          }
+          if (dumpMeta.cacheWriteTokens) {
+            html += `<div class="token-stat"><span class="token-value">${formatTokens(dumpMeta.cacheWriteTokens)}</span> <span class="token-label">cache↑</span></div>`;
+          }
+
+          html += `</div>`;
+        }
+      }
+
+      html += `<div class="chat">`;
+
+
+      entries.forEach(entry => {
+        if (entry.type === "model_change" || entry.type === "thinking_level_change") {
+          // skip — too noisy
+        } else if (entry.type === "custom_message") {
+          html += `<div class="custom-message"><div class="message-content">${renderMarkdown(entry.content || "")}</div></div>`;
+        } else if (entry.type === "message" && entry.message?.role === "user") {
+          const text = extractText(entry.message.content);
+          const msgId = entry.id ? `msg-${entry.id}` : "";
+          html += `
+            <div class="message user" ${msgId ? `id="${msgId}"` : ""}>
+              <div class="message-role">
+                <span class="dot"></span> You
+                ${msgId ? `<a class="msg-anchor" href="#${msgId}" title="Link to this message">#</a>` : ""}
+              </div>
+              <div class="message-content">${renderMarkdown(text)}</div>
+            </div>`;
+        } else if (entry.type === "message" && entry.message?.role === "assistant") {
+          html += renderAssistantMessage(entry.message.content, toolResults, entry.id);
+        }
+      });
+
+      html += `</div>`;
+      main.innerHTML = html;
+
+      // Wire up collapsibles with lazy shiki highlighting
+      main.querySelectorAll(".tool-call-header").forEach(h => {
+        h.addEventListener("click", () => {
+          const toolCall = h.closest(".tool-call");
+          const wasCollapsed = !toolCall.classList.contains("expanded");
+          toolCall.classList.toggle("expanded");
+
+          // Trigger shiki highlight on first expand
+          if (wasCollapsed) {
+            const diffView = toolCall.querySelector(".diff-view, .write-view");
+            if (diffView && !diffView.dataset.highlighted) {
+              diffView.dataset.highlighted = "1";
+              const job = pendingHighlights.find(j => j.uid === diffView.id);
+              if (job) applyShikiHighlight(job);
+            }
+          }
+        });
+      });
+      main.querySelectorAll(".thinking-block").forEach(b => {
+        b.addEventListener("click", () => b.classList.toggle("expanded"));
+      });
+
+      // Scroll to and highlight hash anchor
+      highlightAnchor();
+    }
+
+    // ── Render assistant message ──
+    function renderAssistantMessage(content, toolResults, entryId) {
+      const msgId = entryId ? `msg-${entryId}` : "";
+      const anchorHtml = msgId ? `<a class="msg-anchor" href="#${msgId}" title="Link to this message">#</a>` : "";
+
+      if (!Array.isArray(content)) {
+        if (!String(content).trim()) return "";
+        return `<div class="message assistant" ${msgId ? `id="${msgId}"` : ""}>
+          <div class="message-role"><span class="dot"></span> Assistant ${anchorHtml}</div>
+          <div class="message-content">${renderMarkdown(String(content))}</div>
+        </div>`;
+      }
+
+      // Skip empty assistant turns (only empty text or no content)
+      const hasContent = content.some(b =>
+        (b.type === "text" && b.text?.trim()) ||
+        b.type === "toolCall" || b.type === "tool_use" ||
+        (b.type === "thinking" && b.thinking)
+      );
+      if (!hasContent) return "";
+
+      let html = `<div class="message assistant" ${msgId ? `id="${msgId}"` : ""}><div class="message-role"><span class="dot"></span> Assistant ${anchorHtml}</div><div class="message-content">`;
+
+      content.forEach(block => {
+        if (block.type === "text" && block.text?.trim()) {
+          html += renderMarkdown(block.text);
+        } else if (block.type === "thinking" && block.thinking) {
+          html += `
+            <div class="thinking-block">
+              <div class="thinking-label"><span class="tool-call-chevron">▶</span> thinking</div>
+              <div class="thinking-content">${escapeHtml(block.thinking)}</div>
+            </div>`;
+        } else if (block.type === "toolCall" || block.type === "tool_use") {
+          const name = block.name || block.toolName || "tool";
+          const id = block.id;
+          let args = block.arguments || block.input || {};
+          if (typeof args === "string") { try { args = JSON.parse(args); } catch {} }
+          const summary = getToolSummary(name, args);
+          const result = toolResults[id];
+
+          html += renderToolCall(name, id, args, summary, result);
+        }
+      });
+
+      html += `</div></div>`;
+      return html;
+    }
+
+    // ── Tool Call Renderers ──
+    function renderToolCall(name, id, args, summary, result) {
+      if (name === "edit") return renderEditTool(args, result);
+      if (name === "write") return renderWriteTool(args, result);
+      return renderGenericTool(name, id, args, summary, result);
+    }
+
+    function renderEditTool(args, result) {
+      const path = args.path || "unknown";
+      const oldText = args.oldText || "";
+      const newText = args.newText || "";
+      const uid = "edit-" + Math.random().toString(36).slice(2, 10);
+
+      // Plain fallback while shiki loads
+      const oldLines = oldText.split("\n");
+      const newLines = newText.split("\n");
+      let fallbackHtml = "";
+      oldLines.forEach(line => {
+        fallbackHtml += `<div class="diff-line diff-remove"><span class="diff-marker">-</span><span class="diff-code">${escapeHtml(line)}</span></div>`;
+      });
+      newLines.forEach(line => {
+        fallbackHtml += `<div class="diff-line diff-add"><span class="diff-marker">+</span><span class="diff-code">${escapeHtml(line)}</span></div>`;
+      });
+
+      const isError = result?.isError;
+      const statusIcon = isError ? "❌" : (result ? "✓" : "⚡");
+      const statusColor = isError ? "var(--red)" : (result ? "var(--green)" : "var(--yellow)");
+
+      // Queue shiki highlight for when expanded
+      pendingHighlights.push({ uid, type: "edit", path, oldText, newText });
+
+      return `
+        <div class="tool-call">
+          <div class="tool-call-header">
+            <span class="tool-call-icon" style="color:${statusColor}">${statusIcon}</span>
+            <span class="tool-call-name" style="color:${statusColor}">edit</span>
+            <span class="tool-call-summary">${escapeHtml(path)}</span>
+            <span class="tool-call-chevron">▶</span>
+          </div>
+          <div class="tool-call-body">
+            <div class="diff-file-header"><span class="diff-file-icon">📝</span> ${escapeHtml(path)}</div>
+            <div class="diff-view" id="${uid}">${fallbackHtml}</div>
+          </div>
+        </div>`;
+    }
+
+    function renderWriteTool(args, result) {
+      const path = args.path || "unknown";
+      const content = args.content || "";
+      const lines = content.split("\n");
+      const isLarge = lines.length > 50;
+      const displayLines = isLarge ? lines.slice(0, 50) : lines;
+      const uid = "write-" + Math.random().toString(36).slice(2, 10);
+
+      let fallbackHtml = "";
+      displayLines.forEach(line => {
+        fallbackHtml += `<div class="write-line"><span class="diff-marker">+</span><span class="diff-code">${escapeHtml(line)}</span></div>`;
+      });
+      if (isLarge) {
+        fallbackHtml += `<div class="diff-line diff-separator">… ${lines.length - 50} more lines</div>`;
+      }
+
+      const isError = result?.isError;
+      const statusIcon = isError ? "❌" : (result ? "✓" : "⚡");
+      const statusColor = isError ? "var(--red)" : (result ? "var(--green)" : "var(--yellow)");
+
+      pendingHighlights.push({ uid, type: "write", path, content, isLarge, totalLines: lines.length });
+
+      return `
+        <div class="tool-call">
+          <div class="tool-call-header">
+            <span class="tool-call-icon" style="color:${statusColor}">${statusIcon}</span>
+            <span class="tool-call-name" style="color:${statusColor}">write</span>
+            <span class="tool-call-summary">${escapeHtml(path)}</span>
+            <span class="tool-call-chevron">▶</span>
+          </div>
+          <div class="tool-call-body">
+            <div class="diff-file-header"><span class="diff-file-icon">📄</span> ${escapeHtml(path)} <span style="color:var(--green);margin-left:8px">(new file)</span></div>
+            <div class="write-view" id="${uid}">${fallbackHtml}</div>
+          </div>
+        </div>`;
+    }
+
+    function renderGenericTool(name, id, args, summary, result) {
+      return `
+        <div class="tool-call">
+          <div class="tool-call-header">
+            <span class="tool-call-icon">⚡</span>
+            <span class="tool-call-name">${escapeHtml(name)}</span>
+            <span class="tool-call-summary">${escapeHtml(summary)}</span>
+            <span class="tool-call-chevron">▶</span>
+          </div>
+          <div class="tool-call-body">
+            <div class="tool-call-section">
+              <div class="tool-call-section-label">Arguments</div>
+              <pre>${escapeHtml(typeof args === "string" ? args : JSON.stringify(args, null, 2))}</pre>
+            </div>
+            ${result ? `
+            <div class="tool-call-section result">
+              <div class="tool-call-section-label">${result.isError ? "Error" : "Result"}</div>
+              <pre>${escapeHtml(truncate(result.text, 5000))}</pre>
+            </div>` : ""}
+          </div>
+        </div>`;
+    }
+
+    // ── Helpers ──
+    function extractText(content) {
+      if (typeof content === "string") return content;
+      if (Array.isArray(content)) return content.filter(c => c.type === "text").map(c => c.text).join("\n");
+      return "";
+    }
+
+    function renderMarkdown(text) {
+      try { return marked.parse(text, { breaks: true }); }
+      catch { return `<p>${escapeHtml(text)}</p>`; }
+    }
+
+    function escapeHtml(str) {
+      if (!str) return "";
+      return str.replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;").replace(/"/g, "&quot;");
+    }
+
+    function truncate(str, max) {
+      if (!str || str.length <= max) return str;
+      return str.substring(0, max) + `\n\n… (truncated ${str.length - max} chars)`;
+    }
+
+    function getToolSummary(name, args) {
+      if (name === "bash" && args.command) return args.command.substring(0, 80);
+      if (name === "read" && args.path) return args.path;
+      if (name === "write" && args.path) return args.path;
+      if (name === "edit" && args.path) return args.path;
+      if (name === "perplexity_search" && args.query) return args.query.substring(0, 60);
+      if (name === "perplexity_fetch" && args.url) return args.url.substring(0, 60);
+      if (name === "grokt_search" && args.query) return args.query.substring(0, 60);
+      if (name === "vault_search" && args.query) return args.query.substring(0, 60);
+      if (name === "slack_search" && args.query) return args.query.substring(0, 60);
+      if (name === "subagent") return args.agent || args.task?.substring(0, 40) || "";
+      for (const v of Object.values(args)) {
+        if (typeof v === "string" && v.length > 0) return v.substring(0, 60);
+      }
+      return "";
+    }
+
+    // ── Form handler ──
+    document.getElementById("addForm").addEventListener("submit", async (e) => {
+      e.preventDefault();
+      const input = document.getElementById("uuidInput");
+      const uuid = extractUUID(input.value);
+      if (!uuid) return;
+      input.value = "";
+      // Check if it's the current user's dump
+      const owned = await dumpsDb.where({ uuid, owner: currentUser.email }).find();
+      viewDump(uuid, owned.length > 0);
+    });
+
+    // ── Chat Dock ──
+    const chatFab = document.getElementById("chatFab");
+    const chatDock = document.getElementById("chatDock");
+    const chatDockClose = document.getElementById("chatDockClose");
+    const dockMessages = document.getElementById("dockMessages");
+    const dockInput = document.getElementById("dockInput");
+    const dockSend = document.getElementById("dockSend");
+
+    chatFab.addEventListener("click", () => {
+      chatFab.classList.add("hidden");
+      chatDock.classList.add("open");
+      dockInput.focus();
+    });
+
+    chatDockClose.addEventListener("click", () => {
+      chatDock.classList.remove("open");
+      chatFab.classList.remove("hidden");
+    });
+
+    // Auto-resize textarea
+    dockInput.addEventListener("input", () => {
+      dockInput.style.height = "auto";
+      dockInput.style.height = Math.min(dockInput.scrollHeight, 100) + "px";
+    });
+
+    // Send on Enter (shift+enter for newline)
+    dockInput.addEventListener("keydown", (e) => {
+      if (e.key === "Enter" && !e.shiftKey) {
+        e.preventDefault();
+        sendDockMessage();
+      }
+    });
+
+    dockSend.addEventListener("click", sendDockMessage);
+
+    function resetDockMessages() {
+      dockMessages.innerHTML = `<div class="dock-msg dock-system">Ask anything about the current session dump.</div>`;
+    }
+
+    function buildDumpContext() {
+      if (!currentEntries) return "No dump is currently loaded.";
+
+      const parts = [];
+      const sessionEntry = currentEntries.find(e => e.type === "session");
+      const modelEntry = currentEntries.find(e => e.type === "model_change");
+
+      if (sessionEntry) parts.push(`Session: ${sessionEntry.cwd || ""} (${sessionEntry.timestamp || ""})`);
+      if (modelEntry) parts.push(`Model: ${modelEntry.modelId}`);
+
+      // Build tool result map for inline results
+      const toolResults = {};
+      currentEntries.forEach(e => {
+        if (e.type === "message" && e.message?.role === "toolResult") {
+          const content = e.message.content;
+          let text = "";
+          if (Array.isArray(content)) text = content.map(c => c.text || "").join("\n");
+          else if (typeof content === "string") text = content;
+          toolResults[e.message.toolCallId] = text;
+        }
+      });
+
+      currentEntries.forEach(entry => {
+        if (entry.type === "message" && entry.message?.role === "user") {
+          parts.push(`\n[USER]\n${extractText(entry.message.content)}`);
+        } else if (entry.type === "message" && entry.message?.role === "assistant") {
+          const content = entry.message.content;
+          if (Array.isArray(content)) {
+            content.forEach(block => {
+              if (block.type === "text" && block.text?.trim()) {
+                parts.push(`\n[ASSISTANT]\n${block.text}`);
+              } else if (block.type === "toolCall" || block.type === "tool_use") {
+                const name = block.name || block.toolName || "tool";
+                let args = block.arguments || block.input || {};
+                if (typeof args === "string") { try { args = JSON.parse(args); } catch {} }
+                const summary = getToolSummary(name, args);
+                const result = toolResults[block.id];
+                parts.push(`\n[TOOL: ${name}] ${summary}${result ? `\n→ ${truncate(result, 1000)}` : ""}`);
+              }
+            });
+          } else if (typeof content === "string" && content.trim()) {
+            parts.push(`\n[ASSISTANT]\n${content}`);
+          }
+        } else if (entry.type === "custom_message") {
+          parts.push(`\n[SYSTEM EVENT]\n${entry.content || ""}`);
+        }
+      });
+
+      return parts.join("\n");
+    }
+
+    async function sendDockMessage() {
+      const text = dockInput.value.trim();
+      if (!text) return;
+      if (!currentEntries) {
+        appendDockMsg("Load a dump first to chat about it.", "dock-system");
+        return;
+      }
+
+      dockInput.value = "";
+      dockInput.style.height = "auto";
+      dockSend.disabled = true;
+
+      // Add user message
+      appendDockMsg(text, "dock-user");
+      dockChatHistory.push({ role: "user", content: text });
+
+      // Build messages for API
+      const systemPrompt = `You are a helpful assistant analyzing a pi coding agent session dump. Answer questions about what happened in the session, the code changes, tool calls, decisions made, etc. Be concise and specific.
+
+Here is the full session dump:
+
+${buildDumpContext()}`;
+
+      const messages = [
+        { role: "system", content: systemPrompt },
+        ...dockChatHistory,
+      ];
+
+      // Create AI message bubble
+      const aiEl = document.createElement("div");
+      aiEl.className = "dock-msg dock-ai";
+      aiEl.innerHTML = '<span style="color:var(--text-dim)">…</span>';
+      dockMessages.appendChild(aiEl);
+      dockMessages.scrollTop = dockMessages.scrollHeight;
+
+      try {
+        const stream = await aiClient.chat.completions.create({
+          model: "claude-sonnet-4-20250514",
+          messages,
+          stream: true,
+        });
+
+        let full = "";
+        for await (const chunk of stream) {
+          const content = chunk.choices[0]?.delta?.content;
+          if (content) {
+            full += content;
+            aiEl.innerHTML = renderMarkdown(full);
+            dockMessages.scrollTop = dockMessages.scrollHeight;
+          }
+        }
+
+        dockChatHistory.push({ role: "assistant", content: full });
+      } catch (err) {
+        aiEl.innerHTML = `<span style="color:var(--red)">Error: ${escapeHtml(err.message)}</span>`;
+      }
+
+      dockSend.disabled = false;
+      dockInput.focus();
+    }
+
+    function appendDockMsg(text, cls) {
+      const el = document.createElement("div");
+      el.className = `dock-msg ${cls}`;
+      el.textContent = text;
+      dockMessages.appendChild(el);
+      dockMessages.scrollTop = dockMessages.scrollHeight;
+    }
+
+    // ── Expose to inline handlers (module scope) ──
+    window.copyShareUrl = copyShareUrl;
+    window.deleteDump = deleteDump;
+    window.saveDump = saveDump;
+
+    // ── Init ──
+    async function init() {
+      await loadUser();
+      await loadDumpList();
+
+      // Check ?dump= query param
+      const urlDump = getURLDump();
+      if (urlDump) {
+        // Check if this dump is owned by the user
+        const owned = await dumpsDb.where({ uuid: urlDump, owner: currentUser.email }).find();
+        viewDump(urlDump, owned.length > 0);
+      } else {
+        // Auto-load the most recent dump if user has any
+        const myDumps = await dumpsDb
+          .where({ owner: currentUser.email })
+          .orderBy("created_at", "desc")
+          .limit(1)
+          .find();
+        if (myDumps.length > 0) {
+          viewDump(myDumps[0].uuid, true);
+        }
+      }
+    }
+
+    init();
+  </script>
+</body>
+</html>

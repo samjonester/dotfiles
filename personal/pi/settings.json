@@ -27,12 +27,13 @@
     "gpt-5.3-codex"
   ],
   "enableSkillCommands": true,
-  "lastChangelogVersion": "0.66.1",
+  "lastChangelogVersion": "0.67.5",
   "packages": [
     "npm:pi-web-access",
     "npm:pi-messenger",
     "npm:pi-tool-display",
-    "git:github.com/shopify-playground/pi-tool-gateway-extension"
+    "git:github.com/shopify-playground/pi-tool-gateway-extension",
+    "https://github.com/jhochenbaum/pi-autoresearch-studio"
   ],
   "npmCommand": [
     "pnpm"

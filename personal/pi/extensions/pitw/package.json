@@ -1,0 +1,18 @@
+{
+  "name": "pitw",
+  "version": "0.1.0",
+  "description": "Quick ephemeral side questions for pi — inspired by Claude Code's /btw",
+  "keywords": ["pi-package"],
+  "type": "module",
+  "scripts": {
+    "test": "node test.mjs"
+  },
+  "peerDependencies": {
+    "@mariozechner/pi-coding-agent": "*",
+    "@mariozechner/pi-ai": "*",
+    "@mariozechner/pi-tui": "*"
+  },
+  "pi": {
+    "extensions": ["./index.ts"]
+  }
+}
