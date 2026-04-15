@@ -204,6 +204,14 @@ When asked to review **multiple PRs** ("review these PRs", "batch review #1 #2 #
 - Never use `team_spawn` for diff gathering — use `bg_run` (no tmux pane, no context overhead)
 - Never use cron polling for review progress — `subagent` calls are blocking and return results directly
 
+### Submitting review comments
+
+When submitting a PR review with both a top-level comment and line-level (inline) comments, **do not duplicate content between the two**. The top-level comment and inline comments are visible together — reviewers see both.
+
+- **Top-level comment**: narrative context that doesn't belong on any single line — executive summary, validation results, docs/description update requests, roadmap suggestions, overall impressions. Reference inline findings by number or short title ("see inline comment on `translate.ts:384`") but do NOT repeat the problem description, code snippets, or fix suggestions.
+- **Inline comments**: the full detailed finding — problem, impact, suggested fix with code. These are self-contained; a reader should understand the issue without reading the top-level comment.
+- **Numbered summary list** in the top-level comment is fine for orientation ("I left 6 inline comments: 1. Index-based matching... 2. Token gate...") — keep each to ONE line with just the title and severity. No elaboration.
+
 ## PR Links
 
 - When linking to PRs in the `shop/world` repo, **always use Graphite links** (`https://app.graphite.com/github/pr/shop/world/<number>`) instead of GitHub links (`https://github.com/shop/world/pull/<number>`). Graphite is the primary review interface.
