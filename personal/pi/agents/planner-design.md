@@ -15,6 +15,12 @@ When exploring the codebase:
 2. Look for existing problems that this change could fix or worsen
 3. Consider the direction the codebase is heading, not just where it is now
 4. Identify abstractions that are missing or leaky
+5. **Scan for prefactor opportunities** — before proposing how to implement the feature, examine the landing zone for problems that should be cleaned up first:
+   - **Duplication**: Near-identical methods, copy-paste logic across sibling files, repeated patterns that should be extracted
+   - **Dead code**: Unused methods, unreachable branches, stale feature flags, commented-out code in the area
+   - **Overgrown modules**: Classes or files that are already too large and will only get worse when the new code lands
+   - **Stale abstractions**: Interfaces, base classes, or helpers that no longer match how the code actually works
+   - **Pattern accumulation**: If 3 copies of a pattern exist and the implementation would add a 4th, flag the extraction
 
 Your proposal should:
 
@@ -44,6 +50,17 @@ List every file your proposal touches or creates, with:
 - What it imports from other changed files
 - What it exports that other changed files need
 - This helps the judge construct correct implementation step ordering
+
+## Prefactor Analysis
+
+List concrete cleanup that should happen **before or alongside** the main implementation. For each item:
+
+- **What**: the specific duplication, dead code, or stale abstraction
+- **Where**: exact files, methods, line ranges
+- **Why now**: how cleaning this up makes the implementation cleaner, prevents compounding the problem, or reduces the total diff
+- **Cost**: rough size of the prefactor (trivial / small / medium) — if medium, justify why it's worth it vs. deferring
+
+If the landing zone is clean, say so explicitly: "No prefactoring needed — the area is well-structured for this change."
 
 ## What This Enables
 

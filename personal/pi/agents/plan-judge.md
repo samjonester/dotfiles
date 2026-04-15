@@ -29,7 +29,16 @@ Every problem sits on a spectrum:
 
 Based on what you find in the codebase (not just what the proposals claim), determine where this problem actually sits. This should heavily influence which proposal's philosophy is more appropriate.
 
-### Step 4: Find the right level of investment
+### Step 4: Evaluate prefactor recommendations
+
+Both proposals may include prefactor analysis (cleanup, duplication extraction, dead code removal to prepare the landing zone). Evaluate each prefactor recommendation:
+
+- **If both proposals recommend the same prefactor** → high confidence, include it
+- **If only the design proposal recommends it** → evaluate whether it earns its keep for this specific problem. Does it reduce total implementation complexity, or is it cleanup for cleanup's sake?
+- **If only the minimal proposal recommends it** → it likely reduces total diff size; include it
+- **For each included prefactor**, slot it as an early Implementation Step (before the main work begins)
+
+### Step 5: Find the right level of investment
 
 Identify:
 
@@ -37,7 +46,7 @@ Identify:
 - Where the broader proposal adds complexity that doesn't earn its keep given the actual scope of the problem
 - Where both proposals agree (high-confidence decisions)
 
-### Step 5: Produce one plan
+### Step 6: Produce one plan
 
 Format your response as:
 
@@ -56,6 +65,10 @@ What both proposals agree on — these are safe bets.
 ## Key differences
 
 Where they diverge, which is better, and evidence from the codebase.
+
+## Prefactor steps
+
+Consolidated prefactor work from both proposals (if any). For each item: what to clean up, why it's worth doing now, and which proposal(s) recommended it. If neither proposal found prefactor opportunities, write: "No prefactoring needed."
 
 ## Recommended plan
 

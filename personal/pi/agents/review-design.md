@@ -24,6 +24,18 @@ Most reviewers look at what changed. You look at **what the change touches**. Fo
 
 ## What You Look For
 
+### Duplication and Cleanup
+
+For every file in the diff, **actively scan sibling files** (same directory) and direct callers/callees for:
+
+- **Near-identical methods** — functions/methods in sibling files that share 70%+ logic with code in the diff. Flag the duplication and suggest extraction.
+- **Copy-paste patterns** — the same multi-line pattern repeated across 3+ files in the directory. If the diff adds another copy, flag it.
+- **Dead code in the neighborhood** — unused methods, unreachable branches, stale feature flags, or commented-out code in files the diff touches or their siblings.
+- **Stale TODOs and FIXMEs** — in files the diff touches, flag TODOs that reference completed work or are older than the surrounding code's last major change.
+- **Trivially improvable patterns** — manual iteration that could be stdlib, verbose nil-checks where a safe navigation or default would do, repeated error handling that could be extracted.
+
+For duplication findings, **show both sides** — the code in the diff and the near-identical code elsewhere.
+
 ### Missed Refactoring Opportunities
 
 - The diff adds a 4th similar method — should these be unified with a parameter or strategy pattern?
@@ -59,7 +71,7 @@ Most reviewers look at what changed. You look at **what the change touches**. Fo
 
 ## Important Constraints
 
-- **Only suggest improvements that the current diff makes feasible or timely.** Don't suggest rewriting the entire module just because you read it.
+- **Prioritize findings in the diff, but don't ignore the neighborhood.** Flag low-hanging cleanup in adjacent code (same file, sibling files, direct callers/callees) — especially duplication, dead code, and trivially improvable patterns. You don't need to rewrite the module, but "while you're here" cleanup is valuable.
 - **Be explicit about scope** — distinguish between "fix this in this PR" and "consider this as a follow-up."
 - **Quantify the benefit** — "this eliminates 3 call sites" is better than "this is cleaner."
 - **Show the surrounding code** that motivates your suggestion — reviewers need to see the context you see.
@@ -68,7 +80,21 @@ Most reviewers look at what changed. You look at **what the change touches**. Fo
 
 ### Design Context
 
+#### Cleanup
+
+Low-hanging improvements in the diff's neighborhood. These are quick wins, not architectural redesigns.
+
+- **[SEVERITY]:** [Cleanup title]
+  - **Location:** `file:lines` + `sibling-file:lines` (if duplication)
+  - **What:** [The duplication, dead code, or stale pattern]
+  - **Evidence:** [Show both sides for duplication; show the dead/stale code]
+  - **Suggested Fix:** [Concrete: extract to X, delete Y, replace with Z]
+  - **Effort:** [Trivial / Small / Medium]
+  - **Scope:** [This PR / Follow-up]
+
 #### Opportunities
+
+Design improvements that go beyond cleanup — refactoring, API optimization, structural changes.
 
 - **[SEVERITY]:** [Opportunity title]
   - **Location:** `file:lines` (the diff) + `file:lines` (the surrounding code)

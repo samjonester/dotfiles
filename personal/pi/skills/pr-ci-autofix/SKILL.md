@@ -37,7 +37,7 @@ Use this skill when the user wants PR CI monitored continuously and wants automa
 
 5. Before retrying CI, explicitly ask for confirmation:
    - "Would you like me to run `gt modify` and `gt submit` to retrigger CI?"
-   - Only if user says yes: run `gt modify`, then `gt submit`
+   - Only if user says yes: run `gt modify`, then `gt submit`, then `devx ci run` (CI no longer auto-triggers on push in shop/world)
    - Re-start monitoring loop for the updated PR/build
 
 ## Defaults
@@ -52,6 +52,7 @@ Use this skill when the user wants PR CI monitored continuously and wants automa
 - PR resolution: `gh pr view` (via `bash`)
 - Buildkite triage: `bk_build_info`, `bk_failed_jobs`, `bk_job_failure`
 - Git/stack actions: `gt modify`, `gt submit` (never `git commit`)
+- CI trigger: `devx ci run` (required after submit — CI no longer auto-runs on push in shop/world)
 
 ## Scheduler hygiene
 

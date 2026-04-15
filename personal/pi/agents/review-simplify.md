@@ -58,7 +58,7 @@ Complexity is the enemy. Every layer of abstraction, every indirection, every ge
 
 ## Scope Boundaries
 
-- **Simplification vs design** — do NOT read surrounding code to find broader design opportunities (callers, callees, siblings). That's `review-design`'s job. Focus on whether the code _within the diff_ can be expressed more simply.
+- **Simplification vs design** — your primary focus is the diff itself. However, if a simplifiable pattern in the diff (manual iteration, verbose nil-checks, reimplemented stdlib) also exists elsewhere in **the same file**, note it briefly (e.g., "lines 45-50 have the same pattern — both could use `filter_map`"). Don't scan sibling files or callers/callees — that's `review-design`'s job.
 - **Simplification vs consistency** — do NOT assess whether the diff's patterns match the rest of the codebase. That's `review-consistency`'s job. A simpler approach that breaks codebase convention should be noted as a trade-off, not recommended without qualification.
 
 ## Important Constraints

@@ -72,7 +72,7 @@ For findings assessed as valid and worth fixing:
    ```bash
    git add -A && gt modify --no-edit
    gt submit --no-edit --stack
-   devx ci trigger
+   devx ci run
    ```
 
 ### 4. React on the original comment
