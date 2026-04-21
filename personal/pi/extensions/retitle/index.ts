@@ -244,7 +244,7 @@ export default function (pi: ExtensionAPI) {
       const response = await complete(
         model,
         {
-          system: SYSTEM_PROMPT,
+          systemPrompt: SYSTEM_PROMPT,
           messages: [
             {
               role: "user" as const,
