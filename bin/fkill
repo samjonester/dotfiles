@@ -1,0 +1,91 @@
+#!/usr/bin/env bash
+# fkill - fuzzy-find and kill processes listening on network ports
+#
+# Usage:
+#   fkill              (interactive: fuzzy search all listening processes)
+#   fkill <query>      (pre-fill fzf with query, e.g. "3000" or "node")
+#
+# Combines lsof -i + fzf + kill -9. Multi-select with Tab.
+# Requires: fzf, lsof
+
+set -euo pipefail
+
+main() {
+    local query="${1:-}"
+
+    # Gather listening processes — dedupe by PID so each process appears once
+    # Format: PID  PROCESS  USER  PORT(S)
+    local entries
+    entries=$(lsof -i -P -n -sTCP:LISTEN 2>/dev/null \
+        | awk 'NR > 1 {
+            # Extract port from NAME field, e.g. *:3000 (LISTEN) → 3000
+            # $(NF-1) is the address:port; $NF is the state like (LISTEN)
+            split($(NF-1), a, ":")
+            port = a[length(a)]
+            key = $2  # PID
+            if (!(key in pids)) {
+                pids[key] = 1
+                procs[key] = $1
+                users[key] = $3
+                ports[key] = port
+            } else {
+                # Append additional ports
+                ports[key] = ports[key] "," port
+            }
+        }
+        END {
+            # Header-like sorting: print all entries
+            for (pid in pids) {
+                printf "%-8s %-20s %-12s %s\n", pid, procs[pid], users[pid], ports[pid]
+            }
+        }' | sort -t' ' -k4 -n)
+
+    if [[ -z "$entries" ]]; then
+        echo "No listening processes found." >&2
+        exit 0
+    fi
+
+    local header
+    header=$(printf "%-8s %-20s %-12s %s" "PID" "PROCESS" "USER" "PORT(S)")
+
+    # fzf with multi-select, preview shows full lsof for selected PID
+    local selected
+    selected=$(echo "$entries" | fzf \
+        --multi \
+        --query="$query" \
+        --prompt="kill ❯ " \
+        --header="$header
+Tab: multi-select  │  Enter: kill -9  │  Esc: cancel" \
+        --header-first \
+        --height=~60% \
+        --reverse \
+        --no-info \
+        --preview='pid={1}; lsof -i -P -n -sTCP:LISTEN 2>/dev/null | awk -v p="$pid" '\''NR==1 || $2==p'\' \
+        --preview-window=down:4:wrap \
+    ) || exit 0
+
+    # Extract PIDs and kill
+    local pids=()
+    while IFS= read -r line; do
+        local pid
+        pid=$(echo "$line" | awk '{print $1}')
+        [[ -n "$pid" ]] && pids+=("$pid")
+    done <<< "$selected"
+
+    if [[ ${#pids[@]} -eq 0 ]]; then
+        exit 0
+    fi
+
+    # Confirm and kill
+    for pid in "${pids[@]}"; do
+        local proc_name
+        proc_name=$(echo "$entries" | awk -v p="$pid" '$1 == p {print $2; exit}')
+        local port
+        port=$(echo "$entries" | awk -v p="$pid" '$1 == p {print $4; exit}')
+
+        echo "Killing $proc_name (PID $pid, port $port)..."
+        kill -9 "$pid" 2>/dev/null && echo "  ✓ killed" || echo "  ✗ failed (already dead?)"
+    done
+}
+
+main "$@"
