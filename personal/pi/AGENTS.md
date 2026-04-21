@@ -1,5 +1,8 @@
 # Personal Coding Preferences
 
+## Identity
+- GitHub handle: `samjonester`
+
 ## Tool Usage
 
 - Never use `sed -n` to read file ranges — use the `read` tool with offset/limit parameters instead
@@ -176,6 +179,7 @@ When asked to review **multiple PRs** ("review these PRs", "batch review #1 #2 #
 - Don't duplicate between top-level comment and inline comments — they're visible together.
 - Top-level: executive summary, validation results, numbered one-line finding list for orientation.
 - Inline: self-contained full findings (problem, impact, suggested fix).
+- **Line-level comments require the Reviews API** — `gh pr review --comment --body` posts a top-level comment, NOT inline. For inline comments, use `gh api repos/{owner}/{repo}/pulls/{number}/reviews --input -` with a JSON body containing a `comments` array with `path`, `line`, `side`, and `body` fields. Never use `gh pr review --comment` for line-level comments.
 
 ## PR Links
 
