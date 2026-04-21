@@ -112,6 +112,8 @@ export default function presetExtension(pi: ExtensionAPI) {
   let presets: PresetsConfig = {};
   let activePresetName: string | undefined;
   let activePreset: Preset | undefined;
+  /** Tools that were active before any preset was applied — used to restore on clear */
+  let initialTools: string[] | undefined;
 
   // Register --preset CLI flag
   pi.registerFlag("preset", {
@@ -288,7 +290,7 @@ export default function presetExtension(pi: ExtensionAPI) {
       // Clear preset and restore defaults
       activePresetName = undefined;
       activePreset = undefined;
-      pi.setActiveTools(["read", "bash", "edit", "write"]);
+      if (initialTools) pi.setActiveTools(initialTools);
       ctx.ui.notify("Preset cleared, defaults restored", "info");
       updateStatus(ctx);
       return;
@@ -340,7 +342,7 @@ export default function presetExtension(pi: ExtensionAPI) {
     if (nextName === "(none)") {
       activePresetName = undefined;
       activePreset = undefined;
-      pi.setActiveTools(["read", "bash", "edit", "write"]);
+      if (initialTools) pi.setActiveTools(initialTools);
       ctx.ui.notify("Preset cleared, defaults restored", "info");
       updateStatus(ctx);
       return;
@@ -401,6 +403,9 @@ export default function presetExtension(pi: ExtensionAPI) {
 
   // Initialize on session start
   pi.on("session_start", async (_event, ctx) => {
+    // Capture initial tool set before any preset modifies it
+    initialTools = pi.getAllTools().map((t) => t.name);
+
     // Load presets from config files
     presets = loadPresets(ctx.cwd);
 
