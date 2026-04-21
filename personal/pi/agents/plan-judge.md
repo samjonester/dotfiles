@@ -1,7 +1,7 @@
 ---
 name: plan-judge
 description: Evaluate two solution proposals, verify claims against the codebase, and synthesize an optimal recommendation with implementation-ready steps.
-model: claude-opus-4-6
+model: claude-opus-4-7
 tools: read,bash,grep,find,ls
 ---
 

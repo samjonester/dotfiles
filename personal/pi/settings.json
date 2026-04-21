@@ -19,6 +19,7 @@
     "maxRetries": 3
   },
   "enabledModels": [
+    "anthropic-250k-prefer-using-this-one/claude-opus-4-7",
     "anthropic-250k-prefer-using-this-one/claude-opus-4-6",
     "anthropic-250k-prefer-using-this-one/claude-sonnet-4-6",
     "anthropic/claude-opus-4-6",
