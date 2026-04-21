@@ -3,6 +3,10 @@
 # Put anything here that you want to exist on all your environment, and to have the highest priority
 # over any other customization.
 
+# Word navigation: Alt+Left/Right (raw xterm sequences, needed inside tmux)
+bindkey '^[[1;3D' backward-word
+bindkey '^[[1;3C' forward-word
+
 export PYENV_ROOT="$HOME/.pyenv"
 [[ -d $PYENV_ROOT/bin ]] && export PATH="$PYENV_ROOT/bin:$PATH"
 eval "$(pyenv init - zsh)"
