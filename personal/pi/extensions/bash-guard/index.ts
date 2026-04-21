@@ -60,6 +60,47 @@ import {
 } from "@mariozechner/pi-tui";
 import { execFile } from "child_process";
 
+// ── Focus event suppression ────────────────────────────────────────────────────
+
+/**
+ * Suppress/restore terminal focus event reporting (DECSET 1004).
+ *
+ * When a blocking guard dialog is open, focus events serve no purpose — the
+ * dialog only cares about user keypresses. But tmux focus-in (\x1b[I) can
+ * trigger a TUI framework re-render when the user switches back to the pane,
+ * causing visible flicker. Disabling focus reporting at the terminal level
+ * prevents the event from ever reaching the application.
+ *
+ * Defense-in-depth: isTerminalControlSequence still filters any stray
+ * sequences in handleInput as a fallback.
+ */
+let focusSuppressed = false;
+
+function suppressFocusEvents(): void {
+  if (!focusSuppressed) {
+    process.stdout.write("\x1b[?1004l");
+    focusSuppressed = true;
+  }
+}
+
+function restoreFocusEvents(): void {
+  if (focusSuppressed) {
+    process.stdout.write("\x1b[?1004h");
+    focusSuppressed = false;
+  }
+}
+
+/**
+ * Wrap a done() callback so focus events are restored before resolving.
+ * Use at the top of every ctx.ui.custom() dialog.
+ */
+function withFocusRestore<T>(done: (value: T) => void): (value: T) => void {
+  return (value: T) => {
+    restoreFocusEvents();
+    done(value);
+  };
+}
+
 // ── User alert (macOS notification only) ──────────────────────────────────────
 
 /**
@@ -193,7 +234,9 @@ async function showRemoteMutationDialog(
   matched: RemoteMutationPattern,
 ): Promise<{ allowed: boolean; instructions?: string }> {
   return ctx.ui.custom<{ allowed: boolean; instructions?: string }>(
-    (tui, theme, _kb, done) => {
+    (tui, theme, _kb, rawDone) => {
+      suppressFocusEvents();
+      const done = withFocusRestore(rawDone);
       let mode: "decide" | "feedback" = "decide";
       let resolved = false;
       // Ignore keypresses for 500ms to prevent accidental input from typing
@@ -341,7 +384,9 @@ async function showCommitPolicyDialog(
   matched: CommitPattern,
 ): Promise<{ policy: CommitPolicy; instructions?: string }> {
   return ctx.ui.custom<{ policy: CommitPolicy; instructions?: string }>(
-    (tui, theme, _kb, done) => {
+    (tui, theme, _kb, rawDone) => {
+      suppressFocusEvents();
+      const done = withFocusRestore(rawDone);
       let mode: "decide" | "feedback" = "decide";
       let resolved = false;
       // Ignore keypresses for 500ms to prevent accidental input from typing
@@ -547,6 +592,7 @@ Vote YES for:
 - Multi-line scripts combining grep, find, python3 -c, jq, etc. to process local files (session logs, jsonl, config) — assess each command, but these are normal data-processing workflows → YES
 - Reading from /nix/store/ (read-only Nix store), ~/.pi/ (pi config), or session log directories → YES
 - Local CLI tools: slack-mcp, pi, bk (Buildkite), gh, gt (Graphite) with read-only subcommands → YES
+- Reading company-internal GitHub repos (Shopify/infrastructure, Shopify/minerva, etc.) via gh api, gh search code, or gh repo view — this is routine developer work on an authenticated, VPN-connected workstation → YES
 - Network requests to localhost, 127.0.0.1, or *.shop.dev (local dev servers) → YES
 - Shell loops (for/while) composed of safe commands (grep, curl to localhost, gh api reads, git reads) → YES
 - Git operations (add, checkout, status, log, diff, branch, stash, rebase, reset) → YES
@@ -713,8 +759,12 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*gt\s+(continue|add|restack|checkout|track|sync)\b/,
   /^\s*gt\s+branch\s+(delete|rename)\b/,
 
-  // ── GitHub CLI API (read-only: GET is default, --jq means querying) ──
-  /^\s*gh\s+api\b.*--jq\b/,
+  // ── GitHub CLI API (read-only by default; mutating methods caught by Stage 1,
+  //    data flags caught by hasDangerousFlags) ──
+  /^\s*gh\s+api\b/,
+
+  // ── GitHub CLI search (always read-only) ──
+  /^\s*gh\s+search\b/,
 
   // ── Shopify dev tooling ──
   /^\s*(\/opt\/dev\/bin\/dev|dev)\s+(up|server|backend|cd|test|typecheck|style|console|migrate|stop|ps|lint|github|tree)\b/,
@@ -736,6 +786,11 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   // ── HTTP read operations ──
   /^\s*curl\b/, // conditionally safe: blocked if -X POST/PUT/DELETE or -d (see hasDangerousFlags)
 
+  // ── DNS / network inspection (read-only) ──
+  /^\s*dig\b/,
+  /^\s*nslookup\b/,
+  /^\s*host\b/,
+
   // ── Process inspection ──
   /^\s*pgrep\b/,
   /^\s*lsof\b/,
@@ -746,6 +801,7 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*pnpm\b/,
   /^\s*node\b/,
   /^\s*python3?\b/,
+  /^\s*base64\b/,
 
   // ── MCP tool read operations ──
   /^\s*slack-mcp\s+(get-messages|get-thread|get-unreads|get-channel-sections|get-channel-info|get-status|get-user-profile|get-reactions|get-saved-items|get-file|search|list|test|mcp|auth)\b/,
@@ -803,6 +859,12 @@ function hasDangerousFlags(cmd: string): boolean {
         cmd,
       )
     ) {
+      return true;
+    }
+  }
+  // gh api: block data flags that trigger implicit POST (method flags caught by Stage 1)
+  if (/^\s*gh\s+api\b/.test(cmd)) {
+    if (/\s(-f\s|-F\s|--raw-field\s|--input\s)/.test(cmd)) {
       return true;
     }
   }
@@ -1519,7 +1581,9 @@ async function runVoteTracking(
     return computeVoteResult(records, false, performance.now() - t0);
   }
 
-  return ctx.ui.custom<VoteResult>((tui, theme, _kb, done) => {
+  return ctx.ui.custom<VoteResult>((tui, theme, _kb, rawDone) => {
+    suppressFocusEvents();
+    const done = withFocusRestore(rawDone);
     const records: VoterRecord[] = voters.map((v) => ({
       label: v.label,
       status: "pending" as VoteStatus,
@@ -1919,7 +1983,9 @@ async function showReviewDialog(
     instructions?: string;
     recastCount: number;
     autoRecast?: boolean;
-  }>((tui, theme, _kb, done) => {
+  }>((tui, theme, _kb, rawDone) => {
+    suppressFocusEvents();
+    const done = withFocusRestore(rawDone);
     const mdTheme = getMarkdownTheme();
     let explanationText = "";
     let recastCount = 0;
@@ -2289,6 +2355,9 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("session_start", async (_event, ctx) => {
+    // Safety: ensure focus events are restored if a previous session left them suppressed
+    restoreFocusEvents();
+
     const entries = ctx.sessionManager.getEntries();
 
     // Restore last persisted guard state (reverse scan, break on first match)
