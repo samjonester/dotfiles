@@ -1,6 +1,6 @@
 {
   "defaultProvider": "anthropic-250k-prefer-using-this-one",
-  "defaultModel": "claude-opus-4-6",
+  "defaultModel": "claude-opus-4-7",
   "defaultThinkingLevel": "high",
   "theme": "gruvbox-rainbow",
   "thinkingBudgets": {
