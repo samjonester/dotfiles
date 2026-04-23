@@ -60,46 +60,19 @@ import {
 } from "@mariozechner/pi-tui";
 import { execFile } from "child_process";
 
-// ── Focus event suppression ────────────────────────────────────────────────────
-
-/**
- * Suppress/restore terminal focus event reporting (DECSET 1004).
- *
- * When a blocking guard dialog is open, focus events serve no purpose — the
- * dialog only cares about user keypresses. But tmux focus-in (\x1b[I) can
- * trigger a TUI framework re-render when the user switches back to the pane,
- * causing visible flicker. Disabling focus reporting at the terminal level
- * prevents the event from ever reaching the application.
- *
- * Defense-in-depth: isTerminalControlSequence still filters any stray
- * sequences in handleInput as a fallback.
- */
-let focusSuppressed = false;
-
-function suppressFocusEvents(): void {
-  if (!focusSuppressed) {
-    process.stdout.write("\x1b[?1004l");
-    focusSuppressed = true;
-  }
-}
-
-function restoreFocusEvents(): void {
-  if (focusSuppressed) {
-    process.stdout.write("\x1b[?1004h");
-    focusSuppressed = false;
-  }
-}
-
-/**
- * Wrap a done() callback so focus events are restored before resolving.
- * Use at the top of every ctx.ui.custom() dialog.
- */
-function withFocusRestore<T>(done: (value: T) => void): (value: T) => void {
-  return (value: T) => {
-    restoreFocusEvents();
-    done(value);
-  };
-}
+// ── Focus / control-sequence filtering ──────────────────────────────────────────
+//
+// Guard dialogs only care about user keypresses (y/n/a/c/esc). Terminal control
+// sequences — focus events, mouse reports, device-status responses — must be
+// silently dropped so they don't dismiss the dialog or trigger TUI re-renders.
+//
+// Previous approach wrote raw DECSET 1004 suppress/restore sequences directly to
+// process.stdout. This bypassed the TUI render pipeline and could interleave
+// with kitty graphics APC sequences (\x1b_G…\x1b\), corrupting tmux's
+// passthrough parser and causing base64 image data to render as visible text.
+//
+// Current approach: filter control sequences in handleInput only. No writes to
+// stdout — the TUI owns the output stream exclusively.
 
 // ── User alert (macOS notification only) ──────────────────────────────────────
 
@@ -234,9 +207,7 @@ async function showRemoteMutationDialog(
   matched: RemoteMutationPattern,
 ): Promise<{ allowed: boolean; instructions?: string }> {
   return ctx.ui.custom<{ allowed: boolean; instructions?: string }>(
-    (tui, theme, _kb, rawDone) => {
-      suppressFocusEvents();
-      const done = withFocusRestore(rawDone);
+    (tui, theme, _kb, done) => {
       let mode: "decide" | "feedback" = "decide";
       let resolved = false;
       // Ignore keypresses for 500ms to prevent accidental input from typing
@@ -384,9 +355,7 @@ async function showCommitPolicyDialog(
   matched: CommitPattern,
 ): Promise<{ policy: CommitPolicy; instructions?: string }> {
   return ctx.ui.custom<{ policy: CommitPolicy; instructions?: string }>(
-    (tui, theme, _kb, rawDone) => {
-      suppressFocusEvents();
-      const done = withFocusRestore(rawDone);
+    (tui, theme, _kb, done) => {
       let mode: "decide" | "feedback" = "decide";
       let resolved = false;
       // Ignore keypresses for 500ms to prevent accidental input from typing
@@ -1581,9 +1550,7 @@ async function runVoteTracking(
     return computeVoteResult(records, false, performance.now() - t0);
   }
 
-  return ctx.ui.custom<VoteResult>((tui, theme, _kb, rawDone) => {
-    suppressFocusEvents();
-    const done = withFocusRestore(rawDone);
+  return ctx.ui.custom<VoteResult>((tui, theme, _kb, done) => {
     const records: VoterRecord[] = voters.map((v) => ({
       label: v.label,
       status: "pending" as VoteStatus,
@@ -1983,9 +1950,7 @@ async function showReviewDialog(
     instructions?: string;
     recastCount: number;
     autoRecast?: boolean;
-  }>((tui, theme, _kb, rawDone) => {
-    suppressFocusEvents();
-    const done = withFocusRestore(rawDone);
+  }>((tui, theme, _kb, done) => {
     const mdTheme = getMarkdownTheme();
     let explanationText = "";
     let recastCount = 0;
@@ -2355,9 +2320,6 @@ export default function (pi: ExtensionAPI) {
   });
 
   pi.on("session_start", async (_event, ctx) => {
-    // Safety: ensure focus events are restored if a previous session left them suppressed
-    restoreFocusEvents();
-
     const entries = ctx.sessionManager.getEntries();
 
     // Restore last persisted guard state (reverse scan, break on first match)
