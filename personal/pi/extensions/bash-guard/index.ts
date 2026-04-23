@@ -776,7 +776,7 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*slack-mcp\s+(get-messages|get-thread|get-unreads|get-channel-sections|get-channel-info|get-status|get-user-profile|get-reactions|get-saved-items|get-file|search|list|test|mcp|auth)\b/,
 
   // ── Pi and CI tooling ──
-  /^\s*pi\s+(tool|session|model|config|extension)\b/,
+  /^\s*pi\s+(tool|session|model|config|extension|install|remove|uninstall|update|list|introspect)\b/,
   /^\s*bk\b/,
 
   // ── Terminal multiplexer (window management, not arbitrary execution) ──
