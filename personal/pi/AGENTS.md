@@ -1,6 +1,7 @@
 # Personal Coding Preferences
 
 ## Identity
+
 - GitHub handle: `samjonester`
 
 ## Tool Usage
@@ -132,6 +133,13 @@ For plans without the Implementation Steps section (legacy plans or external doc
 - **Use `/btw` for quick lookups** — syntax checks, API questions, "how does X work?" queries that are informational, not action-driving. Zero trace in conversation history. Press `p` to promote if the answer reveals something actionable, `n` to break out to a full session.
 - **Use `/fork` + `/back` for tangents** — when a question turns into substantial work, `/fork` (or `Ctrl+Shift+F`) creates a new session from the current branch. Use `/back` to return to the parent session when done. When selecting a fork point, always pick a message **after** the first assistant response — forking from before the first response triggers a pi bug where the parent link isn't persisted.
 - For long implementation sessions (>50 tool calls), suggest compacting with `/compact` to reduce context size and speed up responses
+- **Proactively suggest `/session new` when a natural task boundary is reached.** Watch for these signals, and when one fires, write a one-line handoff prompt, `pbcopy` it, and tell the user "Fresh session recommended — prompt copied to clipboard: `/session new`". Trigger signals:
+  - A plan/spec/design doc was just finalized and the next step is implementation (doc = complete source of truth)
+  - A multi-step task completed (PR submitted, investigation concluded, triage finished) and the user's next ask is unrelated
+  - Context has accumulated exploratory work (screenshots, searches, scratch files) that won't help the next task
+  - The user asks "should I compact?" or "fresh session?" — evaluate honestly; fresh often beats compact when the handoff is a single file path
+  - A subagent or skill just ran and produced a finalized artifact (plan, review, finalized patch)
+    When suggesting, the handoff prompt should be ONE line pointing at the artifact (file path, PR number, or skill) plus any critical state the doc doesn't capture (branch name, working tree status, user preferences confirmed in the current session).
 - When spawning a new tmux window, always give it a short descriptive name (e.g., `tmux new-window -n 'dev-server'`)
 - When spawning a task into a separate tmux window (e.g., planning, investigation), treat that window as the user's workspace for that task. Don't pull results back into the parent session — it duplicates context and pollutes history, making it hard to scroll back to the original work (like a triage) that triggered the spawn. Just confirm the window is open and let the user work there directly.
 - When spawning teammates via `team_spawn`, consider whether the task needs tools outside the default `code` preset. The tool auto-infers from keywords, but pass `preset` explicitly when the task domain is clear: `triage` (Slack/calendar/email), `investigate` (Observe/vault/data), `workspace` (Docs/Sheets/Slides), `code+` (browser/Figma), `experiment` (feature flags/grokt), `all` (cross-domain). If the default preset lacks a required tool, the teammate will fail silently.
