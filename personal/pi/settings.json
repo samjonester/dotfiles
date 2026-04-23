@@ -32,11 +32,9 @@
   "packages": [
     "npm:pi-web-access",
     "npm:pi-messenger",
-    "npm:pi-tool-display",
     "git:github.com/shopify-playground/pi-tool-gateway-extension",
-    "https://github.com/jhochenbaum/pi-autoresearch-studio"
+    "https://github.com/jhochenbaum/pi-autoresearch-studio",
+    "git:github.com/JamesOwenHall/tidy-tools"
   ],
-  "npmCommand": [
-    "pnpm"
-  ]
+  "npmCommand": ["pnpm"]
 }
