@@ -22,6 +22,14 @@ setup_pi() {
   ln -vsfn "$dotfiles_pi/prompts"         "$pi_dir/prompts"
   ln -vsfn "$dotfiles_pi/auto-lint.json"  "$pi_dir/auto-lint.json"
 
+  # Knowledge: real directory layering dotfiles-versioned (public) + local private files
+  mkdir -p "$HOME/.pi/memory/knowledge"
+  if [ -d "$dotfiles_pi/knowledge" ]; then
+    for f in "$dotfiles_pi/knowledge"/*.md; do
+      [ -e "$f" ] && ln -vsfn "$f" "$HOME/.pi/memory/knowledge/$(basename "$f")"
+    done
+  fi
+
   # Dotfiles-owned extensions (portable, first-party only)
   for ext_name in bash-guard git-safety.ts; do
     [ -e "$dotfiles_pi/extensions/$ext_name" ] && \
