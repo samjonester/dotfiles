@@ -55,8 +55,7 @@ Two sets of GWS tools are active — prefer based on operation type:
 
 ## Slack Message Formatting
 
-- Use standard markdown (not Slack mrkdwn) — user has "Format messages with markup" enabled.
-- Auto-copy final drafts to clipboard via `pbcopy`.
+Use standard markdown (not Slack mrkdwn). Full guide in knowledge file `slack-formatting.md` (auto-loaded when relevant). Key rule: no `###` headers, no `<details>`, no HTML tables — they render as literal text. Auto-copy final drafts to clipboard via `pbcopy`.
 
 ## Multi-Model Planning
 
@@ -184,10 +183,10 @@ When asked to review **multiple PRs** ("review these PRs", "batch review #1 #2 #
 
 ### Submitting review comments
 
-- Don't duplicate between top-level comment and inline comments — they're visible together.
-- Top-level: executive summary, validation results, numbered one-line finding list for orientation.
-- Inline: self-contained full findings (problem, impact, suggested fix).
-- **Line-level comments require the Reviews API** — `gh pr review --comment --body` posts a top-level comment, NOT inline. For inline comments, use `gh api repos/{owner}/{repo}/pulls/{number}/reviews --input -` with a JSON body containing a `comments` array with `path`, `line`, `side`, and `body` fields. Never use `gh pr review --comment` for line-level comments.
+Full calibration guide and API templates in knowledge files `review-calibration.md` and `pr-review-posting.md` (auto-loaded when relevant).
+
+- Don't duplicate between top-level and inline — they're visible together.
+- **Line-level comments require the Reviews API** — never use `gh pr review --comment` for inline. See `pr-review-posting.md` for exact payloads.
 
 ## PR Links
 
