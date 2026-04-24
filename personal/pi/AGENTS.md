@@ -141,7 +141,10 @@ For plans without the Implementation Steps section (legacy plans or external doc
     When suggesting, the handoff prompt should be ONE line pointing at the artifact (file path, PR number, or skill) plus any critical state the doc doesn't capture (branch name, working tree status, user preferences confirmed in the current session).
 - When spawning a new tmux window, always give it a short descriptive name (e.g., `tmux new-window -n 'dev-server'`)
 - When spawning a task into a separate tmux window (e.g., planning, investigation), treat that window as the user's workspace for that task. Don't pull results back into the parent session — it duplicates context and pollutes history, making it hard to scroll back to the original work (like a triage) that triggered the spawn. Just confirm the window is open and let the user work there directly.
-- When spawning teammates via `team_spawn`, consider whether the task needs tools outside the default `code` preset. The tool auto-infers from keywords, but pass `preset` explicitly when the task domain is clear: `triage` (Slack/calendar/email), `investigate` (Observe/vault/data), `workspace` (Docs/Sheets/Slides), `code+` (browser/Figma), `experiment` (feature flags/grokt), `all` (cross-domain). If the default preset lacks a required tool, the teammate will fail silently.
+- **Tool architecture**: Lead sessions use `tool-search` (lazy-loading — ~30 core tools always visible, ~130 hidden behind `tool_search` manifest). Teammates use deterministic preset-based tool sets. Subagents use agent frontmatter tools.
+- **Teammate presets**: `code` (default — GitHub/BK/grokt/vault), `code+` (+ Figma/browser), `triage` (Slack/calendar/email/GitHub), `investigate` (Observe/GCP/data-portal/vault), `workspace` (Drive/Docs/Sheets/Slides/Tasks), `experiment` (feature flags/grokt/vault). Agent-teams auto-infers from task keywords, but pass `preset` explicitly when the domain is clear.
+- **Lead-only tools**: `memory_*`, `Cron*`, `subagent`, `team_spawn/shutdown/cleanup` — stripped from all teammate presets. Teammates can message back (`team_status/message/broadcast`) but cannot spawn nested agents or touch shared memory.
+- Presets are NOT applied to lead sessions — tool-search manages visibility. The `/preset` command and `Ctrl+Shift+U` still work for manually activating presets with model/instructions (e.g., `plan`, `implement`).
 
 ## Service Design
 
@@ -248,6 +251,7 @@ Suggest autoresearch (`/skill:autoresearch-create`) for iterative optimization l
 
 ## Git Safety
 
+- **When working in a worktree, NEVER touch the main checkout.** All commands — file edits, builds, tests, `gh` API calls, `gt` commands — must run from the worktree directory. The main checkout may have unstaged work from other sessions. `gt modify` and `gt submit` work directly from a worktree — there is no need to copy files back to the main checkout. If the task says "work in worktree X", `cd` to X and stay there for the entire task. Full worktree discipline guide in knowledge file `worktree-discipline.md` (auto-loaded when relevant).
 - **Never revert, checkout, or discard unstaged changes without explicit user approval.** Unstaged changes may be intentional work from other active sessions. Always assume they are. If there are conflicts or ambiguity with your task, ask before touching them. This includes `git checkout -- <file>`, `git restore`, `git stash`, and any command that would discard working tree changes.
 - Always highlight local git/graphite commands after executing them.
 - Never use `git commit` directly — use `gt modify` to amend the current commit, or `gt create` to start a new branch in the Graphite stack. The world repo uses Graphite for all branch/commit management.

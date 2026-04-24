@@ -4,12 +4,12 @@
 # Usage:
 #   lfg                              (pick session or create new)
 #   lfg -n <name> ["prompt"]         (attach/create session by name)
-#   lfg ["prompt"]                   (inside tmux: window picker → dir → preset → pi)
-#   lfg --pane ["prompt"]            (inside tmux: skip name → dir → preset → pi)
+#   lfg ["prompt"]                   (inside tmux: window picker → dir → pi)
+#   lfg --pane ["prompt"]            (inside tmux: skip name → dir → pi)
 #
 # Behavior depends on context:
 #   Outside tmux — session picker flow (or -n to skip it)
-#   Inside tmux  — window picker (select existing or name new), then dir → preset → pi
+#   Inside tmux  — window picker (select existing or name new), then dir → pi
 #   --pane       — pane mode: skip the name step entirely
 #
 # Requires: fzf, tmux, zoxide
@@ -162,42 +162,16 @@ pick_directory() {
     return 1
 }
 
-# ─── Preset picker ────────────────────────────────────────────────────────────
-
-pick_preset() {
-    local presets_file="${HOME}/.pi/agent/presets.json"
-    local presets="code"
-
-    if [[ -f "$presets_file" ]] && command -v python3 &>/dev/null; then
-        presets=$(python3 -c "import json,sys; print('\n'.join(json.load(open(sys.argv[1])).keys()))" "$presets_file" 2>/dev/null) || presets="code"
-    fi
-
-    local selected
-    selected=$(printf '%s\n' $presets | fzf \
-        --prompt="preset ❯ " \
-        --header="Pick pi preset (Enter for code)" \
-        --header-first \
-        --height=~30% \
-        --reverse \
-        --no-info \
-        --query="code" \
-        2>/dev/null) || echo "code"
-
-    echo "${selected:-code}"
-}
-
 # ─── Enter tmux session (outside tmux flow) ──────────────────────────────────
 
 enter_session() {
     local session_name="$1"
     local dir="${2:-}"
-    local preset="${3:-}"
-    local prompt="${4:-}"
+    local prompt="${3:-}"
 
     set_tab_title "$session_name"
 
     local pi_cmd="TMPDIR=$HOME/.pi/tmp devx pi"
-    [[ -n "$preset" ]] && pi_cmd="TMPDIR=$HOME/.pi/tmp devx pi --preset $preset"
     [[ -n "$prompt" ]] && pi_cmd="$pi_cmd $(printf '%q' "$prompt")"
 
     # Inside tmux already → switch client
@@ -224,14 +198,12 @@ enter_session() {
 
 exec_pi() {
     local prompt="${1:-}"
-    local dir preset
+    local dir
 
     dir=$(pick_directory) || exit 0
-    preset=$(pick_preset) || exit 0
 
     cd "$dir"
     local -a pi_args=("devx" "pi")
-    [[ -n "$preset" ]] && pi_args+=("--preset" "$preset")
     [[ -n "$prompt" ]] && pi_args+=("$prompt")
     TMPDIR="$HOME/.pi/tmp" exec "${pi_args[@]}"
 }
@@ -274,13 +246,13 @@ main() {
 
     if [[ -n "${TMUX:-}" ]]; then
 
-        # Pane mode: skip name, go straight to dir → preset → pi
+        # Pane mode: skip name, go straight to dir → pi
         if [[ "$pane_mode" == true ]]; then
             exec_pi "$prompt"
             return 0
         fi
 
-        # Window mode: pick or create window, then dir → preset → pi
+        # Window mode: pick or create window, then dir → pi
         local pick_exit=0 window_name=""
         window_name=$(pick_window) || pick_exit=$?
 
@@ -307,11 +279,10 @@ main() {
         enter_session "$session_name"
     fi
 
-    # New session — pick directory, then preset
-    local dir preset
+    # New session — pick directory
+    local dir
     dir=$(pick_directory) || exit 0
-    preset=$(pick_preset) || exit 0
-    enter_session "$session_name" "$dir" "$preset" "$prompt"
+    enter_session "$session_name" "$dir" "$prompt"
 }
 
 main "$@"
