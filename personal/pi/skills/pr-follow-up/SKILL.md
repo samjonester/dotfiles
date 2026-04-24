@@ -1,3 +1,8 @@
+---
+name: pr-follow-up
+description: Check the status of open PRs where you requested changes — classify each as stale, updated, or addressed, and suggest next actions (re-review, nudge the author). Triggers on 'follow up on my PRs', 'check review status', 'did they address my feedback', 'outstanding reviews', 'stale PRs', or carried-forward PR follow-up TODOs in daily context.
+---
+
 # PR Follow-up Tracker
 
 Check whether reviewees have addressed your requested changes on open PRs.
