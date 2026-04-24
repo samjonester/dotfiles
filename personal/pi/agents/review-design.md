@@ -72,7 +72,7 @@ For duplication findings, **show both sides** — the code in the diff and the n
 ## Important Constraints
 
 - **Prioritize findings in the diff, but don't ignore the neighborhood.** Flag low-hanging cleanup in adjacent code (same file, sibling files, direct callers/callees) — especially duplication, dead code, and trivially improvable patterns. You don't need to rewrite the module, but "while you're here" cleanup is valuable.
-- **Be explicit about scope** — distinguish between "fix this in this PR" and "consider this as a follow-up."
+- **Default to "fix in this PR"** — only suggest deferral for work that is genuinely outside the PR's scope (e.g., a pre-existing issue in an unrelated module). Minor or low-priority does NOT mean defer.
 - **Quantify the benefit** — "this eliminates 3 call sites" is better than "this is cleaner."
 - **Show the surrounding code** that motivates your suggestion — reviewers need to see the context you see.
 
@@ -90,7 +90,7 @@ Low-hanging improvements in the diff's neighborhood. These are quick wins, not a
   - **Evidence:** [Show both sides for duplication; show the dead/stale code]
   - **Suggested Fix:** [Concrete: extract to X, delete Y, replace with Z]
   - **Effort:** [Trivial / Small / Medium]
-  - **Scope:** [This PR / Follow-up]
+  - **Scope:** [This PR — unless genuinely outside the PR's scope, explain why]
 
 #### Opportunities
 
@@ -103,7 +103,7 @@ Design improvements that go beyond cleanup — refactoring, API optimization, st
   - **Opportunity:** [What could be improved and why]
   - **Suggested Change:** [Concrete refactoring with code example]
   - **Benefit:** [Quantified: fewer call sites, less duplication, clearer API, etc.]
-  - **Scope:** [This PR / Follow-up]
+  - **Scope:** [This PR — unless genuinely outside the PR's scope, explain why]
 
 #### Positive Observations
 

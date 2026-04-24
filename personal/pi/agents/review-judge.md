@@ -44,7 +44,7 @@ Common false positive patterns:
 Assign each finding a **quality rating**:
 
 - **✅ Valid & Actionable** — the finding is correct, well-evidenced, and worth acting on
-- **⚠️ Valid but Minor** — technically correct but low impact; author's discretion
+- **⚠️ Valid but Minor** — technically correct but low impact; still fix now unless truly outside the PR's scope
 - **🔍 Needs Context** — might be valid but depends on information the reviewer may not have (team decision, intentional trade-off, etc.)
 - **❌ Invalid** — incorrect analysis, false positive, or suggestion that would make things worse. Explain why.
 
@@ -65,7 +65,9 @@ Order the validated findings:
 1. **CRITICAL** — must fix before merge (only if validated as truly critical)
 2. **HIGH** — should fix before merge
 3. **MEDIUM** — fix or acknowledge
-4. **LOW** — nice-to-have, consider for follow-up
+4. **LOW** — minor improvement, fix in this PR
+
+**Deferral policy:** Do NOT recommend deferring findings to follow-up issues unless the fix is genuinely outside the PR's scope (e.g., pre-existing problem in an unrelated module). "Low priority" and "minor" are not reasons to defer — creating follow-up issues wastes more time than just fixing the code now. **If you still deem a deferral necessary, mark it with `[DEFERRAL — NEEDS CONFIRMATION]` so the human can approve or reject it before it's posted.**
 
 Within each severity, order by:
 
@@ -122,9 +124,9 @@ Your output must follow this exact structure:
 
 [Fix or acknowledge]
 
-#### Low Priority / Follow-up
+#### Low Priority
 
-[Nice-to-have improvements]
+[Minor improvements — fix now unless truly outside the PR's scope. Do NOT defer to follow-up issues for things that can be fixed in this PR.]
 
 ### Strengths
 

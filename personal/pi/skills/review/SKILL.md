@@ -412,6 +412,18 @@ After presenting the review, offer to draft PR comments:
 
 If the user says yes, format:
 
+**Deferral confirmation gate:**
+
+Before drafting comments, scan the judge output for any findings marked `[DEFERRAL — NEEDS CONFIRMATION]` or any suggestion to defer/follow-up. If any exist, present them to the user explicitly:
+
+> **⚠️ Deferral check:** The review suggests deferring these to follow-up:
+>
+> 1. [finding title] — [reason for deferral]
+>
+> Should I include these as "defer to follow-up" in the PR comments, or rewrite them as "fix in this PR"?
+
+Do NOT include deferral language in any drafted comment until the user confirms.
+
 **Top-level comment style guard:**
 
 - Never use shallow approval shorthand such as `LGTM`, `LGTM ✅`, `looks good to me`, or `ship it`.

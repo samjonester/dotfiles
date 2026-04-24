@@ -15,19 +15,21 @@
 - Contract violations (API breaking changes without migration, schema mismatches)
 - Missing error handling on critical paths (user-facing failures, data corruption)
 
-### Non-blocking nit — mention but don't block
+### Non-blocking nit — fix now, don't block merge
 
 - Style preferences that don't affect correctness
 - Minor naming improvements
 - Small code organization suggestions
 - Missing docs that aren't on critical paths
 
+These are still worth fixing in this PR — they're just not worth blocking merge over. Do NOT suggest deferring to follow-up issues for things that can be fixed now.
+
 ### Drop / don't raise — these are noise
 
 - **Premature optimization**: Don't flag performance on secondary views, small datasets (< 1K rows), or low-traffic paths. "The CSVs are short (max 200-300 lines) so processing time is minimal."
 - **Scaling concerns for current scope**: If the data is small and bounded, don't speculate about future scale.
 - **useMemo/useCallback suggestions**: Check platform conventions first — many codebases explicitly avoid these unless profiling shows a bottleneck.
-- **N+1 queries that are pre-existing**: If the PR didn't introduce the N+1, don't block on it. File an issue instead.
+- **N+1 queries that are pre-existing**: If the PR didn't introduce the N+1, don't block on it. Fix it in this PR if the code is already being touched; only defer if the fix is genuinely in unrelated code.
 - **Style-only changes in refactor PRs**: The PR is restructuring code, not polishing style.
 - **Test coverage nits on non-critical paths**: Trust CI thresholds.
 - **"Consider extracting" on PRs that are already extractions**: The author is mid-refactor. More extraction is follow-up work.
@@ -78,6 +80,10 @@ Top-level + inline in one API call:
   "comments": [{ "path": "...", "line": 15, "side": "RIGHT", "body": "..." }]
 }
 ```
+
+## Deferral Confirmation Gate
+
+Before posting any review comment that suggests deferring work to a follow-up issue or PR, **always confirm with the user first**. Present the proposed deferral with the rationale and ask whether to keep the deferral language or rewrite as "fix in this PR". Never post deferral suggestions without explicit approval.
 
 ## Calibrating AI-generated Reviews
 

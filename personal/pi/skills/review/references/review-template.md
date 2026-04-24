@@ -31,9 +31,9 @@
 
 [MEDIUM findings, grouped by theme]
 
-### Minor / Follow-up
+### Minor
 
-[LOW findings, quick list]
+[LOW findings — fix now unless truly outside the PR's scope]
 
 ### Filtered Findings
 
@@ -142,4 +142,4 @@
 <!-- Do NOT include a Verdict section in the top-level PR comment — the GitHub review action (approve/request changes) already communicates it. This section is for the internal review output only. -->
 **Verdict:** [APPROVE / REQUEST CHANGES / DISCUSS / BLOCK]
 **Confidence Level:** [High/Medium/Low — informed by judge validation rate]
-**Follow-up Required:** [Yes/No — specify what]
+**Follow-up Required:** [Yes/No — only for work genuinely outside this PR's scope]
