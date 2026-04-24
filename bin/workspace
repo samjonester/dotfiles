@@ -2,10 +2,16 @@
 # workspace (aliased as `lfg`) - create or reattach tmux sessions
 #
 # Usage:
-#   lfg                    (interactive: pick session or create new)
-#   lfg <name>             (attach or create session with that name)
+#   lfg                              (pick session or create new)
+#   lfg -n <name> ["prompt"]         (attach/create session by name)
+#   lfg ["prompt"]                   (inside tmux: window picker → dir → preset → pi)
+#   lfg --pane ["prompt"]            (inside tmux: skip name → dir → preset → pi)
 #
-# Run in a fresh kitty tab. Execs into tmux so tab closes when session ends.
+# Behavior depends on context:
+#   Outside tmux — session picker flow (or -n to skip it)
+#   Inside tmux  — window picker (select existing or name new), then dir → preset → pi
+#   --pane       — pane mode: skip the name step entirely
+#
 # Requires: fzf, tmux, zoxide
 
 set -euo pipefail
@@ -15,7 +21,7 @@ set_tab_title() {
     printf '\033]2;%s\007' "$1"
 }
 
-# ─── Step 1: Session selection ────────────────────────────────────────────────
+# ─── Session picker (outside tmux) ───────────────────────────────────────────
 
 _lfg_list_sessions() {
     tmux list-sessions -F '#{session_name}|#{?session_attached,attached,detached}|#{session_windows} windows' 2>/dev/null | while IFS='|' read -r name status windows; do
@@ -44,20 +50,17 @@ pick_session() {
         --bind "del:execute-silent($self --kill-session {})+reload($self --list-sessions)" \
         2>/dev/null) || fzf_exit=$?
 
-    # Error or interrupted (ctrl-c / ESC)
     [[ $fzf_exit -ge 2 ]] && return 1
 
     local query selected
     query=$(head -1 <<< "$result")
     selected=$(sed -n '2p' <<< "$result")
 
-    # User selected an existing session from the list
     if [[ "$selected" == [●○]* ]]; then
-        echo "$selected" | sed 's/^[●○] //; s/  (.*//' 
+        echo "$selected" | sed 's/^[●○] //; s/  (.*//'
         return 0
     fi
 
-    # User typed a new session name
     if [[ -n "$query" ]]; then
         echo "$query"
         return 0
@@ -66,12 +69,66 @@ pick_session() {
     return 1
 }
 
-# ─── Step 2: Directory selection (new sessions only) ──────────────────────────
+# ─── Window picker (inside tmux) ─────────────────────────────────────────────
+
+pick_window() {
+    # List windows in the current tmux session
+    local windows
+    windows=$(tmux list-windows -F '#{window_index}|#{window_name}|#{window_active}' 2>/dev/null)
+
+    local fzf_input=""
+    while IFS='|' read -r idx wname active; do
+        [[ -z "$idx" ]] && continue
+        local icon="○"
+        [[ "$active" == "1" ]] && icon="●"
+        fzf_input+="${icon} ${wname}  (${idx})"$'\n'
+    done <<< "$windows"
+
+    local fzf_exit=0 result
+    result=$(printf '%s' "$fzf_input" | fzf \
+        --print-query \
+        --exact \
+        --prompt="window ❯ " \
+        --header="Select window or type new name" \
+        --header-first \
+        --height=~50% \
+        --reverse \
+        --no-info \
+        2>/dev/null) || fzf_exit=$?
+
+    [[ $fzf_exit -ge 2 ]] && return 1
+
+    local query selected
+    query=$(head -1 <<< "$result")
+    selected=$(sed -n '2p' <<< "$result")
+
+    # User selected an existing window from the list → navigate
+    if [[ "$selected" == [●○]* ]]; then
+        local win_idx
+        win_idx=$(echo "$selected" | sed 's/.*(\([0-9]*\))/\1/')
+        tmux select-window -t ":${win_idx}"
+        return 2  # Signal: navigated to existing window
+    fi
+
+    # User typed a name — check if it matches an existing window
+    if [[ -n "$query" ]]; then
+        local match_idx
+        match_idx=$(tmux list-windows -F '#{window_name}|#{window_index}' 2>/dev/null \
+            | grep -i "^${query}|" | head -1 | cut -d'|' -f2)
+        if [[ -n "$match_idx" ]]; then
+            tmux select-window -t ":${match_idx}"
+            return 2  # Signal: navigated to existing window
+        fi
+        echo "$query"
+        return 0
+    fi
+
+    return 1
+}
+
+# ─── Directory picker ─────────────────────────────────────────────────────────
 
 pick_directory() {
-    # Frecency-ranked directory picker with raw-path fallback.
-    # Uses zoxide's database as the candidate list, but wraps in our own
-    # fzf so --print-query lets us capture typed input when nothing matches.
     local result
     result=$(zoxide query -l 2>/dev/null | fzf \
         --print-query \
@@ -88,33 +145,29 @@ pick_directory() {
     query=$(echo "$result" | head -1)
     selected=$(echo "$result" | tail -1)
 
-    # User picked an existing entry from the list
     if [[ -n "$selected" && "$selected" != "$query" ]]; then
         echo "$selected"
         return 0
     fi
 
-    # User typed a raw path - expand tilde and validate
     if [[ -n "$query" ]]; then
         local expanded="${query/#\~/$HOME}"
         if [[ -d "$expanded" ]]; then
             echo "$expanded"
             return 0
         fi
-        # Last resort: let zoxide resolve it non-interactively
         zoxide query -- "$query" 2>/dev/null && return 0
     fi
 
     return 1
 }
 
-# ─── Step 3: Pi preset selection (new sessions only) ──────────────────────────
+# ─── Preset picker ────────────────────────────────────────────────────────────
 
 pick_preset() {
     local presets_file="${HOME}/.pi/agent/presets.json"
     local presets="code"
 
-    # Extract preset names from JSON
     if [[ -f "$presets_file" ]] && command -v python3 &>/dev/null; then
         presets=$(python3 -c "import json,sys; print('\n'.join(json.load(open(sys.argv[1])).keys()))" "$presets_file" 2>/dev/null) || presets="code"
     fi
@@ -133,19 +186,19 @@ pick_preset() {
     echo "${selected:-code}"
 }
 
-# ─── Step 4: Exec into tmux ──────────────────────────────────────────────────
+# ─── Enter tmux session (outside tmux flow) ──────────────────────────────────
 
 enter_session() {
     local session_name="$1"
     local dir="${2:-}"
     local preset="${3:-}"
+    local prompt="${4:-}"
 
-    # Set kitty tab title before handing off to tmux
     set_tab_title "$session_name"
 
-    # Build pi command for new sessions (TMPDIR for crash-safe temp files)
     local pi_cmd="TMPDIR=$HOME/.pi/tmp devx pi"
     [[ -n "$preset" ]] && pi_cmd="TMPDIR=$HOME/.pi/tmp devx pi --preset $preset"
+    [[ -n "$prompt" ]] && pi_cmd="$pi_cmd $(printf '%q' "$prompt")"
 
     # Inside tmux already → switch client
     if [[ -n "${TMUX:-}" ]]; then
@@ -161,10 +214,26 @@ enter_session() {
         exec tmux attach-session -t "=$session_name"
     fi
 
-    # New session - start tmux, launch pi, then attach
+    # New session
     tmux new-session -d -s "$session_name" -c "${dir:-$HOME}"
     tmux send-keys -t "=$session_name:" "$pi_cmd" Enter
     exec tmux attach-session -t "=$session_name"
+}
+
+# ─── Exec pi in current shell (inside tmux) ──────────────────────────────────
+
+exec_pi() {
+    local prompt="${1:-}"
+    local dir preset
+
+    dir=$(pick_directory) || exit 0
+    preset=$(pick_preset) || exit 0
+
+    cd "$dir"
+    local -a pi_args=("devx" "pi")
+    [[ -n "$preset" ]] && pi_args+=("--preset" "$preset")
+    [[ -n "$prompt" ]] && pi_args+=("$prompt")
+    TMPDIR="$HOME/.pi/tmp" exec "${pi_args[@]}"
 }
 
 # ─── Main ────────────────────────────────────────────────────────────────────
@@ -182,23 +251,67 @@ main() {
         return 0
     fi
 
-    local session_name dir preset
+    # Parse flags
+    local session_name="" prompt="" pane_mode=false
+    while [[ $# -gt 0 ]]; do
+        case "$1" in
+            -n|--name)
+                session_name="${2:-}"
+                shift 2
+                ;;
+            --pane)
+                pane_mode=true
+                shift
+                ;;
+            *)
+                prompt="$1"
+                shift
+                ;;
+        esac
+    done
 
-    if [[ $# -ge 1 ]]; then
-        session_name="$1"
-    else
+    # ── Inside tmux ──────────────────────────────────────────────────────
+
+    if [[ -n "${TMUX:-}" ]]; then
+
+        # Pane mode: skip name, go straight to dir → preset → pi
+        if [[ "$pane_mode" == true ]]; then
+            exec_pi "$prompt"
+            return 0
+        fi
+
+        # Window mode: pick or create window, then dir → preset → pi
+        local pick_exit=0 window_name=""
+        window_name=$(pick_window) || pick_exit=$?
+
+        # Exit code 2 = navigated to existing window; temp window closes on exit
+        [[ $pick_exit -eq 2 ]] && exit 0
+        # Exit code 1 = cancelled
+        [[ $pick_exit -eq 1 ]] && exit 0
+
+        # Got a new window name — rename current window
+        [[ -n "$window_name" ]] && tmux rename-window "$window_name"
+
+        exec_pi "$prompt"
+        return 0
+    fi
+
+    # ── Outside tmux ─────────────────────────────────────────────────────
+
+    if [[ -z "$session_name" ]]; then
         session_name=$(pick_session) || exit 0
     fi
 
-    # Existing session - just attach
+    # Existing session — just attach
     if tmux has-session -t "=$session_name" 2>/dev/null; then
         enter_session "$session_name"
     fi
 
-    # New session - pick directory, then preset
+    # New session — pick directory, then preset
+    local dir preset
     dir=$(pick_directory) || exit 0
     preset=$(pick_preset) || exit 0
-    enter_session "$session_name" "$dir" "$preset"
+    enter_session "$session_name" "$dir" "$preset" "$prompt"
 }
 
 main "$@"
