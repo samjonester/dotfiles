@@ -78,17 +78,18 @@ import { execFile } from "child_process";
 
 /**
  * Alert the user that bash-guard needs their attention.
- * Uses macOS system notification (visible even when terminal isn't focused).
+ * Uses macOS system notification (visible even when terminal isn't focused)
+ * and a terminal BEL to trigger tmux's monitor-bell window flag.
  *
- * NOTE: We intentionally do NOT write BEL (\x07) to the terminal. BEL causes
- * kitty to activate the window (window_alert_on_bell), which triggers tmux
- * focus events (\x1b[I). Under PTY read splitting, the focus event can arrive
- * as bare \x1b (after the stdin buffer's 10ms timeout), which matchesKey()
- * interprets as ESC — auto-dismissing the guard dialog. The agent then retries
- * the command, firing another alert, creating an infinite bell→focus→ESC→retry
- * loop that manifests as the scrollback "circling" without showing the prompt.
+ * BEL was previously avoided because kitty's window_alert_on_bell triggered
+ * tmux focus events (\x1b[I) that PTY read splitting delivered as bare \x1b,
+ * which matchesKey() interpreted as ESC — auto-dismissing the dialog in a loop.
+ * This is now safe: isTerminalControlSequence() filters bare ESC and all CSI
+ * sequences in every dialog handleInput handler.
  */
 function alertUser(label: string) {
+  // BEL: triggers tmux monitor-bell (shows ! flag on the window in the status bar)
+  process.stderr.write("\x07");
   execFile(
     "osascript",
     ["-e", `display notification "${label}" with title "🔒 Bash Guard"`],
