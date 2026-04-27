@@ -135,17 +135,21 @@ describe("shell-mode handler", () => {
 		expect(result.result.exitCode).toBe(42);
 	});
 
-	it("runs fullscreen command and returns captured output", async () => {
+	it("alt-screen TUI suppresses captured output and returns status line", async () => {
+		// Alt-screen output is full of cursor-positioning escapes that don't survive
+		// stripping cleanly. We deliberately discard cleanOutput and return a status line.
 		vi.mocked(runInPty).mockReturnValueOnce({ exitCode: 0, rawOutput: "", cleanOutput: "fullscreen output here", usedAltScreen: true, truncated: false });
 		const result = await registeredHandler!({ command: "f some-tui" }, makeCtx());
-		expect(result.result.output).toContain("fullscreen output here");
+		expect(result.result.output).not.toContain("fullscreen output here");
+		expect(result.result.output).toMatch(/fullscreen command exited cleanly/);
 		expect(result.result.exitCode).toBe(0);
 	});
 
-	it("fullscreen with no captured output shows message", async () => {
-		vi.mocked(runInPty).mockReturnValueOnce({ exitCode: 0, rawOutput: "", cleanOutput: "", usedAltScreen: true, truncated: false });
+	it("alt-screen TUI with non-zero exit reports the code", async () => {
+		vi.mocked(runInPty).mockReturnValueOnce({ exitCode: 130, rawOutput: "", cleanOutput: "", usedAltScreen: true, truncated: false });
 		const result = await registeredHandler!({ command: "f some-tui" }, makeCtx());
-		expect(result.result.output).toContain("no output");
+		expect(result.result.output).toMatch(/fullscreen command exited with code 130/);
+		expect(result.result.exitCode).toBe(130);
 	});
 
 	it("fullscreen with non-zero exit and no output", async () => {

@@ -137,6 +137,18 @@ function buildResult(ptyResult: ReturnType<typeof runInPty> | undefined) {
 
 	const exitCode = ptyResult.exitCode;
 
+	// Alt-screen TUIs (nvim, lazygit, htop, etc.) emit cursor-positioning escapes
+	// that don't survive stripping cleanly — the result is sparse fragments + huge
+	// runs of whitespace. Don't render that to scrollback; just return a status line.
+	if (ptyResult.usedAltScreen) {
+		const output = exitCode === 0
+			? "(fullscreen command exited cleanly)"
+			: `(fullscreen command exited with code ${exitCode})`;
+		return {
+			result: { output, exitCode: exitCode ?? 1, cancelled: false, truncated: false },
+		};
+	}
+
 	if (ptyResult.cleanOutput) {
 		const { text, truncated } = truncateOutput(ptyResult.cleanOutput);
 		return {
