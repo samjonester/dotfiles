@@ -8,7 +8,7 @@
  * - `run_experiment` tool — runs any command, times it, captures output, detects pass/fail
  * - `log_experiment` tool — records results with session-persisted state
  * - Status widget showing experiment count + best metric
- * - Ctrl+X toggle to expand/collapse full dashboard inline above the editor
+ * - Ctrl+Shift+E toggle to expand/collapse full dashboard inline above the editor
  * - Adds autoresearch guidance to the system prompt and points the agent at autoresearch.md
  * - Injects autoresearch.md into context on every turn via before_agent_start
  */
@@ -865,8 +865,8 @@ function renderDashboardLines(
     headerHint
       ? appendRightAlignedAdaptiveHint(headerLine, width, th, [
           headerHint,
-          "ctrl+x collapse • full: c-s-x",
-          "ctrl+x • c-s-x",
+          "c-s-e collapse • full: c-s-x",
+          "c-s-e • c-s-x",
         ])
       : truncateToWidth(headerLine, width, "…", true)
   );
@@ -1212,7 +1212,7 @@ export default function autoresearchExtension(pi: ExtensionAPI) {
               safeWidth,
               theme,
               rows,
-              "ctrl+x collapse • ctrl+shift+x fullscreen"
+              "ctrl+shift+e collapse • ctrl+shift+x fullscreen"
             ),
           ];
         },
@@ -1305,9 +1305,9 @@ export default function autoresearchExtension(pi: ExtensionAPI) {
           const left = [...essential, ...optional].join("");
           return [
             appendRightAlignedAdaptiveHint(left, safeWidth, theme, [
-              "ctrl+x expand • ctrl+shift+x fullscreen",
-              "ctrl+x expand • full: c-s-x",
-              "ctrl+x • c-s-x",
+              "ctrl+shift+e expand • ctrl+shift+x fullscreen",
+              "c-s-e expand • full: c-s-x",
+              "c-s-e • c-s-x",
             ]),
           ];
         },
@@ -2408,10 +2408,11 @@ export default function autoresearchExtension(pi: ExtensionAPI) {
   });
 
   // -----------------------------------------------------------------------
-  // Ctrl+X — toggle dashboard expand/collapse
+  // Ctrl+Shift+E — toggle dashboard expand/collapse
+  // (Ctrl+X avoided — conflicts with built-in app.models.clearAll)
   // -----------------------------------------------------------------------
 
-  pi.registerShortcut("ctrl+x", {
+  pi.registerShortcut("ctrl+shift+e", {
     description: "Toggle autoresearch dashboard",
     handler: async (ctx) => {
       const runtime = getRuntime(ctx);
