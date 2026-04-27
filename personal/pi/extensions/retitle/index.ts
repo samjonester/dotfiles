@@ -139,7 +139,7 @@ export default function (pi: ExtensionAPI) {
         pi.setSessionName(name);
         weSetTheName = true;
         ctx.ui.setTitle(sessionTitle(name));
-        ctx.ui.notify(`Session named: ${name}`, "success");
+        ctx.ui.notify(`Session named: ${name}`, "info");
       } else {
         ctx.ui.notify("Failed to generate name", "warning");
       }
@@ -161,7 +161,7 @@ export default function (pi: ExtensionAPI) {
 
       const unnamed = sessions.filter((s) => !s.name);
       if (unnamed.length === 0) {
-        ctx.ui.notify("All sessions already have names!", "success");
+        ctx.ui.notify("All sessions already have names!", "info");
         return;
       }
 
@@ -201,7 +201,7 @@ export default function (pi: ExtensionAPI) {
 
       ctx.ui.notify(
         `Done! Named ${named} sessions${failed > 0 ? `, ${failed} failed/skipped` : ""}`,
-        named > 0 ? "success" : "warning",
+        named > 0 ? "info" : "warning",
       );
     },
   });
@@ -237,7 +237,19 @@ export default function (pi: ExtensionAPI) {
     const model = ctx.modelRegistry.find(PROVIDER, MODEL_ID);
     if (!model) return null;
 
-    const auth = await ctx.modelRegistry.getApiKeyAndHeaders(model);
+    // Defensive cast: the exact shape of getApiKeyAndHeaders has changed a few
+    // times in pi-mono (0.63+). Casting through `unknown` lets retitle keep
+    // working across minor pi releases even if the signature drifts, as long
+    // as the runtime result shape remains `{ ok, apiKey?, headers? }`.
+    const registry = ctx.modelRegistry as unknown as {
+      getApiKeyAndHeaders(
+        m: typeof model,
+      ): Promise<
+        | { ok: true; apiKey?: string; headers?: Record<string, string> }
+        | { ok: false; error: string }
+      >;
+    };
+    const auth = await registry.getApiKeyAndHeaders(model);
     if (!auth.ok || !auth.apiKey) return null;
 
     try {
