@@ -67,5 +67,6 @@
       "team_cleanup"
     ],
     "showToolSearchFooterStatus": true
-  }
+  },
+  "hideThinkingBlock": false
 }
