@@ -16,6 +16,18 @@
 
 Many external services have dedicated tools registered via pi extensions. **Always use a dedicated tool when one exists** instead of reaching for `fetch_content`, Chrome DevTools, `curl`, or direct API calls. Dedicated tools handle auth, pagination, rate limiting, and output formatting — direct access will usually fail or produce worse results. Do not use `fetch_content`, Chrome DevTools, or `curl` for a service that has a dedicated tool.
 
+## Tool Failures — Diagnose, Stop, Ask
+
+When a tool or MCP server fails for **infrastructure reasons** (connection error, auth failure, server down, schema mismatch, rate limit, etc.): briefly diagnose (tool, error, likely cause), **stop**, and ask the user how to proceed. Do not improvise.
+
+Prohibited workarounds:
+- Burning multiple turns retrying with ad-hoc variations
+- Extracting tokens from env/keychain to make raw `curl` calls when a dedicated tool failed
+- Falling back to `fetch_content`, Chrome DevTools, `gh` CLI, or shell scripts to re-implement what the failed tool was supposed to do
+- Switching providers/services to route around the failure without asking
+
+This does **not** apply to malformed calls (wrong param name, missing required field, bad URL format) — self-correct those without asking.
+
 ## Google Workspace Tools
 
 Two sets of GWS tools are active — prefer based on operation type:
