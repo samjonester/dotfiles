@@ -337,6 +337,30 @@ async function runSingleAgent(
         stdio: ["ignore", "pipe", "pipe"],
       });
       let buffer = "";
+      let resolved = false;
+
+      // Detect completion from the message stream rather than waiting for
+      // the subagent's pi process to exit. Extensions like tool-gateway / MCP
+      // bridges can keep the event loop alive indefinitely after the last
+      // message, so we resolve and kill the process when a terminal stopReason
+      // arrives. (Adapted from upstream PR #763.)
+      const finish = (code: number) => {
+        if (resolved) return;
+        resolved = true;
+        try {
+          proc.kill("SIGTERM");
+        } catch {
+          /* process already exited */
+        }
+        setTimeout(() => {
+          try {
+            proc.kill("SIGKILL");
+          } catch {
+            /* already gone */
+          }
+        }, 5000);
+        resolve(code);
+      };
 
       const processLine = (line: string) => {
         if (!line.trim()) return;
@@ -366,6 +390,16 @@ async function runSingleAgent(
               currentResult.model = msg.model;
             if (msg.stopReason) currentResult.stopReason = msg.stopReason;
             if (msg.errorMessage) currentResult.errorMessage = msg.errorMessage;
+
+            // Terminal stopReason means the subagent is done. "toolUse" means
+            // more work is coming; anything else is terminal.
+            if (msg.stopReason && msg.stopReason !== "toolUse") {
+              finish(
+                msg.stopReason === "stop" || msg.stopReason === "length"
+                  ? 0
+                  : 1,
+              );
+            }
           }
           emitUpdate();
         }
@@ -387,13 +421,21 @@ async function runSingleAgent(
         currentResult.stderr += data.toString();
       });
 
+      // Fallback: if the process exits on its own before a terminal stopReason,
+      // still resolve cleanly.
       proc.on("close", (code) => {
         if (buffer.trim()) processLine(buffer);
-        resolve(code ?? 0);
+        if (!resolved) {
+          resolved = true;
+          resolve(code ?? 0);
+        }
       });
 
       proc.on("error", () => {
-        resolve(1);
+        if (!resolved) {
+          resolved = true;
+          resolve(1);
+        }
       });
 
       if (signal) {
