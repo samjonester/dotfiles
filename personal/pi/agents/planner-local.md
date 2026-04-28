@@ -25,6 +25,18 @@ Your proposal should:
 
 Format your response as:
 
+## Reconnaissance
+
+Before reading any code beyond what's referenced in the problem statement, emit this block exactly. Commit specifically — vague answers defeat the purpose.
+
+    GOAL: <one line — what locally must change>
+    LOCAL_INVARIANTS: <contracts the fix must preserve for surrounding code>
+    FILES_TO_READ: <list, scoped tightly to the immediate area>
+    HYPOTHESIS: <the contained fix, one line>
+    SCOPE_BOUNDARY: <what you commit to NOT touching>
+
+If exploration shows the fix can't stay local, note that explicitly in `## Approach` before describing what bleeds outward. Do not silently expand scope.
+
 ## Approach
 
 One paragraph: the targeted fix and why local containment is the right call.

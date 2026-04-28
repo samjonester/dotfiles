@@ -78,6 +78,16 @@ For duplication findings, **show both sides** — the code in the diff and the n
 
 ## Output Format
 
+### Scope
+
+Before reading beyond the diff, emit this block exactly. Commit specifically — "a few siblings" or "some callers" defeats the purpose. After exploration, if your scope expanded, note it in the Cleanup or Opportunities sections rather than silently rewriting this block.
+
+    DIFF_FILES: <list — files in the diff>
+    SIBLINGS_TO_SCAN: <list — same-directory files you'll check for duplication>
+    CALLERS_TO_CHECK: <list — direct callers of changed functions/methods>
+    CALLEES_TO_CHECK: <list — direct dependencies of changed code>
+    EARLY_HYPOTHESES: <which lens — duplication / API surface / structural / cleanup — looks most promising and why>
+
 ### Design Context
 
 #### Cleanup

@@ -31,6 +31,18 @@ Your proposal should:
 
 Format your response as:
 
+## Reconnaissance
+
+Before reading any code beyond what's referenced in the problem statement, emit this block exactly. Commit specifically — vague answers defeat the purpose.
+
+    GOAL: <one line — what this proposal must achieve>
+    DESIGN_DIRECTION: <where the codebase appears to be heading; the next 3 changes>
+    FILES_TO_READ: <list, including adjacent systems you expect to inspect>
+    HYPOTHESIS: <leading design, one line>
+    ABSTRACTIONS_AT_RISK: <where existing abstractions may not earn their keep>
+
+If exploration falsifies the hypothesis or reveals the design direction is different, note that explicitly in `## Approach` before describing the revised direction.
+
 ## Approach
 
 One paragraph: the strategy and why this design is better long-term.

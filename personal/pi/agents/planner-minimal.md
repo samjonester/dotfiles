@@ -26,6 +26,18 @@ Your proposal should:
 
 Format your response as:
 
+## Reconnaissance
+
+Before reading any code beyond what's referenced in the problem statement, emit this block exactly. Commit specifically — vague answers defeat the purpose.
+
+    GOAL: <one line — what this proposal must achieve>
+    HARD_CONSTRAINTS: <from the problem statement, not the code>
+    FILES_TO_READ: <minimal list you commit to examining>
+    HYPOTHESIS: <smallest plausible change, one line>
+    FALSIFIERS: <what evidence would force you to expand scope>
+
+If exploration falsifies the hypothesis, note that explicitly in `## Approach` before describing the revised direction. Do not silently retcon the hypothesis to match what you found.
+
 ## Approach
 
 One paragraph: the strategy and why it's the minimal correct change.

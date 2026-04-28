@@ -26,6 +26,19 @@ Your proposal should:
 
 Format your response as:
 
+## Reconnaissance
+
+Before reading any code beyond what's referenced in the problem statement, emit this block exactly. Commit specifically — vague answers defeat the purpose.
+
+    GOAL: <one line — root cause to address>
+    SYMPTOM_VS_CAUSE: <observed symptom one line / suspected cause one line>
+    SEARCH_PLAN: <grep/find targets you'll use to find other instances of the pattern>
+    FILES_TO_READ: <list, including the suspected upstream layer>
+    HYPOTHESIS: <the root-cause fix, one line>
+    SCOPE_ESTIMATE: <expected number of call sites / files affected, before measuring>
+
+After exploration, your `## Scope of impact` section must reconcile the actual scope with `SCOPE_ESTIMATE` — if the gap is large, it's a signal the diagnosis was off.
+
 ## Diagnosis
 
 What is the root cause, and how did you trace it? Show evidence from the codebase (other instances, related bugs, pattern violations).
