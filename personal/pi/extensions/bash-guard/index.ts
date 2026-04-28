@@ -26,6 +26,22 @@
  *   Timeouts and errors count as abstentions (ignored in vote tally).
  *   Toggle with `/guard on|off|debug`. Not exposed as a tool — LLM cannot disable it.
  *
+ * Stage 0 — Teammate autonomy gate (only when running as a spawned teammate):
+ *   Spawned teammates have a TUI but no human watching — interactive dialogs
+ *   would deadlock. When isTeammateSession() is true, we replace Stage 1 / 1.5
+ *   for a narrow set of "draft-PR-safe" commands:
+ *     • Commit-like commands (gt create/modify/absorb, git commit) → auto-allow
+ *     • `gt submit` / `gt stack submit` (without --publish) → contextual voter pass
+ *     • `git push` (no force, non-protected target) → contextual voter pass
+ *   Voter pass receives current branch + user message context. Unanimous YES
+ *   from at least 2 voters allows; anything else blocks with a reason the model
+ *   can read. Hard-block list (publish, ready, merge, edit, force-push, push to
+ *   main/master/production) returns block immediately — no voting. Other
+ *   remote mutations (gh pr create, gh issue, etc.) also hard-block, since the
+ *   teammate cannot confirm interactively. Stages 1/1.5 dialog-blocking paths
+ *   also fall through to non-interactive `block: true` for teammates so nothing
+ *   deadlocks.
+ *
  * Override memory: when the user overrides a NO/split decision with `y`, the
  * command is recorded. Exact repeat commands are auto-allowed with a notification.
  * Past overrides are provided as context to voters so they can learn user
@@ -59,6 +75,9 @@ import {
   Text,
 } from "@mariozechner/pi-tui";
 import { execFile } from "child_process";
+import * as fs from "fs";
+import * as os from "os";
+import * as path from "path";
 
 // ── Focus / control-sequence filtering ──────────────────────────────────────────
 //
@@ -116,6 +135,233 @@ function isTerminalControlSequence(data: string): boolean {
   // APC sequences: ESC _ ...
   if (data.startsWith("\x1b_")) return true;
   return false;
+}
+
+// ── Teammate session detection (Stage 0) ───────────────────────────────────────
+//
+// A spawned teammate runs in a tmux pane with a TUI but no human watching.
+// Interactive dialogs would deadlock the teammate. Detection mirrors the
+// repo-guard extension: TMUX_PANE matches a non-lead member in any team
+// config under ~/.pi/teams/<team>/config.json. Cached after first call —
+// the role of a process doesn't change mid-session.
+
+const TEAM_DIR = path.join(os.homedir(), ".pi", "teams");
+let _teammateCache: boolean | null = null;
+
+function isTeammateSession(): boolean {
+  if (_teammateCache !== null) return _teammateCache;
+  const paneId = process.env.TMUX_PANE;
+  if (!paneId) return (_teammateCache = false);
+  if (!fs.existsSync(TEAM_DIR)) return (_teammateCache = false);
+  try {
+    for (const team of fs.readdirSync(TEAM_DIR)) {
+      const configPath = path.join(TEAM_DIR, team, "config.json");
+      if (!fs.existsSync(configPath)) continue;
+      const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
+      for (const m of (config.members || []) as Array<{
+        paneId?: string;
+        role?: string;
+      }>) {
+        if (m.paneId === paneId && m.role !== "lead") {
+          return (_teammateCache = true);
+        }
+      }
+    }
+  } catch {
+    // If team config is unreadable, assume lead (safer default — we'd rather
+    // show a dialog the user can dismiss than silently block).
+  }
+  return (_teammateCache = false);
+}
+
+// ── Teammate gate patterns (Stage 0) ─────────────────────────────────────────
+
+interface TeammateBlockedPattern {
+  pattern: RegExp;
+  label: string;
+  reason: string;
+}
+
+/**
+ * Commands that are NEVER allowed for unattended teammates. The lead must
+ * perform these. Order matters: more specific patterns (e.g. --publish)
+ * come before general matches (e.g. plain gt submit).
+ */
+const TEAMMATE_BLOCKED_PATTERNS: TeammateBlockedPattern[] = [
+  // Publishing draft → ready
+  {
+    pattern: /\bgt\s+(stack\s+)?submit\b[^|;&]*--publish\b/,
+    label: "gt submit --publish",
+    reason: "publishes draft → ready; lead must approve.",
+  },
+  {
+    pattern: /\bgh\s+pr\s+ready\b/,
+    label: "gh pr ready",
+    reason: "publishes draft → ready; lead must approve.",
+  },
+  // PR mutations beyond submit
+  {
+    pattern:
+      /\bgh\s+pr\s+(merge|edit|comment|create|close|reopen|review|convert-to-draft)\b/,
+    label: "gh pr (mutating)",
+    reason: "PR mutation requires lead.",
+  },
+  // Issue / release / repo / api mutations
+  {
+    pattern: /\bgh\s+issue\s+(create|close|reopen|edit|comment|delete)\b/,
+    label: "gh issue (mutating)",
+    reason: "issue mutation requires lead.",
+  },
+  {
+    pattern: /\bgh\s+release\s+(create|delete|edit|upload)\b/,
+    label: "gh release (mutating)",
+    reason: "release mutation requires lead.",
+  },
+  {
+    pattern: /\bgh\s+repo\s+(create|fork|delete|rename|transfer)\b/,
+    label: "gh repo (mutating)",
+    reason: "repo mutation requires lead.",
+  },
+  {
+    pattern: /\bgh\s+api\b.*(--method|-X)\s+(POST|PATCH|PUT|DELETE)\b/i,
+    label: "gh api (mutating)",
+    reason: "API mutation requires lead.",
+  },
+  // Deploy
+  {
+    pattern: /\bquick\s+deploy\b/,
+    label: "quick deploy",
+    reason: "deployment requires lead.",
+  },
+  // Force pushes
+  {
+    pattern: /\bgit\s+push\b[^|;&]*(--force(?:-with-lease)?|\s-f\b|\s\+)/,
+    label: "git push --force",
+    reason: "force push requires lead.",
+  },
+  // Push to protected branches (positional refspec or src:dst)
+  {
+    pattern:
+      /\bgit\s+push\s+\S+\s+(?:[^\s:]+:)?(?:main|master|production|staging|prod|release(?:\/[^\s]+)?)\b/,
+    label: "git push to protected branch",
+    reason: "push to protected branch requires lead.",
+  },
+];
+
+/**
+ * Commands that may be allowed for teammates after a contextual voter pass
+ * (must verify branch is appropriate). Checked AFTER blocked patterns.
+ */
+const TEAMMATE_VOTABLE_PATTERNS: { pattern: RegExp; label: string }[] = [
+  { pattern: /\bgt\s+(stack\s+)?submit\b/, label: "gt submit (draft)" },
+  { pattern: /\bgit\s+push\b/, label: "git push" },
+];
+
+/** Branches we never allow teammates to target, regardless of voter outcome. */
+const PROTECTED_BRANCH_RE =
+  /^(main|master|production|prod|staging|release(?:\/.+)?|hotfix(?:\/.+)?)$/i;
+
+/**
+ * Run a small process and capture stdout. Times out after 2s. Returns null
+ * on any failure — callers treat null as "unknown".
+ */
+function runProcess(
+  cmd: string,
+  args: string[],
+  cwd?: string,
+): Promise<string | null> {
+  return new Promise((resolve) => {
+    let resolved = false;
+    const child = execFile(
+      cmd,
+      args,
+      { cwd, timeout: 2000 },
+      (err, stdout) => {
+        if (resolved) return;
+        resolved = true;
+        if (err) return resolve(null);
+        resolve(stdout.toString().trim());
+      },
+    );
+    // Belt + braces in case the timeout option doesn't fire on this platform.
+    setTimeout(() => {
+      if (resolved) return;
+      resolved = true;
+      try {
+        child.kill("SIGKILL");
+      } catch {}
+      resolve(null);
+    }, 2500);
+  });
+}
+
+/**
+ * Extract an effective working directory from a leading `cd <dir> && ...`,
+ * `cd <dir>; ...`, or `pushd <dir> && ...`. Falls back to process.cwd().
+ * Used to resolve `git rev-parse --abbrev-ref HEAD` in the right repo when
+ * teammates work in worktrees and start commands with `cd <worktree>`.
+ */
+function extractEffectiveCwd(command: string, fallback: string): string {
+  const m = command.match(
+    /^\s*(?:cd|pushd)\s+(['"]?)([^'"\s;&]+)\1\s*(?:&&|;)/,
+  );
+  if (!m) return fallback;
+  let dir = m[2];
+  if (dir.startsWith("~")) dir = path.join(os.homedir(), dir.slice(1));
+  return path.isAbsolute(dir) ? dir : path.resolve(fallback, dir);
+}
+
+async function getCurrentBranch(cwd: string): Promise<string | null> {
+  return runProcess("git", ["rev-parse", "--abbrev-ref", "HEAD"], cwd);
+}
+
+// ── Teammate voter prompt (Stage 0 contextual review) ─────────────────────
+
+const TEAMMATE_VOTER_SYSTEM_PROMPT = `You are a security reviewer for an autonomous AI coding assistant running unattended on a developer's workstation. Your job is to decide if a git/graphite command is safe to run without human supervision.
+
+The agent is a TEAMMATE: spawned by the lead to autonomously implement a feature and end up at a DRAFT pull request. There is no human watching to confirm prompts.
+
+You will receive:
+- <command>: the bash command being attempted
+- <git_branch>: the current branch in the working directory the command will run in
+- <git_cwd>: the working directory itself (worktree path)
+- <last_user_message>: the most recent instruction from the lead
+- <turns_since_request>: how many turns ago the lead spoke
+
+Vote YES only if ALL of these hold:
+- <git_branch> is clearly a feature branch — NOT main, master, production, prod, staging, release/*, hotfix/*
+- The command does not include --force, --force-with-lease, -f, or a + refspec
+- The command does not include --publish
+- For \`gt submit\` / \`gt stack submit\`: it would create or update a DRAFT PR
+- For \`git push\`: the target is a feature branch on origin (or a fork) — not a protected branch
+- The lead's last instruction is consistent with the agent making a draft PR (e.g. "end at a draft PR", "submit draft", "create a feature branch")
+
+Vote NO if ANY of these hold:
+- <git_branch> is a protected branch (main/master/production/staging/release/hotfix)
+- The command targets a protected branch via positional ref or src:dst refspec
+- Force push, --publish, or any flag that leaves draft state
+- The lead's last instruction does NOT clearly authorize autonomous commit/submit (e.g. they said "don't commit", or there's no relevant context)
+- The command does anything beyond pushing the current feature branch as a draft PR
+- ANYTHING ambiguous — when in doubt, vote NO. The lead can re-issue the command directly.
+
+Respond with exactly one word: YES or NO. No explanation.`;
+
+interface TeammateVoteContext {
+  command: string;
+  branch: string;
+  cwd: string;
+  lastUserMessage: string;
+  turnsSinceUserMessage: number;
+}
+
+function buildTeammateVoterMessage(c: TeammateVoteContext): string {
+  return [
+    `<command>${c.command}</command>`,
+    `<git_branch>${c.branch}</git_branch>`,
+    `<git_cwd>${c.cwd}</git_cwd>`,
+    `<last_user_message>${c.lastUserMessage || "(none)"}</last_user_message>`,
+    `<turns_since_request>${c.turnsSinceUserMessage}</turns_since_request>`,
+  ].join("\n");
 }
 
 // ── Remote mutation patterns (Stage 1 — checked before whitelist/voters) ─────
@@ -196,6 +442,160 @@ type CommitPolicy = "unset" | "auto-allow" | "confirm-each";
 
 function matchCommitCommand(command: string): CommitPattern | undefined {
   return COMMIT_PATTERNS.find(({ pattern }) => pattern.test(command));
+}
+
+// ── Teammate gate (Stage 0) ── helpers ─────────────────────────────────────────
+
+/**
+ * Cast a single teammate vote using the contextual prompt. Returns "yes",
+ * "no", or null on timeout/error/unexpected response. Mirrors `castVote`
+ * but with a different system prompt and message shape. Kept separate so
+ * the main voter path is untouched.
+ */
+async function castTeammateVote(
+  voter: { model: any; apiKey: string; label: string },
+  voteCtx: TeammateVoteContext,
+): Promise<"yes" | "no" | null> {
+  const controller = new AbortController();
+  const timer = setTimeout(() => controller.abort(), VOTE_TIMEOUT_MS);
+  try {
+    const response = await complete(
+      voter.model,
+      {
+        systemPrompt: TEAMMATE_VOTER_SYSTEM_PROMPT,
+        messages: [
+          {
+            role: "user" as const,
+            content: [
+              {
+                type: "text" as const,
+                text: buildTeammateVoterMessage(voteCtx),
+              },
+            ],
+            timestamp: Date.now(),
+          },
+        ],
+      },
+      { apiKey: voter.apiKey, maxTokens: 16, signal: controller.signal },
+    );
+    if (response.stopReason === "error") return null;
+    const text = extractText(response.content).trim().toUpperCase();
+    if (text.startsWith("YES")) return "yes";
+    if (text.startsWith("NO")) return "no";
+    return null;
+  } catch {
+    return null;
+  } finally {
+    clearTimeout(timer);
+  }
+}
+
+/**
+ * Result of running the teammate Stage 0 gate.
+ *   "allow"        — silently allow the command
+ *   "fall-through" — not a teammate-relevant command, run remaining stages
+ *   { block }      — block with a model-readable reason
+ */
+type TeammateGateResult =
+  | "allow"
+  | "fall-through"
+  | { block: true; reason: string };
+
+async function teammateGate(
+  command: string,
+  ctx: ExtensionContext,
+): Promise<TeammateGateResult> {
+  // 1. Hard-block list — no voting, no dialog.
+  for (const { pattern, label, reason } of TEAMMATE_BLOCKED_PATTERNS) {
+    if (pattern.test(command)) {
+      return {
+        block: true,
+        reason: `[teammate] Blocked ${label}: ${reason} Report back to the lead instead of retrying.`,
+      };
+    }
+  }
+
+  // 2. Commit-gate commands — silent allow. Teammates working in their own
+  //    worktree on a feature branch are expected to commit autonomously.
+  if (matchCommitCommand(command)) {
+    return "allow";
+  }
+
+  // 3. Votable mutations — gt submit (draft) or git push to feature branch.
+  for (const { pattern, label } of TEAMMATE_VOTABLE_PATTERNS) {
+    if (!pattern.test(command)) continue;
+
+    const cwd = extractEffectiveCwd(command, process.cwd());
+    const branch = (await getCurrentBranch(cwd)) ?? "unknown";
+
+    // Deterministic safety: hard-block if branch looks protected. Belt-and-
+    // braces with the voter prompt — if voters miss it, we still catch it.
+    if (PROTECTED_BRANCH_RE.test(branch)) {
+      return {
+        block: true,
+        reason: `[teammate] Blocked ${label}: working branch '${branch}' is protected. Report back to the lead.`,
+      };
+    }
+    if (branch === "unknown" || branch === "HEAD") {
+      return {
+        block: true,
+        reason: `[teammate] Blocked ${label}: could not determine branch in '${cwd}' (detached HEAD or not a git repo). Report back to the lead.`,
+      };
+    }
+
+    // Run the contextual voter pass. Fail closed: no voters → block.
+    const voterModels = await resolveVoterModels(ctx);
+    if (voterModels.length === 0) {
+      return {
+        block: true,
+        reason: `[teammate] Blocked ${label}: no voter models available to verify branch safety. Report back to the lead.`,
+      };
+    }
+    const voters = distributeVoters(voterModels);
+    const voterContext = extractVoterContext(ctx.sessionManager.getBranch());
+    const voteCtx: TeammateVoteContext = {
+      command,
+      branch,
+      cwd,
+      lastUserMessage: voterContext.lastUserMessage,
+      turnsSinceUserMessage: voterContext.turnsSinceUserMessage,
+    };
+
+    const results = await Promise.all(
+      voters.map((v) => castTeammateVote(v, voteCtx)),
+    );
+    const yes = results.filter((r) => r === "yes").length;
+    const no = results.filter((r) => r === "no").length;
+    const decided = yes + no;
+
+    // Require at least 2 decided voters AND unanimous YES.
+    if (decided >= 2 && no === 0) {
+      if (ctx.hasUI) {
+        ctx.ui.notify(
+          `🤝 teammate-gate: allowed ${label} on '${branch}' (${yes}/${decided} YES)`,
+          "info",
+        );
+      }
+      return "allow";
+    }
+
+    return {
+      block: true,
+      reason: `[teammate] Blocked ${label} on branch '${branch}': voter consensus ${yes} YES / ${no} NO / ${results.length - decided} abstained. Verify the branch is appropriate or report back to the lead.`,
+    };
+  }
+
+  // 4. Any other remote mutation — hard-block. Teammate cannot confirm
+  //    interactively, so we deny rather than deadlock on a dialog.
+  const otherRemote = matchRemoteMutation(command);
+  if (otherRemote) {
+    return {
+      block: true,
+      reason: `[teammate] Cannot prompt interactively for ${otherRemote.label}. The lead must perform this action.`,
+    };
+  }
+
+  return "fall-through";
 }
 
 /**
@@ -1540,8 +1940,12 @@ async function runVoteTracking(
   overrides: ReadonlyArray<VoteOverride>,
   voterContext?: VoterContext,
 ): Promise<VoteResult> {
-  /** Headless: no abort signal (each voter has its own timeout). */
-  if (!ctx.hasUI) {
+  /**
+   * Headless: no abort signal (each voter has its own timeout). Used when
+   * there is no UI at all, OR when running as a teammate (TUI exists but
+   * nobody can dismiss a progress dialog).
+   */
+  if (!ctx.hasUI || isTeammateSession()) {
     const t0 = performance.now();
     const records = await Promise.all(
       voters.map((voter) =>
@@ -2192,14 +2596,27 @@ export default function (pi: ExtensionAPI) {
 
   function updateStatus(ctx: ExtensionContext) {
     const t = ctx.ui.theme;
+    const teammateSuffix = isTeammateSession()
+      ? " " + t.fg("warning", "🤝")
+      : "";
     if (!guardEnabled)
-      ctx.ui.setStatus("bash-guard", t.fg("dim", "🔓 guard off"));
+      ctx.ui.setStatus(
+        "bash-guard",
+        t.fg("dim", "🔓 guard off") + teammateSuffix,
+      );
     else if (debugEnabled)
       ctx.ui.setStatus(
         "bash-guard",
-        t.fg("success", "🔒 guard") + " " + t.fg("dim", "🔍"),
+        t.fg("success", "🔒 guard") +
+          " " +
+          t.fg("dim", "🔍") +
+          teammateSuffix,
       );
-    else ctx.ui.setStatus("bash-guard", t.fg("success", "🔒 guard"));
+    else
+      ctx.ui.setStatus(
+        "bash-guard",
+        t.fg("success", "🔒 guard") + teammateSuffix,
+      );
   }
 
   /** Append-only persistence. Restore reads last entry only (reverse scan). */
@@ -2209,7 +2626,10 @@ export default function (pi: ExtensionAPI) {
 
   pi.registerCommand("guard", {
     description:
-      "Toggle bash guard (on/off/debug) or commit policy (commits auto/commits confirm/commits reset)",
+      "Toggle bash guard (on/off/debug), commit policy (commits auto/confirm/reset), or check teammate-gate status",
+    // Teammate-gate is automatic when running as a spawned teammate — no
+    // toggle needed. The 'teammate' subcommand prints current detection state
+    // for debugging.
     getArgumentCompletions: (prefix: string) => {
       const opts = [
         "on",
@@ -2218,6 +2638,7 @@ export default function (pi: ExtensionAPI) {
         "commits auto",
         "commits confirm",
         "commits reset",
+        "teammate",
       ];
       const filtered = opts.filter((o) => o.startsWith(prefix));
       return filtered.length > 0
@@ -2226,6 +2647,19 @@ export default function (pi: ExtensionAPI) {
     },
     handler: async (args, ctx) => {
       const arg = args?.trim().toLowerCase();
+
+      // Teammate gate status (read-only — detection is automatic)
+      if (arg === "teammate") {
+        const isTm = isTeammateSession();
+        const paneId = process.env.TMUX_PANE ?? "(unset)";
+        ctx.ui.notify(
+          isTm
+            ? `🤝 Teammate session detected (TMUX_PANE=${paneId}). Stage 0 gate active: commits auto-allow, gt submit / git push voted contextually, --publish / merge / force-push hard-blocked.`
+            : `Lead session (TMUX_PANE=${paneId}). Stage 0 teammate gate inactive — standard guard stages apply.`,
+          "info",
+        );
+        return;
+      }
 
       // Commit policy subcommands
       if (arg === "commits auto") {
@@ -2362,10 +2796,28 @@ export default function (pi: ExtensionAPI) {
 
     const command = event.input.command;
 
+    // Spawned teammates have a TUI but no human watching — dialogs deadlock.
+    // Treat them as non-interactive for any blocking-dialog code path.
+    // Notifications still use ctx.hasUI directly (visible in the pane).
+    const teammate = isTeammateSession();
+    const canPrompt = ctx.hasUI && !teammate;
+
+    // ── Stage 0: Teammate autonomy gate (only when running as a teammate) ──
+    if (teammate) {
+      const t0 = await teammateGate(command, ctx);
+      if (t0 === "allow") return; // silent allow, skip remaining stages
+      if (t0 !== "fall-through") {
+        // Block result — includes a model-readable reason
+        return t0;
+      }
+      // fall-through: not a teammate-specific command; continue to other stages.
+      // The dialog-blocking sites below use !canPrompt so they won't deadlock.
+    }
+
     // ── Stage 1: Remote mutation gate (always active, deterministic, no voters) ──
     const remoteMutation = matchRemoteMutation(command);
     if (remoteMutation) {
-      if (!ctx.hasUI) {
+      if (!canPrompt) {
         return {
           block: true,
           reason: `Remote mutation blocked in non-interactive mode (${remoteMutation.label}). Re-run interactively to confirm.`,
@@ -2396,7 +2848,7 @@ export default function (pi: ExtensionAPI) {
 
       if (commitPolicy === "confirm-each") {
         // Session policy: confirm each commit individually
-        if (!ctx.hasUI) {
+        if (!canPrompt) {
           return {
             block: true,
             reason: `Commit blocked in non-interactive mode (${commitMatch.label}). Session policy: confirm-each.`,
@@ -2414,7 +2866,7 @@ export default function (pi: ExtensionAPI) {
       }
 
       // commitPolicy === "unset" — first commit in session, ask for policy
-      if (!ctx.hasUI) {
+      if (!canPrompt) {
         // Non-interactive: default to confirm-each (safe default)
         commitPolicy = "confirm-each";
         return {
@@ -2477,7 +2929,7 @@ export default function (pi: ExtensionAPI) {
     const voterModels = await resolveVoterModels(ctx);
 
     if (voterModels.length === 0) {
-      if (!ctx.hasUI) {
+      if (!canPrompt) {
         return {
           block: true,
           reason: "Bash guard: no voter models available and no UI.",
@@ -2545,7 +2997,7 @@ export default function (pi: ExtensionAPI) {
     }
 
     // ── Unanimous NO or Split vote ──
-    if (!ctx.hasUI) {
+    if (!canPrompt) {
       const label =
         result.unanimous === "no" ? "unanimously rejected" : "inconclusive";
       return {
