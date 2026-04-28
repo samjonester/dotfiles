@@ -25,25 +25,14 @@ preexec() {
 # pipx
 # export PATH="$PATH:/Users/sam/.local/bin"
 
-# Terminal tooling aliases
+# Aliases and functions live in personal/aliases.zsh so they're also available
+# to non-interactive shells (pi shell-mode, scripts) via personal/.zshenv.
+# Re-sourcing here is idempotent and ensures interactive shells get them even
+# if .zshenv was bypassed somehow.
+[ -f "$DF_USER/aliases.zsh" ] && source "$DF_USER/aliases.zsh"
 # alias c=clear
 # alias v=nvim
-alias g=git
-alias gco='git checkout $(git branch --format="%(refname:short)" | fzf)'
 # alias n=npm
-alias r=ranger
-
-alias dpi='TMPDIR=$HOME/.pi/tmp devx pi'
-alias lg='lazygit'
-
-alias '?s'='gh copilot suggest'
-alias '?e'='gh copilot explain'
-
-alias eza='eza --color=always --long --git --no-filesize --icons=always --no-time --no-user'
-alias e='eza'
-alias et='eza --tree --color=always'
-alias et2='eza --tree --color=always --level=2'
-alias ls='ls -lAh --color=auto'
 
 # FZF Setup
 [ -f ~/.fzf.zsh ] && source ~/.fzf.zsh
@@ -84,68 +73,8 @@ _fzf_compgen_dir() {
   fd --type=d --hidden --exclude .git . "$1"
 }
 
-# Bat setup
+# Bat setup (env var only — bat alias lives in aliases.zsh)
 export BAT_THEME=gruvbox-dark
-alias bat='bat --color=always'
-alias cat='bat'
-
-# Utility aliases
-alias fixcam='sudo killall VDCAssistant'
-alias fixwifi='sudo ifconfig en0 down && sudo ifconfig en0 up'
-alias enable-key-repeat='defaults write -g ApplePressAndHoldEnabled -bool false'
-alias disable-key-repeat='defaults write -g ApplePressAndHoldEnabled -bool true'
-
-# Utility functions
-mcd() {
-    mkdir -p $1
-    cd $1
-}
-
-ps-kill() {
-  ps aux | grep "$1" | grep -v grep | awk '{ print $2 }' | xargs kill -9
-}
-
-# Examples of call:
-# git-clone-bare-for-worktrees git@github.com:name/repo.git
-# => Clones to a /repo directory
-#
-# git-clone-bare-for-worktrees git@github.com:name/repo.git my-repo
-# => Clones to a /my-repo directory
-bare-clone() {
-  url=$1
-  basename=${url##*/}
-  name=${2:-${basename%.*}}
-
-  mkdir $name
-  cd "$name"
-
-  # Moves all the administrative git files (a.k.a $GIT_DIR) under .bare directory.
-  #
-  # Plan is to create worktrees as siblings of this directory.
-  # Example targeted structure:
-  # .bare
-  # main
-  # new-awesome-feature
-  # hotfix-bug-12
-  # ...
-  git clone --bare "$url" .bare
-  echo "gitdir: ./.bare" > .git
-
-  # Explicitly sets the remote origin fetch so we can fetch remote branches
-  git config remote.origin.fetch "+refs/heads/*:refs/remotes/origin/*"
-
-  # Gets all branches from origin
-  git fetch origin
-}
-
-killport() {
-    local port=$1
-    if [ -z "$port" ]; then
-      lsof -i TCP | fzf --multi | awk '{print $2}' | xargs kill -9
-    else
-      lsof -i :$port | awk '{print $2}' | xargs kill -9
-    fi
-}
 
 # WTP shell integration (needs compdef from compinit, so must load after antigen apply)
 [ -f "$HOME/src/github.com/shopify-playground/wtp/shell/wtp.zsh" ] && source "$HOME/src/github.com/shopify-playground/wtp/shell/wtp.zsh"

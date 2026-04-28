@@ -3,6 +3,19 @@
 
 ZSH_HOST_OS=$(uname | awk '{print tolower($0)}')
 
+# ── Symlink ~/.zshenv → personal/.zshenv ──────────────────────────────────────
+# Sourced for every zsh invocation (including non-interactive `zsh -c`),
+# so this is where cargo PATH and the alias file live. Done early so all
+# subsequent zsh invocations in this install script see the aliases too.
+setup_zshenv() {
+  local target="$HOME/$DOTFILES_DIRECTORY_NAME/personal/.zshenv"
+  if [ -f "$HOME/.zshenv" ] && [ ! -L "$HOME/.zshenv" ]; then
+    cp -L "$HOME/.zshenv" "$HOME/.zshenv.$(date +%Y%m%d).bak"
+  fi
+  ln -vsfn "$target" "$HOME/.zshenv"
+}
+setup_zshenv
+
 # ── Pi agent configuration (shared across OS) ────────────────────────────────
 #
 # Links portable dotfiles config into ~/.pi/agent, then overlays any
