@@ -181,15 +181,14 @@ export default function (pi: ExtensionAPI) {
               })
               .map(([, text]) => sanitizeStatusText(text));
 
-            // Append preset at the end — only when a preset is actually active.
-            // Leads using tool-search don't auto-apply a preset, so no chip is shown.
+            // Append preset at the end (always visible)
             const presetStatus = extensionStatuses.get("preset");
             if (presetStatus) {
               const presetText = stripAnsi(sanitizeStatusText(presetStatus));
               const presetName = presetText.replace(/^preset:/, "");
-              if (presetName) {
-                sortedStatuses.push("\uD83E\uDDE9 " + presetName);
-              }
+              sortedStatuses.push("\uD83E\uDDE9 " + (presetName || "code"));
+            } else {
+              sortedStatuses.push("\uD83E\uDDE9 code");
             }
 
             if (sortedStatuses.length > 0) {
