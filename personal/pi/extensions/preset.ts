@@ -53,21 +53,6 @@ import {
   Text,
 } from "@mariozechner/pi-tui";
 
-/**
- * Check if the tool-search extension is configured (settings.json has a toolSearch block).
- * When active, tool-search manages tool visibility for the lead session via a
- * manifest-aware tool_search meta-tool. Preset.ts should skip setActiveTools
- * and only apply model/provider/instructions.
- */
-function isToolSearchConfigured(): boolean {
-  try {
-    const raw = readFileSync(join(getAgentDir(), "settings.json"), "utf-8");
-    return !!JSON.parse(raw)?.toolSearch;
-  } catch {
-    return false;
-  }
-}
-
 // Preset configuration
 interface Preset {
   /** Provider name (e.g., "anthropic", "openai") */
@@ -129,8 +114,6 @@ export default function presetExtension(pi: ExtensionAPI) {
   let activePreset: Preset | undefined;
   /** Tools that were active before any preset was applied — used to restore on clear */
   let initialTools: string[] | undefined;
-  /** True when session was started with explicit --preset flag (teammate/subagent mode) */
-  let isTeammateMode = false;
 
   // Register --preset CLI flag
   pi.registerFlag("preset", {
@@ -172,29 +155,21 @@ export default function presetExtension(pi: ExtensionAPI) {
 
     // Apply tools if specified
     if (preset.tools && preset.tools.length > 0) {
-      // When tool-search is managing visibility for the lead session, skip tool
-      // filtering. tool-search hides all tools behind a manifest-aware tool_search
-      // meta-tool; overriding here would clobber that. Teammates (explicit --preset
-      // flag) still get deterministic tool sets via setActiveTools.
-      const toolSearchActive = isToolSearchConfigured() && !isTeammateMode;
+      const allToolNames = pi.getAllTools().map((t) => t.name);
+      const validTools = preset.tools.filter((t) => allToolNames.includes(t));
+      const invalidTools = preset.tools.filter(
+        (t) => !allToolNames.includes(t),
+      );
 
-      if (!toolSearchActive) {
-        const allToolNames = pi.getAllTools().map((t) => t.name);
-        const validTools = preset.tools.filter((t) => allToolNames.includes(t));
-        const invalidTools = preset.tools.filter(
-          (t) => !allToolNames.includes(t),
+      if (invalidTools.length > 0) {
+        ctx.ui.notify(
+          `Preset "${name}": Unknown tools: ${invalidTools.join(", ")}`,
+          "warning",
         );
+      }
 
-        if (invalidTools.length > 0) {
-          ctx.ui.notify(
-            `Preset "${name}": Unknown tools: ${invalidTools.join(", ")}`,
-            "warning",
-          );
-        }
-
-        if (validTools.length > 0) {
-          pi.setActiveTools(validTools);
-        }
+      if (validTools.length > 0) {
+        pi.setActiveTools(validTools);
       }
     }
 
@@ -367,8 +342,7 @@ export default function presetExtension(pi: ExtensionAPI) {
     if (nextName === "(none)") {
       activePresetName = undefined;
       activePreset = undefined;
-      // When tool-search is managing visibility, don't clobber it with initialTools
-      if (initialTools && !isToolSearchConfigured()) pi.setActiveTools(initialTools);
+      if (initialTools) pi.setActiveTools(initialTools);
       ctx.ui.notify("Preset cleared, defaults restored", "info");
       updateStatus(ctx);
       return;
@@ -435,9 +409,8 @@ export default function presetExtension(pi: ExtensionAPI) {
     // Load presets from config files
     presets = loadPresets(ctx.cwd);
 
-    // Check for --preset flag — explicit flag means teammate/subagent mode
+    // Check for --preset flag
     const presetFlag = pi.getFlag("preset");
-    isTeammateMode = typeof presetFlag === "string" && !!presetFlag;
     if (typeof presetFlag === "string" && presetFlag) {
       const preset = presets[presetFlag];
       if (preset) {
@@ -470,10 +443,8 @@ export default function presetExtension(pi: ExtensionAPI) {
       }
     }
 
-    // Default to "code" preset if nothing else was activated.
-    // Skip default when tool-search is managing tools for the lead — no preset
-    // needed since "code" only defines tools (no model/instructions).
-    if (!activePresetName && !presetFlag && !isToolSearchConfigured()) {
+    // Default to "code" preset if nothing else was activated
+    if (!activePresetName && !presetFlag) {
       const defaultPreset = presets["code"];
       if (defaultPreset) {
         await applyPreset("code", defaultPreset, ctx);

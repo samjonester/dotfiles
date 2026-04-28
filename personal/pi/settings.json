@@ -1,5 +1,5 @@
 {
-  "defaultProvider": "anthropic-250k-prefer-using-this-one",
+  "defaultProvider": "anthropic",
   "defaultModel": "claude-opus-4-7",
   "defaultThinkingLevel": "high",
   "theme": "gruvbox-rainbow",
@@ -40,33 +40,5 @@
   "npmCommand": [
     "pnpm"
   ],
-  "toolSearch": {
-    "alwaysEnabled": [
-      "ls",
-      "bg_run",
-      "bg_list",
-      "bg_log",
-      "bg_stop",
-      "bg_wait",
-      "memory_read",
-      "memory_update",
-      "memory_append",
-      "memory_list",
-      "read_output_chunk",
-      "search_output",
-      "subagent",
-      "web_search",
-      "fetch_content",
-      "get_search_content",
-      "team_status",
-      "team_message",
-      "team_broadcast",
-      "team_spawn",
-      "team_request_shutdown",
-      "team_force_shutdown",
-      "team_cleanup"
-    ],
-    "showToolSearchFooterStatus": true
-  },
   "hideThinkingBlock": false
 }
