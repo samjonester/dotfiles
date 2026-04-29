@@ -9,20 +9,6 @@ You are the review lead. You detect the review source, dispatch specialized revi
 
 **This skill supersedes the `code-review` skill from shop-pi-fy.** If both are available, always use this one. This version adds: smart source detection, a judge validation step, model diversity across reviewers, and actionable output (PR comment drafts or fix plans).
 
-## Failure Modes (read before dispatching)
-
-The parallel subagent dispatcher can return **silent failures** that look like clean results but contain nothing useful. Watch for these signals from any batch in Step 4b or Step 5:
-
-- `Parallel: 0/N succeeded` (or `M/N succeeded` where M < N)
-- Any agent block that renders as `## <agent-name> (failed)` or contains `(no output)` / empty body
-- The whole batch returns near-instantly (much faster than a real review run)
-
-**What this means:** the failure is in the subagent infrastructure or the underlying model call (e.g., a Gemini `400` on `thinking_budget`, an Opus rate-limit, a transport error). It is **not** a signal about the code under review. The reviewer never actually ran.
-
-**How to recover:** do NOT proceed to the judge with empty reviewer output — the judge will hallucinate around the gaps. Instead, re-dispatch each failed agent **individually** so the underlying error message surfaces in full (parallel mode swallows per-agent errors). See Step 4b sub-step "Fallback for silent batch failures" for the exact procedure.
-
-**Model-specific errors** (Gemini `thinking_budget`, Anthropic overload, etc.) should trigger an automatic retry of the batch with the failing agent excluded, and the exclusion must appear in the user-facing report.
-
 ## Step 1: Detect the Review Source
 
 Parse the user's input to determine the review source. Try each in order:
@@ -299,42 +285,38 @@ Run the optional reviewers identified in Step 3c (typically 2-4 agents). Wait fo
 
 If the user specified a subset (Step 3b), run all specified reviewers in a single batch — no core/optional split needed since the user has already curated the list.
 
-### 4b.1 Fallback for silent batch failures
+### 4c. Detect and recover from silent batch failures
 
-**Trigger:** after any batch (core, optional, or user-subset) returns, inspect the result before continuing. If any of these are true, this is a silent infrastructure/model failure — not a real review:
+After every parallel batch returns, inspect the response **before** treating it as a real review.
 
-- The batch summary shows `Parallel: 0/N succeeded` (total wipeout)
-- The batch summary shows `M/N succeeded` with M < N
-- Any individual agent block renders as `## <agent> (failed)` or `(no output)` / empty body
+**Detect.** Treat the batch as a silent failure if any of these are true:
 
-See "Failure Modes" near the top of this skill for context.
+- Summary reads `Parallel: 0/N succeeded` or any `M/N succeeded` where `M < N`
+- An agent block renders as `## <agent-name> (failed)` with empty / `(no output)` body
+- A reviewer task body contains `Agent error:` or a transport/protocol error string
 
-**Recovery procedure:**
+The reviewer never ran — the failure is in the subagent infrastructure or the underlying model call (Gemini `400` on `thinking_budget`, Anthropic overload, MCP transport, etc.). Do **not** pass empty output to the judge.
 
-1. **Re-dispatch each failed agent individually (sequentially, NOT in parallel).** Parallel mode silently swallows per-agent errors — single dispatch surfaces the real stderr/error message:
+**Surface.** For each failed agent, re-dispatch as a **single** subagent call (not parallel) so the underlying error surfaces in full:
 
-   ```json
-   {
-     "agent": "review-scope",
-     "task": "<same composed task>",
-     "cwd": "<REVIEW_CWD if set>"
-   }
-   ```
+```json
+{
+  "agent": "review-scope",
+  "task": "<same composed task>",
+  "cwd": "<REVIEW_CWD if set>"
+}
+```
 
-   Run one at a time so each error surfaces cleanly. Capture the actual error text (e.g., `Gemini API 400: thinking_budget must be ...`).
+Capture the error verbatim, add it to the user-facing report (see Step 6 — Reviewers status line), and continue with whichever reviewers succeeded — never abandon the whole review on a silent failure.
 
-2. **Classify the surfaced error:**
-   - **Model-specific / per-agent** (e.g., one model rejects a parameter, one agent has a misconfigured frontmatter): the agent is the problem, the rest of the batch is fine. Drop that agent from the batch and **retry the remaining agents in parallel**. Note the exclusion.
-   - **Transient infrastructure** (timeout, transport error, generic 5xx): retry the individual dispatch once. If it succeeds, continue. If it fails again, treat it as dropped.
-   - **Universal failure** (every agent surfaces the same error): the harness or your task payload is broken. Stop, report the error to the user, and ask whether to proceed with a degraded review.
+**Mitigate.** If the per-agent error is model-specific (`thinking_budget out of range`, `Overloaded`, rate-limit), retry the original batch **without** that agent and note the omission. If the same agent also fails on single re-dispatch, mark it failed and move on — do not loop. If >50% of a batch fails with infrastructure errors, flag the review as **INCOMPLETE** per Step 5d and ask the user whether to retry.
 
-3. **Report the recovery in the user-facing output.** Add a short "Reviewer dispatch notes" section to the final report (Step 6) listing:
-   - Which reviewers initially failed silently
-   - The surfaced error message for each (verbatim, one line)
-   - Whether each was successfully retried, retried-with-exclusion, or permanently dropped
-   - If >50% of selected reviewers were dropped, mark the review **INCOMPLETE** per Step 5d.
+### 4d. Failure modes — quick reference
 
-**Do not** advance to Step 5 (Judge) with empty/silent-failed reviewer outputs filled in as `## review-X (failed)` — the judge cannot validate what was never produced and will either hallucinate around the gap or amplify the missing-coverage risk.
+- `0/N succeeded` on a parallel batch → re-dispatch each singly, capture errors, retry batch without the bad ones
+- `thinking_budget out of range` (Gemini 2.5 Flash) → drop the agent, note in report, file follow-up
+- `Overloaded` / `rate_limited` (Anthropic) or MCP transport error → one retry, then drop and report
+- Empty body but `succeeded` count looks fine → treat as single-agent failure; re-dispatch that one agent
 
 ## Step 5: Judge
 
@@ -435,6 +417,16 @@ Read the template at [references/review-template.md](references/review-template.
 - **Filtered Findings** — from the judge's invalid/rejected list
 - **Specialist Reports** — original output from each reviewer, with verdict indicators
 - **Decision** — from the judge, with your confidence assessment
+
+### Reviewers status line
+
+Lead the consolidated output with a one-line roster showing each dispatched reviewer's result, including any silent failures recovered in Step 4c:
+
+```
+Reviewers: review-correctness ✅ · review-architecture ✅ · review-simplify ✅ · review-scope ❌ (Gemini thinking_budget bug — see /tmp/...)
+```
+
+Use ✅ for completed (with or without findings), ❌ for failed/dropped, with the captured error in parentheses. This makes coverage gaps visible without burying them in the specialist sections.
 
 ### Verdict indicators for specialist sections
 
