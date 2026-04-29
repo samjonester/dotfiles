@@ -9,6 +9,20 @@ You are the review lead. You detect the review source, dispatch specialized revi
 
 **This skill supersedes the `code-review` skill from shop-pi-fy.** If both are available, always use this one. This version adds: smart source detection, a judge validation step, model diversity across reviewers, and actionable output (PR comment drafts or fix plans).
 
+## Failure Modes (read before dispatching)
+
+The parallel subagent dispatcher can return **silent failures** that look like clean results but contain nothing useful. Watch for these signals from any batch in Step 4b or Step 5:
+
+- `Parallel: 0/N succeeded` (or `M/N succeeded` where M < N)
+- Any agent block that renders as `## <agent-name> (failed)` or contains `(no output)` / empty body
+- The whole batch returns near-instantly (much faster than a real review run)
+
+**What this means:** the failure is in the subagent infrastructure or the underlying model call (e.g., a Gemini `400` on `thinking_budget`, an Opus rate-limit, a transport error). It is **not** a signal about the code under review. The reviewer never actually ran.
+
+**How to recover:** do NOT proceed to the judge with empty reviewer output — the judge will hallucinate around the gaps. Instead, re-dispatch each failed agent **individually** so the underlying error message surfaces in full (parallel mode swallows per-agent errors). See Step 4b sub-step "Fallback for silent batch failures" for the exact procedure.
+
+**Model-specific errors** (Gemini `thinking_budget`, Anthropic overload, etc.) should trigger an automatic retry of the batch with the failing agent excluded, and the exclusion must appear in the user-facing report.
+
 ## Step 1: Detect the Review Source
 
 Parse the user's input to determine the review source. Try each in order:
@@ -35,7 +49,7 @@ Set `SOURCE_TYPE=pr` and save the PR metadata (title, URL, number, headRefName) 
 
 #### Checkout into a WTP worktree
 
-For PR reviews, always checkout the PR branch into an isolated WTP worktree so reviewers can `read`, `grep`, and `find` the full codebase — not just the diff. Follow the WTP checkout flow in [../_shared/wtp-checkout.md](../_shared/wtp-checkout.md):
+For PR reviews, always checkout the PR branch into an isolated WTP worktree so reviewers can `read`, `grep`, and `find` the full codebase — not just the diff. Follow the WTP checkout flow in [../\_shared/wtp-checkout.md](../_shared/wtp-checkout.md):
 
 ```bash
 WTP_BIN="$HOME/src/github.com/shopify-playground/wtp/bin/_wtp"
@@ -235,7 +249,11 @@ Source: [PR #N / uncommitted changes / branch: feature-xyz]
 **Set reviewer working directory:** If `REVIEW_CWD` was set in Step 1a (WTP worktree checkout), pass it as `cwd` on every reviewer subagent task. This gives reviewers access to the full codebase via `read`, `grep`, and `find`:
 
 ```json
-{ "agent": "review-correctness", "task": "<composed task>", "cwd": "<REVIEW_CWD>" }
+{
+  "agent": "review-correctness",
+  "task": "<composed task>",
+  "cwd": "<REVIEW_CWD>"
+}
 ```
 
 For local reviews (`local_uncommitted`, `local_branch`), omit `cwd` — reviewers inherit the current working directory which already has the code.
@@ -280,6 +298,43 @@ Run the optional reviewers identified in Step 3c (typically 2-4 agents). Wait fo
 **Combine results** from both batches and proceed to Step 5 (Judge).
 
 If the user specified a subset (Step 3b), run all specified reviewers in a single batch — no core/optional split needed since the user has already curated the list.
+
+### 4b.1 Fallback for silent batch failures
+
+**Trigger:** after any batch (core, optional, or user-subset) returns, inspect the result before continuing. If any of these are true, this is a silent infrastructure/model failure — not a real review:
+
+- The batch summary shows `Parallel: 0/N succeeded` (total wipeout)
+- The batch summary shows `M/N succeeded` with M < N
+- Any individual agent block renders as `## <agent> (failed)` or `(no output)` / empty body
+
+See "Failure Modes" near the top of this skill for context.
+
+**Recovery procedure:**
+
+1. **Re-dispatch each failed agent individually (sequentially, NOT in parallel).** Parallel mode silently swallows per-agent errors — single dispatch surfaces the real stderr/error message:
+
+   ```json
+   {
+     "agent": "review-scope",
+     "task": "<same composed task>",
+     "cwd": "<REVIEW_CWD if set>"
+   }
+   ```
+
+   Run one at a time so each error surfaces cleanly. Capture the actual error text (e.g., `Gemini API 400: thinking_budget must be ...`).
+
+2. **Classify the surfaced error:**
+   - **Model-specific / per-agent** (e.g., one model rejects a parameter, one agent has a misconfigured frontmatter): the agent is the problem, the rest of the batch is fine. Drop that agent from the batch and **retry the remaining agents in parallel**. Note the exclusion.
+   - **Transient infrastructure** (timeout, transport error, generic 5xx): retry the individual dispatch once. If it succeeds, continue. If it fails again, treat it as dropped.
+   - **Universal failure** (every agent surfaces the same error): the harness or your task payload is broken. Stop, report the error to the user, and ask whether to proceed with a degraded review.
+
+3. **Report the recovery in the user-facing output.** Add a short "Reviewer dispatch notes" section to the final report (Step 6) listing:
+   - Which reviewers initially failed silently
+   - The surfaced error message for each (verbatim, one line)
+   - Whether each was successfully retried, retried-with-exclusion, or permanently dropped
+   - If >50% of selected reviewers were dropped, mark the review **INCOMPLETE** per Step 5d.
+
+**Do not** advance to Step 5 (Judge) with empty/silent-failed reviewer outputs filled in as `## review-X (failed)` — the judge cannot validate what was never produced and will either hallucinate around the gap or amplify the missing-coverage risk.
 
 ## Step 5: Judge
 
