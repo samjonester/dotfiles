@@ -21,6 +21,7 @@ Many external services have dedicated tools registered via pi extensions. **Alwa
 When a tool or MCP server fails for **infrastructure reasons** (connection error, auth failure, server down, schema mismatch, rate limit, etc.): briefly diagnose (tool, error, likely cause), **stop**, and ask the user how to proceed. Do not improvise.
 
 Prohibited workarounds:
+
 - Burning multiple turns retrying with ad-hoc variations
 - Extracting tokens from env/keychain to make raw `curl` calls when a dedicated tool failed
 - Falling back to `fetch_content`, Chrome DevTools, `gh` CLI, or shell scripts to re-implement what the failed tool was supposed to do
@@ -241,9 +242,17 @@ When user asks to free a worktree, release a slot, or clean up worktrees, use `_
 
 When responding to Binks or assessing PR feedback, load the `binks-review` skill — it has the full response format, calibration feedback structure, and validity assessment framework.
 
+### Binks watcher pattern
+
+Binks reveals findings serially — PR #878 had 3 rounds over ~2 hours, 30-50 min idle between rounds. Prefer **one long-lived `binks_pr_<N>_watcher` teammate** per PR rather than respawning per round (which re-pays teammate-gate friction every time). Loop:
+
+1. Wait for Binks to settle on current HEAD (`gh pr checks <N> --watch` or poll — gate lands 5-30 min after push; follow-ups take up to 30-50 min more).
+2. Fetch findings, assess via the `binks-review` skill, fix valid ones, `gt modify`, push `--force-with-lease`. Post replies / 👍👎 reactions / thread resolves; until R2 ships, hand back to lead for the `gh` API mutations.
+3. Resume. Don't declare done after round 1 even if the gate is green — wait 1-2 hr after each push (complex PRs surface findings serially, e.g. #878's alt-screen extractor had 3 separate bugs). One watcher per PR — no multiplexing, no parallel watchers. Treat `shop-pi-fy` Binks the same as `shop/world` — it fires, just slower.
+
 ## Loop Scheduler
 
-Suggest `/loop` or `CronCreate` for: long-running deploys/builds, waiting on CI/PR state, periodic health checks, test watch loops. Don't suggest for things that complete in seconds.
+Suggest `/loop` or `CronCreate` for: long-running deploys/builds, waiting on CI/PR state, periodic health checks, test watch loops. Don't suggest for things that complete in seconds. A long-lived Binks watcher per PR is a good `/loop` use case — see the Binks watcher pattern above for the loop body.
 
 ## Autoresearch
 
