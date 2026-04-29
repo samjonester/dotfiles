@@ -199,12 +199,26 @@ const TEAMMATE_BLOCKED_PATTERNS: TeammateBlockedPattern[] = [
     label: "gh pr ready",
     reason: "publishes draft → ready; lead must approve.",
   },
-  // PR mutations beyond submit
+  // PR mutations beyond submit.
+  //
+  // Binks reply workflow: posting review comments, reacting, and resolving
+  // threads are non-destructive annotate operations — safe for teammates.
+  // The following are intentionally NOT in this regex (they are allowed):
+  //   - `gh pr comment`              (top-level PR comment)
+  //   - `gh pr review --comment`     (review submitted as COMMENT event)
+  // Blocked review verdicts (--approve / --request-changes) are matched by
+  // the next pattern.
   {
-    pattern:
-      /\bgh\s+pr\s+(merge|edit|comment|create|close|reopen|review|convert-to-draft)\b/,
+    pattern: /\bgh\s+pr\s+(merge|edit|create|close|reopen|convert-to-draft)\b/,
     label: "gh pr (mutating)",
     reason: "PR mutation requires lead.",
+  },
+  // gh pr review verdicts (approve / request-changes) require lead. The
+  // COMMENT event variant (`gh pr review --comment`) is allowed.
+  {
+    pattern: /\bgh\s+pr\s+review\b[^|;&]*--(approve|request-changes)\b/,
+    label: "gh pr review (verdict)",
+    reason: "review approve/request-changes requires lead.",
   },
   // Issue / release / repo / api mutations
   {
@@ -222,8 +236,17 @@ const TEAMMATE_BLOCKED_PATTERNS: TeammateBlockedPattern[] = [
     label: "gh repo (mutating)",
     reason: "repo mutation requires lead.",
   },
+  // gh api mutations are blocked by default, with a Binks-reply allowlist:
+  //   - repos/*/pulls/*/comments     (PR review comments + threaded replies)
+  //   - */reactions                  (reactions on issues / PR comments)
+  //   - */threads/*/resolve          (resolving review threads)
+  //   - GraphQL `resolveReviewThread` mutation
+  // These are non-destructive annotate operations safe for teammates. All
+  // other mutating endpoints (releases, issues, dispatches, repos, etc.)
+  // remain blocked.
   {
-    pattern: /\bgh\s+api\b.*(--method|-X)\s+(POST|PATCH|PUT|DELETE)\b/i,
+    pattern:
+      /\bgh\s+api\b(?![^\n]*(?:pulls\/[^\s\/]+\/comments|\/reactions(?:\b|\/)|\/threads\/[^\s\/]+\/resolve|resolveReviewThread))[^\n]*(--method|-X)\s+(POST|PATCH|PUT|DELETE)\b/i,
     label: "gh api (mutating)",
     reason: "API mutation requires lead.",
   },
@@ -272,17 +295,12 @@ function runProcess(
 ): Promise<string | null> {
   return new Promise((resolve) => {
     let resolved = false;
-    const child = execFile(
-      cmd,
-      args,
-      { cwd, timeout: 2000 },
-      (err, stdout) => {
-        if (resolved) return;
-        resolved = true;
-        if (err) return resolve(null);
-        resolve(stdout.toString().trim());
-      },
-    );
+    const child = execFile(cmd, args, { cwd, timeout: 2000 }, (err, stdout) => {
+      if (resolved) return;
+      resolved = true;
+      if (err) return resolve(null);
+      resolve(stdout.toString().trim());
+    });
     // Belt + braces in case the timeout option doesn't fire on this platform.
     setTimeout(() => {
       if (resolved) return;
@@ -375,11 +393,23 @@ const REMOTE_MUTATION_PATTERNS: RemoteMutationPattern[] = [
   // git
   { pattern: /\bgit\s+push\b/, label: "git push" },
 
-  // gh pr
+  // gh pr — mirrors TEAMMATE_BLOCKED_PATTERNS. Binks-reply primitives
+  // (`gh pr comment`, `gh pr review --comment`) are intentionally NOT
+  // matched here so they pass through with no dialog for the lead and no
+  // hard-block for teammates (which fall through to matchRemoteMutation
+  // at teammateGate step 4). Verdict reviews and `gh pr ready` are caught
+  // by their own patterns below.
   {
-    pattern:
-      /\bgh\s+pr\s+(edit|comment|create|merge|close|reopen|review|ready|convert-to-draft)\b/,
+    pattern: /\bgh\s+pr\s+ready\b/,
+    label: "gh pr ready",
+  },
+  {
+    pattern: /\bgh\s+pr\s+(edit|create|merge|close|reopen|convert-to-draft)\b/,
     label: "gh pr (mutating)",
+  },
+  {
+    pattern: /\bgh\s+pr\s+review\b[^|;&]*--(approve|request-changes)\b/,
+    label: "gh pr review (verdict)",
   },
 
   // gh issue
@@ -400,9 +430,21 @@ const REMOTE_MUTATION_PATTERNS: RemoteMutationPattern[] = [
     label: "gh repo (mutating)",
   },
 
-  // gh api (mutating methods only — GET calls pass through)
+  // gh api (mutating methods only — GET calls pass through). Binks-reply
+  // endpoints are excluded via the same negative-lookahead carve-out used
+  // in TEAMMATE_BLOCKED_PATTERNS, so they bypass both the lead's dialog and
+  // the teammate hard-block. Excluded URL fragments:
+  //   - repos/*/pulls/*/comments      (PR review comments + threaded replies)
+  //   - */reactions                   (reactions on issues / PR comments)
+  //   - */threads/*/resolve           (resolving review threads, REST)
+  //   - GraphQL `resolveReviewThread` mutation (resolving review threads)
+  // Lead UX impact is suppressing a y/n confirmation for these specific
+  // safe endpoints — leads who run them directly never had to think about
+  // them. All other mutations (releases, dispatches, repo contents, etc.)
+  // still prompt as before.
   {
-    pattern: /\bgh\s+api\b.*(--method|-X)\s+(POST|PATCH|PUT|DELETE)\b/i,
+    pattern:
+      /\bgh\s+api\b(?![^\n]*(?:pulls\/[^\s\/]+\/comments|\/reactions(?:\b|\/)|\/threads\/[^\s\/]+\/resolve|resolveReviewThread))[^\n]*(--method|-X)\s+(POST|PATCH|PUT|DELETE)\b/i,
     label: "gh api (mutating)",
   },
 
@@ -2607,10 +2649,7 @@ export default function (pi: ExtensionAPI) {
     else if (debugEnabled)
       ctx.ui.setStatus(
         "bash-guard",
-        t.fg("success", "🔒 guard") +
-          " " +
-          t.fg("dim", "🔍") +
-          teammateSuffix,
+        t.fg("success", "🔒 guard") + " " + t.fg("dim", "🔍") + teammateSuffix,
       );
     else
       ctx.ui.setStatus(
