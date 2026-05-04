@@ -1,12 +1,5 @@
 /**
  * Agent discovery and configuration
- *
- * Discovery order (later sources override earlier ones by agent name):
- *   1. User dir: ~/.pi/agent/agents/
- *   2. Each registered package's pi.agents directories (from settings.json
- *      `packages` entries that point at local paths or git/npm packages with
- *      a `pi.agents` manifest field)
- *   3. Project dir: nearest .pi/agents/ walking up from cwd
  */
 
 import * as fs from "node:fs";
@@ -101,131 +94,23 @@ function findNearestProjectAgentsDir(cwd: string): string | null {
 	}
 }
 
-/**
- * Resolve a package source entry from settings.json `packages` to its
- * on-disk root directory.
- *
- *   - Local absolute path: use as-is
- *   - Local relative path: resolved against the directory containing settings.json
- *   - Strings with a scheme/repo shorthand (git:, https://, github.com/...) are
- *     resolved under ~/.pi/agent/git/<host>/<path>
- */
-function resolvePackageRoot(entry: string, agentDir: string): string | null {
-	if (!entry) return null;
-
-	if (entry.startsWith("/")) {
-		return isDirectory(entry) ? entry : null;
-	}
-
-	if (entry.startsWith("~/")) {
-		const home = process.env.HOME || "";
-		const expanded = path.join(home, entry.slice(2));
-		return isDirectory(expanded) ? expanded : null;
-	}
-
-	if (entry.startsWith("./") || entry.startsWith("../")) {
-		const resolved = path.resolve(agentDir, entry);
-		return isDirectory(resolved) ? resolved : null;
-	}
-
-	// Strip optional leading scheme prefix
-	let spec = entry;
-	for (const prefix of ["git:", "npm:", "https://", "http://", "ssh://"]) {
-		if (spec.startsWith(prefix)) {
-			spec = spec.slice(prefix.length);
-			break;
-		}
-	}
-	// Strip @ref suffix (e.g. github.com/user/repo@v1)
-	const atIdx = spec.lastIndexOf("@");
-	if (atIdx > 0 && spec.indexOf("/", atIdx) === -1) {
-		spec = spec.slice(0, atIdx);
-	}
-	// git@github.com:user/repo -> github.com/user/repo
-	const sshMatch = spec.match(/^([^@:/]+@)?([^:]+):(.+)$/);
-	if (sshMatch && !spec.startsWith(sshMatch[2] + "/")) {
-		spec = `${sshMatch[2]}/${sshMatch[3]}`;
-	}
-
-	const candidate = path.join(agentDir, "git", spec);
-	return isDirectory(candidate) ? candidate : null;
-}
-
-/**
- * Read pi.agents directories declared in a package's package.json.
- */
-function getPackageAgentDirs(packageRoot: string): string[] {
-	const pkgJsonPath = path.join(packageRoot, "package.json");
-	if (!fs.existsSync(pkgJsonPath)) return [];
-
-	try {
-		const raw = fs.readFileSync(pkgJsonPath, "utf-8");
-		const pkg = JSON.parse(raw) as { pi?: { agents?: unknown } };
-		const agentsField = pkg?.pi?.agents;
-		if (!Array.isArray(agentsField)) return [];
-
-		const dirs: string[] = [];
-		for (const entry of agentsField) {
-			if (typeof entry !== "string") continue;
-			const resolved = path.resolve(packageRoot, entry);
-			if (isDirectory(resolved)) dirs.push(resolved);
-		}
-		return dirs;
-	} catch {
-		return [];
-	}
-}
-
-/**
- * Walk settings.json `packages` and return all `pi.agents` directories.
- */
-function getAgentDirsFromPackages(agentDir: string): string[] {
-	const settingsPath = path.join(agentDir, "settings.json");
-	if (!fs.existsSync(settingsPath)) return [];
-
-	let packages: unknown[];
-	try {
-		const raw = fs.readFileSync(settingsPath, "utf-8");
-		const settings = JSON.parse(raw) as { packages?: unknown };
-		if (!Array.isArray(settings.packages)) return [];
-		packages = settings.packages;
-	} catch {
-		return [];
-	}
-
-	const dirs: string[] = [];
-	for (const entry of packages) {
-		const sourceStr = typeof entry === "string" ? entry : (entry as { source?: string })?.source;
-		if (typeof sourceStr !== "string") continue;
-
-		const root = resolvePackageRoot(sourceStr, agentDir);
-		if (!root) continue;
-
-		dirs.push(...getPackageAgentDirs(root));
-	}
-	return dirs;
-}
-
 export function discoverAgents(cwd: string, scope: AgentScope): AgentDiscoveryResult {
-	const agentDir = getAgentDir();
-	const userDir = path.join(agentDir, "agents");
+	const userDir = path.join(getAgentDir(), "agents");
 	const projectAgentsDir = findNearestProjectAgentsDir(cwd);
 
-	const includeUser = scope !== "project";
-	const includeProject = scope !== "user" && !!projectAgentsDir;
+	const userAgents = scope === "project" ? [] : loadAgentsFromDir(userDir, "user");
+	const projectAgents = scope === "user" || !projectAgentsDir ? [] : loadAgentsFromDir(projectAgentsDir, "project");
 
-	const userAgents = includeUser ? loadAgentsFromDir(userDir, "user") : [];
-	const packageAgents = includeUser
-		? getAgentDirsFromPackages(agentDir).flatMap((dir) => loadAgentsFromDir(dir, "user"))
-		: [];
-	const projectAgents = includeProject ? loadAgentsFromDir(projectAgentsDir!, "project") : [];
-
-	// Merge with later sources overriding earlier ones by agent name:
-	//   user dir < package agents < project dir
 	const agentMap = new Map<string, AgentConfig>();
-	for (const agent of userAgents) agentMap.set(agent.name, agent);
-	for (const agent of packageAgents) agentMap.set(agent.name, agent);
-	for (const agent of projectAgents) agentMap.set(agent.name, agent);
+
+	if (scope === "both") {
+		for (const agent of userAgents) agentMap.set(agent.name, agent);
+		for (const agent of projectAgents) agentMap.set(agent.name, agent);
+	} else if (scope === "user") {
+		for (const agent of userAgents) agentMap.set(agent.name, agent);
+	} else {
+		for (const agent of projectAgents) agentMap.set(agent.name, agent);
+	}
 
 	return { agents: Array.from(agentMap.values()), projectAgentsDir };
 }
