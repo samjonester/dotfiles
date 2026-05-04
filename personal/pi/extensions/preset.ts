@@ -114,6 +114,16 @@ export default function presetExtension(pi: ExtensionAPI) {
   let activePreset: Preset | undefined;
   /** Tools that were active before any preset was applied — used to restore on clear */
   let initialTools: string[] | undefined;
+  /**
+   * Tracks a preset whose tool list contained names not yet registered at apply time.
+   * Async-loaded extensions (e.g. pi-tool-gateway-extension fetches tools/list over HTTP)
+   * register tools after `session_start` fires, so apply-time validation produces
+   * false-positive "Unknown tools" warnings. We re-check on `before_agent_start`,
+   * which fires after async setup has settled.
+   */
+  let pendingToolValidation:
+    | { presetName: string; requestedTools: string[] }
+    | undefined;
 
   // Register --preset CLI flag
   pi.registerFlag("preset", {
@@ -161,16 +171,24 @@ export default function presetExtension(pi: ExtensionAPI) {
         (t) => !allToolNames.includes(t),
       );
 
-      if (invalidTools.length > 0) {
-        ctx.ui.notify(
-          `Preset "${name}": Unknown tools: ${invalidTools.join(", ")}`,
-          "warning",
-        );
-      }
-
       if (validTools.length > 0) {
         pi.setActiveTools(validTools);
       }
+
+      if (invalidTools.length > 0) {
+        // Defer the warning to `before_agent_start` — async-loaded extensions
+        // (pi-tool-gateway-extension, etc.) register tools after session_start
+        // fires. We'll re-validate then and only warn about tools that are
+        // *still* missing.
+        pendingToolValidation = {
+          presetName: name,
+          requestedTools: preset.tools,
+        };
+      } else {
+        pendingToolValidation = undefined;
+      }
+    } else {
+      pendingToolValidation = undefined;
     }
 
     // Store active preset for system prompt injection
@@ -392,8 +410,32 @@ export default function presetExtension(pi: ExtensionAPI) {
     },
   });
 
-  // Inject preset instructions into system prompt
-  pi.on("before_agent_start", async (event) => {
+  // Inject preset instructions into system prompt + re-validate tool list
+  // for async-loaded tools (see pendingToolValidation comment above).
+  pi.on("before_agent_start", async (event, ctx) => {
+    if (pendingToolValidation) {
+      const { presetName, requestedTools } = pendingToolValidation;
+      const allToolNames = pi.getAllTools().map((t) => t.name);
+      const validTools = requestedTools.filter((t) => allToolNames.includes(t));
+      const stillMissing = requestedTools.filter(
+        (t) => !allToolNames.includes(t),
+      );
+
+      // Re-apply the (now-larger) valid set so async-registered tools become active.
+      if (validTools.length > 0) {
+        pi.setActiveTools(validTools);
+      }
+
+      if (stillMissing.length > 0) {
+        ctx.ui.notify(
+          `Preset "${presetName}": Unknown tools: ${stillMissing.join(", ")}`,
+          "warning",
+        );
+      }
+
+      pendingToolValidation = undefined;
+    }
+
     if (activePreset?.instructions) {
       return {
         systemPrompt: `${event.systemPrompt}\n\n${activePreset.instructions}`,
