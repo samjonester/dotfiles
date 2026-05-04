@@ -1,62 +1,77 @@
 ---
-description: Spawn teammates for multiple parallel activities — parses free-form prose into discrete tasks
-argument-hint: "<free-form description of parallel work>"
+description: Task spawn — delegate ONE task. Auto-routes to a subagent (returns artifact) or teammate (long-running session) based on scope and preset needs.
+argument-hint: "<single task description>"
 ---
-Spawn pi teammates for parallel work described in free-form prose. No delimiters required — an LLM parses the input into discrete tasks first.
+Delegate one task off the lead. Auto-routes to **subagent** (small artifact) or **teammate** (long-running session) so the lead keeps a small context.
 
-**Input**: `$@` — a free-form description of multiple things the user wants done in parallel.
+**Input**: `$@` — a single task description.
 
-### Steps
+**Related**: For many items at once, use `/tq`. For an explicit teammate spawn (no auto-routing), use `/tm`.
 
-#### 1. Parse via subagent
+### Step 1: Empty / multi-task guard
 
-If `$@` is empty, ask the user what to dispatch. Otherwise, call:
+- If `$@` is empty, ask the user what to delegate and stop.
+- If the input clearly describes >1 discrete task ("review X, do Y, fix Z"), suggest `/tq` instead and stop.
+
+### Step 2: Route — subagent vs teammate
+
+Auto-route based on these signals. Don't ask the user unless genuinely ambiguous.
+
+**Choose teammate when ANY of:**
+- Verb implies a long-running session: `review`, `investigate`, `implement`, `build`, `fix`, `refactor`, `validate`, `test`, `triage` (multi-step modes), `address feedback`
+- Task references a known skill that runs in its own session (`review`, `slack-triage`, `mozart-validate`, `mozart-plan-and-implement`, `binks-review`, `pr-ci-autofix`, `autoresearch-create`, ...)
+- Task needs a different working directory (worktree, separate repo)
+- Task needs a non-default preset (`triage`, `investigate`, `workspace`, `code+`, `experiment`, `all`)
+- User says "as a teammate", "spawn", "in tmux", "background", or similar
+
+**Choose subagent when ANY of:**
+- Verb implies a single-shot artifact: `draft`, `summarize`, `extract`, `format`, `translate`, `analyze`, `propose`, `compare`, `lookup`, `cite`
+- Task is a focused research question with a clear, bounded answer
+- User says "as a subagent", "without spawning a tmux", "just give me", "return"
+
+**Override**: any explicit phrase ("as a subagent" / "as a teammate" / "with preset X") wins over heuristics.
+
+If still ambiguous after these heuristics, ask once: "subagent (returns artifact) or teammate (own session)?" and proceed on the answer.
+
+### Step 3: Spawn
+
+**Subagent route:**
+
+Pick an agent if one fits the task verbatim (e.g., `librarian` for code lookups, `plan-questioner` for refining problems, `task-runner` for drafting an artifact). Otherwise default to `task-runner`.
 
 ```
 subagent({
-  agent: "task-splitter",
-  task: "<the raw $@ verbatim — do not rephrase>"
+  agent: "<chosen agent or task-runner>",
+  task: "<task with all needed context inlined>"
 })
 ```
 
-The subagent returns strict JSON: `{ tasks: [{ name, summary, task }, ...], notes? }`.
+After it returns, present the artifact (or the agent's full response if it's a reasoning artifact) to the user.
 
-#### 2. Validate
-
-- **0 tasks** → tell the user the input couldn't be parsed and ask for clarification.
-- **1 task** → don't spawn. Tell the user "this looks like a single task — want me to just do it inline?" and stop.
-- **>5 tasks** → tell the user there are too many for one batch (cap is 5 per AGENTS.md). Ask which to prioritize.
-- **Duplicate names** → defensively append `_2`, `_3`, etc.
-- **`notes` field present** → surface it to the user verbatim before spawning. If it flags file-scope overlap or a dependency, ask for confirmation before proceeding.
-
-#### 3. Spawn
-
-For each task in the validated list, call `team_spawn({ name, task })`. Spawn them in a single tool-call block when possible — they're independent.
-
-Teammates inherit the lead's model and default tools. Don't pass `model` unless the user asked for a specific one.
-
-#### 4. Report
-
-Print a compact summary table:
+**Teammate route:**
 
 ```
-@name           summary
-─────────────── ────────────────────────────────────────
-pr_review       Review PR #524035
-slack_triage    Mid-day Slack triage
-figma_actuators Wire dominanceIssue actuator
+team_spawn({
+  name: "<snake_case short name>",
+  task: "<self-contained task — inline file paths, PR numbers, working dirs>",
+  preset: "<inferred preset, omit if 'code'>"  // optional
+})
 ```
 
-Then a one-line monitoring hint:
+Don't pass `model` unless the user requested one.
 
-> Monitor: `C-Space <n>` to switch tmux windows · `team_status` · `team_message <name> ...`
+After spawning, print one line:
 
-Do NOT poll teammate output. Do NOT pull results back into the lead's context. Per AGENTS.md, treat each teammate's pane as the user's workspace for that task.
+> @<name> spawned. Monitor: `C-Space <n>` · `team_status` · `team_message <name> ...`
+
+### Step 4: Don't pollute the lead
+
+- For teammate route: do NOT poll the teammate's output. Treat its pane as the user's workspace per AGENTS.md.
+- For subagent route: present the returned artifact as-is. Don't re-summarize a summary.
 
 ### Guardrails
 
-- **Don't dispatch trivial work.** If the splitter returns 1 task, refuse to spawn — the user should just run it inline.
-- **Don't fabricate context.** The splitter is responsible for inlining file paths, PR numbers, etc. into each task. If a task prompt looks under-specified, surface that and ask before spawning.
-- **Independence is non-negotiable.** Two teammates editing the same file = silent corruption. If the splitter's `notes` flags overlap, stop and ask.
-
-Ideal: ~3 tool calls total — one subagent (parse), one batch of `team_spawn` calls (1-5), one report.
+- **Inline all needed context.** Whatever the user mentioned (file path, PR number, branch, plan doc) goes into the spawned task verbatim. Subagents and teammates have no access to the lead's conversation.
+- **Don't fabricate context.** If something is unclear, ask the user once before spawning.
+- **One task only.** Multi-task input → suggest `/tq`.
+- **Trust the route.** If the heuristics pick subagent and you're 70%+ sure, go. Don't ask "is that ok?" unless truly torn.
