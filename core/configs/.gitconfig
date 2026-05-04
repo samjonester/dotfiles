@@ -108,3 +108,9 @@
 	smudge = git-lfs smudge -- %f
 	process = git-lfs filter-process
 	required = true
+[fetch]
+	writeCommitGraph = true
+[status]
+	relativePaths = true
+[feature]
+	manyFiles = true
