@@ -1,0 +1,29 @@
+{
+  "name": "samjonester-pi-config",
+  "version": "1.0.0",
+  "description": "Personal pi-coding-agent configuration: extensions, skills, prompts, themes",
+  "private": true,
+  "type": "module",
+  "keywords": [
+    "pi-package"
+  ],
+  "pi": {
+    "extensions": [
+      "./extensions",
+      "!./extensions/tool-search",
+      "!./extensions/tool-result-guard"
+    ],
+    "skills": [
+      "./skills"
+    ],
+    "prompts": [
+      "./prompts"
+    ],
+    "themes": [
+      "./themes"
+    ],
+    "agents": [
+      "./agents"
+    ]
+  }
+}

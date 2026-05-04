@@ -31,8 +31,10 @@
   "enableSkillCommands": true,
   "lastChangelogVersion": "0.70.2",
   "packages": [
+    "/Users/sam/dotfiles/personal/pi",
     "npm:pi-web-access",
     "npm:pi-messenger",
+    "git:github.com/shopify-playground/shop-pi-fy",
     "git:github.com/shopify-playground/pi-tool-gateway-extension",
     "https://github.com/jhochenbaum/pi-autoresearch-studio",
     "git:github.com/JamesOwenHall/tidy-tools"
