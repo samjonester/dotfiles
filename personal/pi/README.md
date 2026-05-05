@@ -37,15 +37,12 @@ The following dotfiles extensions intentionally **override** their shop-pi-fy up
 
 | Extension | Why dotfiles forks it |
 |---|---|
-| `auto-reload` | Auto-reload triggers tuned for personal workflow |
 | `bash-guard` | LLM-jury security guard with custom heuristics |
 | `context-viz` | Personal display tweaks |
-| `link-picker` | Custom link-picker behavior |
 | `memory` | Persistent memory bank |
 | `notify` | Custom notification rules |
 | `retitle` | Out-of-band Haiku-based session naming — refines name across first 3 turns, respects manual renames |
 | `session-banner` | Display-only fork — naming delegated to retitle, custom footer suppresses duplicate `• name` (see extension README) |
-| `session-dump` | Personal session-dump format |
 | `shell-mode` | Personal shell-mode behavior |
 | `subagent` | Subprocess-based delegation. Upstream `agent-teams` defers to this fork's registration (see agent-teams/index.ts:333). |
 

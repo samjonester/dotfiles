@@ -76,8 +76,8 @@ setup_pi() {
     # and any extension forked into dotfiles (forks override upstream and double-loading
     # would fire event handlers twice).
     local skip="\
-      auto-reload bash-guard context-viz link-picker memory notify \
-      retitle session-banner session-dump shell-mode subagent \
+      bash-guard context-viz memory notify \
+      retitle session-banner shell-mode subagent \
       grokt observe perplexity-research shopify-data slack vault web-search\
       "
     for f in "$pkg_dir/extensions"/*; do
