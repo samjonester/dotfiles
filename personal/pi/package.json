@@ -9,9 +9,7 @@
   ],
   "pi": {
     "extensions": [
-      "./extensions",
-      "!./extensions/tool-search",
-      "!./extensions/tool-result-guard"
+      "./extensions"
     ],
     "skills": [
       "./skills"

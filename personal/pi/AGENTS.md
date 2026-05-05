@@ -167,19 +167,15 @@ For plans without the Implementation Steps section (legacy plans or external doc
 
 ## Dotfiles & Pi Config Management
 
-All pi configuration is versioned in `~/dotfiles/personal/pi/` and symlinked into `~/.pi/agent/`. When creating or modifying any pi resource (extensions, skills, agents, prompts, settings.json, AGENTS.md), always:
+All pi configuration is versioned in `~/dotfiles/personal/pi/`. The dotfiles dir is registered as a **pi package** in `settings.json`, so `package.json` auto-discovery handles most resources — no manual symlinks needed. When creating or modifying any pi resource:
 
 1. **Write the file to `~/dotfiles/personal/pi/<type>/`** — not directly into `~/.pi/agent/`
-2. **Symlink into `~/.pi/agent/`** if a symlink doesn't already exist for that path
-3. The symlink structure is:
-   - `~/.pi/agent/AGENTS.md` → `~/dotfiles/personal/pi/AGENTS.md`
-   - `~/.pi/agent/settings.json` → `~/dotfiles/personal/pi/settings.json`
-   - `~/.pi/agent/agents/` → `~/dotfiles/personal/pi/agents/`
-   - `~/.pi/agent/skills/` → `~/dotfiles/personal/pi/skills/`
-   - `~/.pi/agent/prompts` → `~/dotfiles/personal/pi/prompts`
-   - `~/.pi/agent/extensions/<name>` → `~/dotfiles/personal/pi/extensions/<name>` (per-extension symlinks)
-4. Directory-level symlinks (agents, skills, prompts) mean new files inside them are automatically versioned — no extra symlinking needed
-5. Extensions use per-extension symlinks (not a directory symlink) because `shopify-proxy` is managed externally via nix
+2. **No symlink work for resources that auto-discover** — extensions, skills, prompts, themes load via `pi.extensions/skills/prompts/themes` in the dotfiles `package.json`. Add a file there and pi picks it up on next reload.
+3. **Config files DO need symlinks** at `~/.pi/agent/`. `install.sh setup_pi()` creates them: `AGENTS.md`, `settings.json`, `keybindings.json`, `presets.json`, `models.json`, `auto-lint.json`. If you add a new top-level config, add it to setup_pi.
+4. **Agents directory is real** (`~/.pi/agent/agents/`) and built file-by-file by `install.sh` from dotfiles agents + shop-pi-fy package agents. New agent files in dotfiles need an install.sh re-run to symlink in.
+5. **Forking a shop-pi-fy extension into dotfiles**: add it to the skip list in `install.sh setup_pi()` so the upstream symlink isn't created — otherwise both versions load and event handlers fire twice. See `personal/pi/README.md` for the current fork list.
+
+For full details on layout, fork conventions, and tool-name maintenance, read `~/dotfiles/personal/pi/README.md`.
 
 ## Code Review
 

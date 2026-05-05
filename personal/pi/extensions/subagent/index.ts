@@ -1,15 +1,37 @@
 /**
- * Subagent Tool - Delegate tasks to specialized agents
+ * Subagent Tool — Delegate tasks to specialized agents (subprocess model).
  *
- * Spawns a separate `pi` process for each subagent invocation,
- * giving it an isolated context window.
+ * **This is a personal fork.** Source: pi-coding-agent's `examples/extensions/subagent/`.
+ * Diverges architecturally from upstream shop-pi-fy's `agent-teams/subagent-tool.ts`,
+ * which spawns visible teammates in tmux panes via RPC. This fork instead spawns
+ * isolated subprocesses with `--mode json -p --no-session` and captures their
+ * structured output — trading visibility for simplicity and predictability.
+ *
+ * **Tool name interop with agent-teams.** shop-pi-fy's `agent-teams` ships
+ * its own `subagent` tool (visible-pane / RPC model) but **explicitly defers**
+ * to whatever registered it first. agent-teams/index.ts:333 checks
+ * `pi.getAllTools()` on session_start and skips its own registration if a
+ * `subagent` tool already exists. Since dotfiles loads before shop-pi-fy per
+ * settings.json packages order, this fork registers first and agent-teams
+ * cleanly cedes — not a silent override, an opt-in collaboration. If you ever
+ * disable this fork (e.g. remove from package manifest), agent-teams will
+ * automatically register its own subagent tool with no other changes needed.
+ *
+ * Spawns a separate `pi` process for each subagent invocation, giving it an
+ * isolated context window.
  *
  * Supports three modes:
- *   - Single: { agent: "name", task: "..." }
+ *   - Single:   { agent: "name", task: "..." }
  *   - Parallel: { tasks: [{ agent: "name", task: "..." }, ...] }
- *   - Chain: { chain: [{ agent: "name", task: "... {previous} ..." }, ...] }
+ *   - Chain:    { chain: [{ agent: "name", task: "... {previous} ..." }, ...] }
  *
  * Uses JSON mode to capture structured output from subagents.
+ *
+ * Architectural caveat: agent files often include `team_message`,
+ * `team_request_shutdown` etc. in their `tools:` lists. Those are registered
+ * by upstream agent-teams and only function in teammate (visible-pane) mode.
+ * In this fork's subprocess mode, they no-op gracefully — the agent's stdout
+ * JSON serves as the report channel instead.
  */
 
 import { spawn } from "node:child_process";

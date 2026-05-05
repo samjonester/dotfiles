@@ -28,12 +28,19 @@ setup_pi() {
 
   mkdir -p "$pi_dir/extensions"
 
-  # Dotfiles-owned config
-  ln -vsfn "$dotfiles_pi/AGENTS.md"       "$pi_dir/AGENTS.md"
-  ln -vsfn "$dotfiles_pi/settings.json"   "$pi_dir/settings.json"
-  ln -vsfn "$dotfiles_pi/skills"          "$pi_dir/skills"
-  ln -vsfn "$dotfiles_pi/prompts"         "$pi_dir/prompts"
-  ln -vsfn "$dotfiles_pi/auto-lint.json"  "$pi_dir/auto-lint.json"
+  # Dotfiles-owned config files. Each is read by pi from the agent dir;
+  # symlinks let dotfiles edits propagate without re-running install.sh.
+  # Note: skills/, prompts/, themes/ are NOT symlinked here — they auto-load
+  # via dotfiles' package.json (`pi.skills/prompts/themes`) and ~/.pi/agent/
+  # versions of these dirs are picker-managed (real dirs holding individual
+  # symlinks to shop-pi-fy resources). A directory-symlink would either fail
+  # or nest inside the real dir.
+  ln -vsfn "$dotfiles_pi/AGENTS.md"          "$pi_dir/AGENTS.md"
+  ln -vsfn "$dotfiles_pi/settings.json"      "$pi_dir/settings.json"
+  ln -vsfn "$dotfiles_pi/keybindings.json"   "$pi_dir/keybindings.json"
+  ln -vsfn "$dotfiles_pi/presets.json"       "$pi_dir/presets.json"
+  ln -vsfn "$dotfiles_pi/models.json"        "$pi_dir/models.json"
+  ln -vsfn "$dotfiles_pi/auto-lint.json"     "$pi_dir/auto-lint.json"
 
   # Knowledge: real directory layering dotfiles-versioned (public) + local private files
   mkdir -p "$HOME/.pi/memory/knowledge"
@@ -43,11 +50,10 @@ setup_pi() {
     done
   fi
 
-  # Dotfiles-owned extensions (portable, first-party only)
-  for ext_name in bash-guard git-safety.ts; do
-    [ -e "$dotfiles_pi/extensions/$ext_name" ] && \
-      ln -vsfn "$dotfiles_pi/extensions/$ext_name" "$pi_dir/extensions/$ext_name"
-  done
+  # Dotfiles extensions are auto-loaded via personal/pi/package.json
+  # (`pi.extensions: ["./extensions"]`) since dotfiles is registered as a pi
+  # package in settings.json. No manual symlinks needed — pi discovers every
+  # subdirectory and top-level .ts file in dotfiles/extensions/ automatically.
 
   # Agents: real directory layering dotfiles + optional package agents
   [ -L "$pi_dir/agents" ] && rm "$pi_dir/agents"
@@ -66,8 +72,14 @@ setup_pi() {
     done
 
     # Non-packaged extensions — skip ones already declared in package.json
-    # .pi.extensions (auto-loaded by pi) and web-search (conflicts with pi-web-access)
-    local skip="grokt observe perplexity-research shopify-data slack subagent vault web-search"
+    # .pi.extensions (auto-loaded by pi), web-search (conflicts with pi-web-access),
+    # and any extension forked into dotfiles (forks override upstream and double-loading
+    # would fire event handlers twice).
+    local skip="\
+      auto-reload bash-guard context-viz link-picker memory notify \
+      retitle session-banner session-dump shell-mode subagent \
+      grokt observe perplexity-research shopify-data slack vault web-search\
+      "
     for f in "$pkg_dir/extensions"/*; do
       [ -d "$f" ] || continue
       local ext_name=$(basename "$f")
@@ -94,6 +106,12 @@ setup_shopify_tooling() {
   if command -v pi >/dev/null 2>&1; then
     pi install https://github.com/shopify-playground/shop-pi-fy 2>/dev/null || true
   fi
+
+  # Re-run setup_pi to overlay shop-pi-fy agents/extensions — the first
+  # setup_pi call (before setup_shopify_tooling) ran when shop-pi-fy wasn't
+  # yet installed, so its overlay block silently no-op'd. This second run
+  # picks them up.
+  setup_pi
 }
 
 case $ZSH_HOST_OS in

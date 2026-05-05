@@ -6,6 +6,30 @@ import * as fs from "node:fs";
 import * as path from "node:path";
 import { getAgentDir, parseFrontmatter } from "@mariozechner/pi-coding-agent";
 
+/**
+ * Parse a frontmatter `tools:` field into a string array.
+ *
+ * Accepts both YAML representations agents in the wild use:
+ *   - String form:  `tools: read, write, bash` → yaml.parse → "read, write, bash"
+ *   - Flow array:   `tools: [read, write, bash]` → yaml.parse → ["read","write","bash"]
+ *   - Block array:  `tools:\n  - read\n  - write` → yaml.parse → ["read","write"]
+ *
+ * Returns `undefined` for missing/empty/non-string-non-array values so the
+ * caller can fall back to a default tool set.
+ */
+function parseToolList(value: unknown): string[] | undefined {
+	let rawTools: string[];
+	if (Array.isArray(value)) {
+		rawTools = value.map((tool) => String(tool));
+	} else if (typeof value === "string") {
+		rawTools = value.split(",");
+	} else {
+		return undefined;
+	}
+	const tools = rawTools.map((t) => t.trim()).filter(Boolean);
+	return tools.length > 0 ? tools : undefined;
+}
+
 export type AgentScope = "user" | "project" | "both";
 
 export interface AgentConfig {
@@ -49,22 +73,22 @@ function loadAgentsFromDir(dir: string, source: "user" | "project"): AgentConfig
 			continue;
 		}
 
-		const { frontmatter, body } = parseFrontmatter<Record<string, string>>(content);
+		const { frontmatter, body } = parseFrontmatter<Record<string, unknown>>(content);
 
-		if (!frontmatter.name || !frontmatter.description) {
+		const name = typeof frontmatter.name === "string" ? frontmatter.name : undefined;
+		const description = typeof frontmatter.description === "string" ? frontmatter.description : undefined;
+		if (!name || !description) {
 			continue;
 		}
 
-		const tools = frontmatter.tools
-			?.split(",")
-			.map((t: string) => t.trim())
-			.filter(Boolean);
+		const tools = parseToolList(frontmatter.tools);
+		const model = typeof frontmatter.model === "string" ? frontmatter.model : undefined;
 
 		agents.push({
-			name: frontmatter.name,
-			description: frontmatter.description,
-			tools: tools && tools.length > 0 ? tools : undefined,
-			model: frontmatter.model,
+			name,
+			description,
+			tools,
+			model,
 			systemPrompt: body,
 			source,
 			filePath,

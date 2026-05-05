@@ -1,101 +1,97 @@
 # Pi Configuration
 
-Personal [pi](https://github.com/mariozechner/pi) agent configuration, versioned in dotfiles and symlinked into `~/.pi/agent/` by `install.sh`.
+Personal [pi](https://github.com/mariozechner/pi) agent configuration. Dotfiles is registered as a **pi package** in `settings.json`, so most resources auto-discover via `package.json` → `pi.*` manifest. `install.sh` only handles cross-package wiring (agents, optional shop-pi-fy extensions).
 
 ## Directory layout
 
 ```
 personal/pi/
+├── package.json       Declares this dir as a pi package; pi.extensions/skills/prompts/themes auto-discover
 ├── AGENTS.md          → ~/.pi/agent/AGENTS.md (system prompt additions)
 ├── settings.json      → ~/.pi/agent/settings.json
-├── auto-lint.json     → ~/.pi/agent/auto-lint.json
-├── agents/            → ~/.pi/agent/agents/ (planner agents, layered with package agents)
-├── extensions/        → ~/.pi/agent/extensions/ (first-party only)
-│   ├── bash-guard/    Security guard: LLM jury votes on risky bash commands
-│   └── git-safety.ts  Confirmation gate for remote git/gh/gt mutations
+├── keybindings.json   Custom keybindings layered onto pi-core defaults
+├── presets.json       Preset definitions (code, investigate, all, etc.)
+├── models.json        Provider/model overrides (e.g. maxTokens for 250k-context Anthropic provider)
+├── auto-lint.json     Auto-lint rules
+├── agents/            Symlinked file-by-file into ~/.pi/agent/agents/ (layered with shop-pi-fy agents)
+├── extensions/        Auto-loaded by package mechanism (no symlinks needed)
 ├── skills/            → ~/.pi/agent/skills/
-└── prompts/           → ~/.pi/agent/prompts/
+├── prompts/           → ~/.pi/agent/prompts/
+├── themes/            → ~/.pi/agent/themes/
+└── knowledge/         Public knowledge files; symlinked into ~/.pi/memory/knowledge/
 ```
 
-## Extension sources
+## How extensions load
 
-Extensions load from multiple places:
+Three sources, in this order:
 
-1. **Dotfiles** (`personal/pi/extensions/`) — portable, first-party code versioned here
-2. **Pi packages** (`settings.json` → packages) — `pi-web-access`, `pi-messenger`, `pi-tool-display`
-3. **Workplace packages** (optional) — installed via `pi install <url>`, wired at install time by `install.sh` → `setup_pi()`
+1. **Dotfiles** — `personal/pi/extensions/` auto-discovered via `package.json` → `pi.extensions: ["./extensions"]`. Every subdirectory's `index.ts` and every top-level `.ts` file becomes an extension.
+2. **Pi packages from npm** — `pi-web-access`, `pi-messenger`, `pi-tool-display` etc., declared in `settings.json` → `packages`.
+3. **shop-pi-fy** (Shopify-only workplace package) — installed via `pi install`, then `install.sh` symlinks individual extensions from the package clone into `~/.pi/agent/extensions/`.
 
-Extensions from workplace packages are **not** stored in dotfiles. `install.sh` symlinks them from the pi package clone into `~/.pi/agent/extensions/` at install time. On machines without the package, these blocks are safe no-ops.
+Pi's `core/extensions/runner.js:getAllRegisteredTools` dedupes by **first-wins, silently** when multiple extensions register the same name. The dotfiles package loads before shop-pi-fy per `settings.json` packages order. Some upstream extensions (notably `agent-teams`) check for prior registration and **explicitly defer** — e.g. agent-teams skips registering `subagent` if another extension already did. So fork-overrides are well-behaved when upstream cooperates.
 
-## Avoiding duplicate registration
+## Forks of upstream extensions
 
-Pi packages declare which extensions auto-load via `package.json` → `.pi.extensions`. Those must **not** also be symlinked into `~/.pi/agent/extensions/` or every tool registers twice.
+The following dotfiles extensions intentionally **override** their shop-pi-fy upstream counterparts. `install.sh`'s skip list excludes them so the upstream symlink isn't created (which would cause double event-handler registration).
 
-`install.sh` maintains a skip-list of package-registered extension names to prevent this. If you add a new pi package that exports extensions, check its `package.json` and add any declared extensions to the skip-list in `setup_pi()`.
+| Extension | Why dotfiles forks it |
+|---|---|
+| `auto-reload` | Auto-reload triggers tuned for personal workflow |
+| `bash-guard` | LLM-jury security guard with custom heuristics |
+| `context-viz` | Personal display tweaks |
+| `link-picker` | Custom link-picker behavior |
+| `memory` | Persistent memory bank |
+| `notify` | Custom notification rules |
+| `retitle` | Out-of-band Haiku-based session naming — refines name across first 3 turns, respects manual renames |
+| `session-banner` | Display-only fork — naming delegated to retitle, custom footer suppresses duplicate `• name` (see extension README) |
+| `session-dump` | Personal session-dump format |
+| `shell-mode` | Personal shell-mode behavior |
+| `subagent` | Subprocess-based delegation. Upstream `agent-teams` defers to this fork's registration (see agent-teams/index.ts:333). |
 
-Similarly, if a package extension conflicts with an npm package tool (e.g. both provide `web_search`), add it to the skip-list and keep whichever is more capable.
+When syncing with upstream pi-core changes, **check each fork's README** for the upstream-tracking note — some files (`session-banner/footer.ts`) deliberately mirror pi-core internals and need manual sync on pi version bumps.
 
-## Adding a new first-party extension
+## Dotfiles-only extensions
 
-1. Create the extension in `personal/pi/extensions/<name>/`
-2. Add `<name>` to the `PI_LOCAL_EXTENSIONS` array in `setup_pi()` in `install.sh`
-3. Run `install.sh` or manually `ln -vsfn` it into `~/.pi/agent/extensions/`
+These have no shop-pi-fy upstream — they're personal extensions that exist only here:
 
-## Agent layering
+| Extension | Purpose |
+|---|---|
+| `custom-footer` | Custom footer rendering rules |
+| `lfg` | `/lfg` quick-launch shortcuts |
+| `pi-autoresearch` | Autoresearch loop tooling (init/run/log experiments) |
+| `pi-figma-remote-mcp` | Figma MCP bridge configuration |
+| `pitw` | Pi tmux/window helpers |
+| `tm` | Tmux pane management |
+| `preset.ts` | Preset loading + `pendingToolValidation` mechanism for async-loaded tool extensions |
 
-`~/.pi/agent/agents/` is a **real directory** (not a symlink), built by `install.sh` from:
+## Agent files
 
-1. Dotfiles agents (`personal/pi/agents/*.md`) — planners, questioners
-2. Workplace package agents (if installed) — reviewer personas, etc.
+`~/.pi/agent/agents/` is a real directory built by `install.sh` from two sources:
 
-This lets both sources coexist without either overwriting the other.
+1. Dotfiles agents (`personal/pi/agents/*.md`) — planners, custom reviewers, task runners
+2. shop-pi-fy package agents (if installed) — `review-architecture`, `review-correctness`, `review-scope`, etc.
 
----
+Both sources coexist; dotfiles symlinks are created first, then shop-pi-fy symlinks layer on top of any non-conflicting names.
 
-## Portable extensions worth replicating
+### Tool name maintenance
 
-These extensions from the workplace package have **no** internal infrastructure dependencies and could be installed or recreated on any machine.
+Agent `tools:` frontmatter must reference **registered tool names** at runtime. When pi-core or extensions rename tools (e.g., `vault_search` → `vault_list_tools` + `vault_call_tool`), update each agent file's tools list. The dotfiles `subagent/agents.ts` parses `tools:` defensively (string `"a, b"`, flow array `[a, b]`, block array, or null) but won't catch stale names — those just become "unknown tool" warnings in subagent runs.
 
-| Extension                  | Tools / Commands                                               | Description                                                          |
-| -------------------------- | -------------------------------------------------------------- | -------------------------------------------------------------------- |
-| **auto-lint**              | `/lint-toggle`, `/lint-reload`                                 | Auto-format files on save via configurable rules                     |
-| **background-jobs**        | `bg_run`, `bg_list`, `bg_log`, `bg_stop`, `bg_wait`            | Run long processes in background, read logs                          |
-| **chrome-devtools**        | (via skill)                                                    | Chrome browser automation and inspection                             |
-| **investigator**           | `log_finding`                                                  | Structured investigation logging (hypotheses, findings, conclusions) |
-| **loop-scheduler**         | `/loop`                                                        | Recurring prompt scheduler (e.g. `/loop 2m check CI`)                |
-| **memory**                 | `memory_read`, `memory_update`, `memory_append`, `memory_list` | Persistent memory bank across sessions                               |
-| **no-sleep-while-working** | —                                                              | Prevent macOS sleep during active agent work                         |
-| **notify**                 | `/notify`                                                      | Desktop notifications                                                |
-| **output-guard**           | `read_output_chunk`, `search_output`                           | Truncate large tool outputs, provide chunked reading                 |
-| **pkg**                    | `/pkg`                                                         | Unified package manager for pi resources                             |
-| **prefer-graphite**        | —                                                              | Prefer Graphite `gt` over raw git for branch management              |
-| **retitle**                | `/retitle`, `/retitle-all`                                     | Auto-name sessions via LLM                                           |
-| **subagent**               | `subagent`                                                     | Delegate tasks to specialized agents                                 |
-| **vim-mode**               | —                                                              | Modal editing with operators, motions, counts                        |
+## Adding a new dotfiles extension
 
-## Dotfiles agents
+1. Create `personal/pi/extensions/<name>/index.ts` (or `personal/pi/extensions/<name>.ts` for a single-file extension)
+2. **No further wiring needed** — `package.json` auto-discovery picks it up on next pi reload
+3. If `<name>` exists in shop-pi-fy upstream, add it to the skip list in `install.sh` → `setup_pi()` to prevent duplicate loading
 
-Agents versioned here (in `agents/`). Planner agents power the multi-model planning workflow; review agents are dispatched by the `review` skill orchestrator.
+## Settings & keybindings layering
 
-### Planners
+- `settings.json` → packages list, presets, picker config
+- `keybindings.json` → custom shortcuts (only entries that override pi-core defaults need to appear)
+- `presets.json` → preset definitions; the `code`, `investigate`, `all` presets are heavily customized with Mozart MCP tools
 
-| Agent              | Model  | Role                                             |
-| ------------------ | ------ | ------------------------------------------------ |
-| `plan-questioner`  | Sonnet | Sharpen problem statement before planning begins |
-| `planner-minimal`     | Opus   | Minimal / locally-scoped proposal                |
-| `planner-design`   | Opus   | Clean-design / forward-looking proposal          |
-| `planner-local`    | Opus   | Targeted fix scoped to immediate problem area    |
-| `planner-systemic` | Opus   | Root-cause fix addressing underlying pattern     |
-| `plan-judge`       | Opus   | Evaluate proposals, verify claims, synthesize    |
+## Memory bank
 
-### Reviewers (custom — complement shop-pi-fy's `review-*` agents)
-
-| Agent                | Model  | Focus                                                         |
-| -------------------- | ------ | ------------------------------------------------------------- |
-| `review-design`      | Opus   | Reads beyond the diff — callers, callees, design context      |
-| `review-simplify`    | Opus   | Reduce complexity, remove unnecessary abstractions            |
-| `review-consistency` | Sonnet | Flags patterns diverging from codebase majority               |
-| `review-naming`      | Sonnet | Variable, method, class naming quality and clarity            |
-| `review-readability` | Sonnet | Cognitive complexity, control flow, information density       |
-| `review-intent`      | Sonnet | PR description vs actual code alignment (PR reviews only)     |
-| `review-judge`       | Opus   | Validates all findings, filters false positives, consolidates |
+`~/.pi/memory/knowledge/` is a real directory with both:
+- Public (dotfiles-versioned) knowledge files in `personal/pi/knowledge/`, symlinked file-by-file
+- Local (private, machine-specific) knowledge files added directly to `~/.pi/memory/knowledge/`
