@@ -4,15 +4,21 @@
 # Usage:
 #   lfg                              (pick session or create new)
 #   lfg -n <name> ["prompt"]         (attach/create session by name)
-#   lfg ["prompt"]                   (inside tmux: window picker → dir → pi)
-#   lfg --pane ["prompt"]            (inside tmux: skip name → dir → pi)
+#   lfg ["prompt"]                   (inside tmux: window → worktree → dir → pi)
+#   lfg --pane ["prompt"]            (inside tmux: skip name → worktree → dir → pi)
 #
 # Behavior depends on context:
 #   Outside tmux — session picker flow (or -n to skip it)
-#   Inside tmux  — window picker (select existing or name new), then dir → pi
+#   Inside tmux  — window picker, then worktree picker (WTP), then dir → pi
 #   --pane       — pane mode: skip the name step entirely
 #
+# Worktree picker (WTP integration):
+#   Shows active pool worktrees. Type/paste a PR #, Graphite/GitHub URL, or
+#   branch name to claim a pool and land in areas/platforms/mozart. Press Esc
+#   to skip and use the zoxide directory picker instead.
+#
 # Requires: fzf, tmux, zoxide
+# Optional: _wtp (worktree pool manager), gh (GitHub CLI)
 
 set -euo pipefail
 
@@ -102,8 +108,13 @@ pick_window() {
     query=$(head -1 <<< "$result")
     selected=$(sed -n '2p' <<< "$result")
 
-    # User selected an existing window from the list → navigate
+    # User selected an existing window from the list
     if [[ "$selected" == [●○]* ]]; then
+        # If it's the current window (●), continue the flow (worktree → dir → pi)
+        if [[ "$selected" == "●"* ]]; then
+            return 0
+        fi
+        # Different window → navigate there
         local win_idx
         win_idx=$(echo "$selected" | sed 's/.*(\([0-9]*\))/\1/')
         tmux select-window -t ":${win_idx}"
@@ -126,24 +137,330 @@ pick_window() {
     return 1
 }
 
+# ─── Worktree picker (WTP-aware) ──────────────────────────────────────────────
+
+WTP_BIN="$HOME/src/github.com/shopify-playground/wtp/bin/_wtp"
+WTP_ROOT_MZ="$HOME/world/trees/root/src/areas/platforms/mozart"
+
+_list_worktrees() {
+    [[ ! -x "$WTP_BIN" ]] && return 0
+    local free_count=0
+    "$WTP_BIN" status 2>/dev/null | while IFS=': ' read -r slot state; do
+        [[ -z "$slot" ]] && continue
+        if [[ "$state" == "free" ]]; then
+            # Count free slots — emitted as summary at end
+            echo "FREE"
+        else
+            echo "● ${slot}  ${state}"
+        fi
+    done
+}
+
+# Detect if input looks like a PR number, PR URL, or branch name.
+# Returns: "pr:<number>" | "branch:<name>" | "" (not WTP input)
+_classify_wtp_input() {
+    local input="$1"
+    # Pure digits → PR number
+    if [[ "$input" =~ ^[0-9]+$ ]]; then
+        echo "pr:$input"
+        return 0
+    fi
+    # Graphite or GitHub PR URL → extract number
+    if [[ "$input" == *graphite.com* ]] || [[ "$input" == *github.com* ]]; then
+        local num
+        num=$(echo "$input" | grep -oE '[0-9]+' | tail -1)
+        if [[ -n "$num" ]]; then
+            echo "pr:$num"
+            return 0
+        fi
+    fi
+    # Contains / → likely a branch name
+    if [[ "$input" == */* ]]; then
+        echo "branch:$input"
+        return 0
+    fi
+    # Contains - or _ and is at least 4 chars → likely a branch name (e.g. "mozart-mcp-create-ad-asset-template")
+    if [[ ${#input} -ge 4 && ("$input" == *-* || "$input" == *_*) ]]; then
+        echo "branch:$input"
+        return 0
+    fi
+    # Not WTP input
+    echo ""
+}
+
+# Check if a branch belongs to a Graphite stack already claimed in a pool.
+# Walks up parents via `gt branch info` until it finds a match or hits main.
+# Outputs: pool slot name (e.g. "pool-2") or empty.
+_find_stack_pool() {
+    local target="$1"
+    local any_pool_src=""
+
+    # Build parallel arrays of claimed slots + branches
+    local pool_slots=() pool_branches=()
+    while IFS=': ' read -r slot branch_val; do
+        [[ "$branch_val" == "free" || -z "$branch_val" ]] && continue
+        pool_slots+=("$slot")
+        pool_branches+=("$branch_val")
+        # Use any claimed pool's src dir for gt commands
+        [[ -z "$any_pool_src" ]] && any_pool_src="$HOME/world/trees/$slot/src"
+    done < <("$WTP_BIN" status 2>/dev/null)
+
+    [[ -z "$any_pool_src" ]] && return 1
+
+    # Direct match
+    for i in "${!pool_branches[@]}"; do
+        [[ "${pool_branches[$i]}" == "$target" ]] && echo "${pool_slots[$i]}" && return 0
+    done
+
+    # Walk up parents
+    local current="$target" max_depth=10
+    while [[ $max_depth -gt 0 ]]; do
+        local parent
+        parent=$(cd "$any_pool_src" && gt branch info "$current" --no-interactive 2>/dev/null | grep '^Parent:' | sed 's/^Parent: //')
+        [[ -z "$parent" || "$parent" == "main" || "$parent" == "master" ]] && break
+        for i in "${!pool_branches[@]}"; do
+            [[ "${pool_branches[$i]}" == "$parent" ]] && echo "${pool_slots[$i]}" && return 0
+        done
+        current="$parent"
+        ((max_depth--))
+    done
+
+    return 1
+}
+
+# Resolve WTP input → mozart directory path.
+# Handles PR resolution, _wtp claim/resume, and sync.
+# Outputs: "<path>\t<label>" on stdout (tab-separated)
+_resolve_wtp() {
+    local input="$1"
+    local classified branch="" label=""
+    classified=$(_classify_wtp_input "$input")
+
+    case "$classified" in
+        pr:*)
+            local pr_num="${classified#pr:}"
+            branch=$(gh pr view "$pr_num" --repo shop/world --json headRefName --jq .headRefName 2>/dev/null)
+            if [[ -z "$branch" ]]; then
+                echo "❌ Could not resolve PR #$pr_num" >&2
+                return 1
+            fi
+            label="pr-$pr_num"
+            ;;
+        branch:*)
+            branch="${classified#branch:}"
+            label="${branch##*/}"
+            ;;
+        *)
+            return 1
+            ;;
+    esac
+
+    # Stack-aware pool detection: walk up Graphite parents to find if this
+    # branch belongs to a stack already checked out in a claimed pool.
+    local stack_pool
+    stack_pool=$(_find_stack_pool "$branch")
+    if [[ -n "$stack_pool" ]]; then
+        # Resume the pool that owns this stack, then checkout the target branch
+        local claimed_branch
+        claimed_branch=$($WTP_BIN status 2>/dev/null | grep "^${stack_pool}:" | sed "s/^${stack_pool}: //")
+        local wtp_out
+        wtp_out=$(cd "$WTP_ROOT_MZ" && "$WTP_BIN" "$claimed_branch" 2>&1)
+        if [[ $? -eq 0 ]]; then
+            local mz_path
+            mz_path=$(echo "$wtp_out" | tail -1)
+            if [[ -d "$mz_path" && "$branch" != "$claimed_branch" ]]; then
+                echo "Stack match → ${stack_pool} (via $claimed_branch), checking out $branch" >&2
+                (cd "$mz_path" && git fetch origin "$branch" 2>/dev/null && git checkout "$branch" 2>/dev/null && git reset --hard "origin/$branch" 2>/dev/null) || true
+            fi
+            printf '%s\t%s' "$mz_path" "$label"
+            return 0
+        fi
+    fi
+
+    # No stack match — claim/resume via _wtp from the mozart dir
+    local wtp_out
+    wtp_out=$(cd "$WTP_ROOT_MZ" && "$WTP_BIN" "$branch" 2>&1)
+    if [[ $? -ne 0 ]]; then
+        echo "❌ WTP: $wtp_out" >&2
+        return 1
+    fi
+
+    local mz_path
+    mz_path=$(echo "$wtp_out" | tail -1)
+    if [[ ! -d "$mz_path" ]]; then
+        echo "❌ Path not found: $mz_path" >&2
+        return 1
+    fi
+
+    # Print the status line (e.g. "Claiming pool-3 for ...")
+    echo "$wtp_out" | head -1 >&2
+
+    # Sync if clean
+    if [[ -z "$(cd "$mz_path" && git status --porcelain 2>/dev/null)" ]]; then
+        (cd "$mz_path" && git fetch origin "$branch" 2>/dev/null && git reset --hard "origin/$branch" 2>/dev/null) || true
+    fi
+
+    printf '%s\t%s' "$mz_path" "$label"
+}
+
+# File-based cache for worktree picker data. Files survive subshells
+# (command substitution), shell variables don't.
+_LFG_WT_RAW="/tmp/.lfg-wt-raw.$$"    # raw _list_worktrees output
+_LFG_WT_FZF="/tmp/.lfg-wt-fzf.$$"    # processed fzf input lines
+_LFG_WT_HDR="/tmp/.lfg-wt-hdr.$$"    # header string
+
+# Prefetch worktree status in background. Call early (before window picker)
+# so results are ready by the time pick_worktree runs.
+_prefetch_worktrees() {
+    [[ ! -x "$WTP_BIN" ]] && return 0
+    _list_worktrees > "$_LFG_WT_RAW" 2>/dev/null &
+    _LFG_WT_PID=$!
+}
+
+# Build (or reuse) the fzf input and header for the worktree picker.
+# Uses file cache so it works across subshells (Tab back = instant).
+_build_worktree_list() {
+    # Already built? Reuse files.
+    [[ -f "$_LFG_WT_FZF" ]] && return 0
+
+    # Wait for prefetch if still running
+    if [[ -n "${_LFG_WT_PID:-}" ]]; then
+        wait "$_LFG_WT_PID" 2>/dev/null || true
+        _LFG_WT_PID=""
+    fi
+
+    local raw_lines free_count=0
+    if [[ -f "$_LFG_WT_RAW" ]]; then
+        raw_lines=$(cat "$_LFG_WT_RAW")
+        rm -f "$_LFG_WT_RAW"
+    else
+        raw_lines=$(_list_worktrees)
+    fi
+
+    local fzf_input=""
+    while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
+        if [[ "$line" == "FREE" ]]; then
+            ((free_count++)) || true
+        else
+            fzf_input+="${line}"$'\n'
+        fi
+    done <<< "$raw_lines"
+
+    printf '%s' "$fzf_input" > "$_LFG_WT_FZF"
+
+    local header="PR #, URL, branch  │  Select active  │  Tab: pick dir"
+    if [[ $free_count -gt 0 ]]; then
+        header="${header}  │  ${free_count} free"
+    fi
+    printf '%s' "$header" > "$_LFG_WT_HDR"
+}
+
+# Interactive worktree picker. Returns mozart path or empty (fall through to dir picker).
+# Sets WT_LABEL in the caller's scope for window naming.
+pick_worktree() {
+    [[ ! -x "$WTP_BIN" ]] && return 1
+    [[ ! -d "$WTP_ROOT_MZ" ]] && return 1
+
+    _build_worktree_list
+
+    local fzf_exit=0 result
+    result=$(cat "$_LFG_WT_FZF" | fzf \
+        --print-query \
+        --expect=tab \
+        --prompt="worktree ❯ " \
+        --header="$(cat "$_LFG_WT_HDR")" \
+        --header-first \
+        --height=~50% \
+        --reverse \
+        --no-info \
+        --bind 'esc:ignore' \
+        2>/dev/null) || fzf_exit=$?
+
+    [[ $fzf_exit -ge 2 ]] && return 1
+
+    # --print-query + --expect: line 1=query, line 2=key, line 3=selected
+    local query key selected
+    query=$(sed -n '1p' <<< "$result")
+    key=$(sed -n '2p' <<< "$result")
+    selected=$(sed -n '3p' <<< "$result")
+
+    # Tab pressed → switch to dir picker
+    [[ "$key" == "tab" ]] && return 3
+
+    # Helper: call _resolve_wtp and parse tab-separated "path\tlabel" output
+    _try_resolve() {
+        local input="$1" result mz_path label
+        result=$(_resolve_wtp "$input") || return 1
+        mz_path=$(printf '%s' "$result" | cut -f1)
+        label=$(printf '%s' "$result" | cut -f2)
+        if [[ -n "$mz_path" && -d "$mz_path" ]]; then
+            WT_LABEL="${label:-wtp}"
+            echo "$mz_path"
+            return 0
+        fi
+        return 1
+    }
+
+    # Selected an active worktree from the list — branch is known, skip classification
+    if [[ "$selected" == "●"* ]]; then
+        local wt_branch
+        wt_branch=$(echo "$selected" | sed 's/^● [^ ]* *//')
+        if [[ -n "$wt_branch" ]]; then
+            # Resume directly via _wtp (branch is already claimed)
+            local wtp_out
+            wtp_out=$(cd "$WTP_ROOT_MZ" && "$WTP_BIN" "$wt_branch" 2>&1)
+            if [[ $? -eq 0 ]]; then
+                local mz_path
+                mz_path=$(echo "$wtp_out" | tail -1)
+                if [[ -n "$mz_path" && -d "$mz_path" ]]; then
+                    WT_LABEL="${wt_branch##*/}"
+                    echo "$mz_path"
+                    return 0
+                fi
+            fi
+        fi
+        return 1
+    fi
+
+    # User typed something (query) — try WTP resolution
+    if [[ -n "$query" ]]; then
+        local classified
+        classified=$(_classify_wtp_input "$query")
+        [[ -n "$classified" ]] && _try_resolve "$query" && return 0
+    fi
+
+    # Nothing resolved → fall through
+    return 1
+}
+
 # ─── Directory picker ─────────────────────────────────────────────────────────
 
 pick_directory() {
-    local result
+    local fzf_exit=0 result
     result=$(zoxide query -l 2>/dev/null | fzf \
         --print-query \
+        --expect=tab \
         --prompt="dir ❯ " \
-        --header="Type path or pick from history" \
+        --header="Type path or pick from history  │  Tab: worktree" \
         --header-first \
         --height=~50% \
         --reverse \
         --no-info \
         --scheme=path \
-        2>/dev/null) || true
+        --bind 'esc:ignore' \
+        2>/dev/null) || fzf_exit=$?
 
-    local query selected
-    query=$(echo "$result" | head -1)
-    selected=$(echo "$result" | tail -1)
+    [[ $fzf_exit -ge 2 ]] && return 1
+
+    # --print-query + --expect: line 1=query, line 2=key, line 3=selected
+    local query key selected
+    query=$(sed -n '1p' <<< "$result")
+    key=$(sed -n '2p' <<< "$result")
+    selected=$(sed -n '3p' <<< "$result")
+
+    # Tab pressed → switch to worktree picker
+    [[ "$key" == "tab" ]] && return 3
 
     if [[ -n "$selected" && "$selected" != "$query" ]]; then
         echo "$selected"
@@ -198,9 +515,34 @@ enter_session() {
 
 exec_pi() {
     local prompt="${1:-}"
-    local dir
+    local dir="" mode="worktree"
+    WT_LABEL=""
 
-    dir=$(pick_directory) || exit 0
+    # Pre-build worktree list in parent shell so file cache is ready
+    # (pick_worktree runs in a subshell via $(), can't persist variables)
+    _build_worktree_list
+
+    # Loop between worktree and dir pickers; Tab switches, Enter selects
+    while true; do
+        local pick_exit=0
+        if [[ "$mode" == "worktree" ]]; then
+            dir=$(pick_worktree) || pick_exit=$?
+            if [[ $pick_exit -eq 3 ]]; then
+                mode="dir"; continue
+            fi
+            [[ $pick_exit -ne 0 ]] && exit 0
+            # Auto-name the window from worktree label
+            [[ -n "$WT_LABEL" ]] && tmux rename-window "$WT_LABEL" 2>/dev/null || true
+            break
+        else
+            dir=$(pick_directory) || pick_exit=$?
+            if [[ $pick_exit -eq 3 ]]; then
+                mode="worktree"; continue
+            fi
+            [[ $pick_exit -ne 0 ]] && exit 0
+            break
+        fi
+    done
 
     cd "$dir"
     local -a pi_args=("devx" "pi")
@@ -245,6 +587,10 @@ main() {
     # ── Inside tmux ──────────────────────────────────────────────────────
 
     if [[ -n "${TMUX:-}" ]]; then
+
+        # Start WTP prefetch in background while window picker runs
+        _prefetch_worktrees
+        trap 'rm -f "$_LFG_WT_RAW" "$_LFG_WT_FZF" "$_LFG_WT_HDR"' EXIT
 
         # Pane mode: skip name, go straight to dir → pi
         if [[ "$pane_mode" == true ]]; then
