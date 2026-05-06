@@ -1,0 +1,106 @@
+# shop-pi-fy opt-in manifest
+# Generated 2026-05-06 from shop-pi-fy-migration.md
+# Format: <kind>: <name>   (kind = ext | skill | agent | prompt)
+# Blank lines and # comments are ignored by install.sh
+
+# ── Extensions ────────────────────────────────────────────────────────────────
+
+# Core / dev-loop ergonomics
+ext: agent-teams
+ext: ask
+ext: auto-lint
+ext: auto-reload
+ext: background-jobs
+ext: bg-monitor
+ext: claude-cache-ttl
+ext: fix-json-control-char
+ext: fork-back
+# ext: max-token-compaction — removed (annoying auto-compaction behavior)
+ext: output-guard
+ext: profiles
+ext: rtk-rewrite
+ext: tmux-fork
+ext: usage-tracker
+ext: vim-mode
+
+# Guards / safety
+# 🛑 bash-guard / guard — fork in dotfiles (~/dotfiles/personal/pi/extensions/bash-guard/)
+ext: github-gate
+ext: prefer-graphite
+
+# PR / CI / review
+ext: buildkite
+ext: pr-status
+ext: restack-workflow
+ext: tree
+
+# Shopify integrations
+ext: grokt
+ext: vault
+ext: slack
+ext: gworkspace
+ext: observe
+ext: mozart-mcp
+ext: world
+ext: experiments
+ext: incidents
+ext: dev-open
+ext: perplexity-research
+ext: fetch-markdown
+
+# Browser / external
+ext: chrome-devtools
+ext: chrome-tabs
+ext: link-picker
+
+# Skills / wiki / data infrastructure
+ext: llm-wiki
+ext: lsp
+ext: data-portal
+
+# Output / publishing
+ext: publish-session
+ext: session-dump
+ext: loop-scheduler
+ext: quick-mcp-bridge
+
+# UI / cosmetics
+# 🛑 retitle — fork in dotfiles
+# 🛑 notify — fork in dotfiles
+# 🛑 session-banner — fork in dotfiles
+# 🛑 memory — fork in dotfiles
+# 🛑 context-viz — fork in dotfiles
+# 🛑 file-preview — fork in dotfiles
+# 🛑 shell-mode — fork in dotfiles
+# 🛑 subagent — fork in dotfiles
+
+# Bootstrap
+ext: checkout-command
+
+# ── Skills ────────────────────────────────────────────────────────────────────
+
+skill: chrome-devtools
+skill: data-portal
+skill: llm-wiki
+skill: pi-cost-drivers
+# 🛑 extension-analyzer — fork in dotfiles
+
+# ── Agents ────────────────────────────────────────────────────────────────────
+
+# Code review specialists
+agent: review-architecture
+agent: review-correctness
+agent: review-coverage-gaps
+agent: review-impact
+agent: review-nullsafety
+agent: review-operations
+agent: review-performance
+agent: review-scope
+agent: review-security
+agent: review-shopify
+agent: review-silent-failures
+agent: review-testing
+
+# ── Prompts ───────────────────────────────────────────────────────────────────
+
+prompt: shell.md

@@ -63,29 +63,50 @@ setup_pi() {
     [ -e "$f" ] && ln -vsfn "$f" "$pi_dir/agents/$(basename "$f")"
   done
 
-  # Overlay agents/extensions from shop-pi-fy if installed as a pi package
+  # Overlay shop-pi-fy resources via opt-in manifest
+  # (replaces the old deny-list loop — only entries in shop-pi-fy.installs
+  # are symlinked; forks / unwanted extensions are simply omitted)
   local pkg_dir="$pi_dir/git/github.com/shopify-playground/shop-pi-fy"
-  if [ -d "$pkg_dir" ]; then
-    # Package agents (review-* etc.)
-    for f in "$pkg_dir/agents"/*.md; do
-      [ -e "$f" ] && ln -vsfn "$f" "$pi_dir/agents/$(basename "$f")"
-    done
+  if [ -d "$pkg_dir" ] && [ -f "$dotfiles_pi/shop-pi-fy.installs" ]; then
+    mkdir -p "$pi_dir/skills" "$pi_dir/prompts"
+    while IFS= read -r line; do
+      line="${line%%#*}"                          # strip comments
+      line="${line#"${line%%[![:space:]]*}"}"      # ltrim
+      line="${line%"${line##*[![:space:]]}"}"      # rtrim
+      [ -z "$line" ] && continue
 
-    # Non-packaged extensions — skip ones already declared in package.json
-    # .pi.extensions (auto-loaded by pi), web-search (conflicts with pi-web-access),
-    # and any extension forked into dotfiles (forks override upstream and double-loading
-    # would fire event handlers twice).
-    local skip="\
-      bash-guard context-viz memory notify \
-      retitle session-banner shell-mode subagent \
-      grokt observe perplexity-research shopify-data slack vault web-search\
-      "
-    for f in "$pkg_dir/extensions"/*; do
-      [ -d "$f" ] || continue
-      local ext_name=$(basename "$f")
-      case " $skip " in *" $ext_name "*) continue ;; esac
-      ln -vsfn "$f" "$pi_dir/extensions/$ext_name"
-    done
+      local kind="${line%%:*}"
+      local name="${line#*:}"
+      name="${name#"${name%%[![:space:]]*}"}"      # ltrim name
+
+      local src="" dst=""
+      case "$kind" in
+        ext)    src="$pkg_dir/extensions/$name"; dst="$pi_dir/extensions/$name" ;;
+        skill)  src="$pkg_dir/skills/$name";     dst="$pi_dir/skills/$name" ;;
+        agent)  src="$pkg_dir/agents/$name.md";  dst="$pi_dir/agents/$name.md" ;;
+        prompt) src="$pkg_dir/prompts/$name";    dst="$pi_dir/prompts/$name" ;;
+        *)      echo "WARN: unknown kind '$kind' in shop-pi-fy.installs" >&2; continue ;;
+      esac
+
+      if [ ! -e "$src" ]; then
+        echo "WARN: missing $src" >&2
+        continue
+      fi
+
+      ln -vsfn "$src" "$dst"
+    done < "$dotfiles_pi/shop-pi-fy.installs"
+  fi
+
+  # Install npm dependencies declared in personal/pi/package.json (e.g.
+  # `minisearch` for the memory extension's full-text search). Pi resolves
+  # imports from node_modules but doesn't auto-install — we have to seed it
+  # ourselves so extensions don't fail to load on a fresh setup.
+  if [ -f "$dotfiles_pi/package.json" ] && grep -q '"dependencies"' "$dotfiles_pi/package.json"; then
+    if command -v pnpm >/dev/null 2>&1; then
+      (cd "$dotfiles_pi" && pnpm install --silent) || true
+    elif command -v npm >/dev/null 2>&1; then
+      (cd "$dotfiles_pi" && npm install --silent) || true
+    fi
   fi
 
   # Shopify-specific project AGENTS.md
