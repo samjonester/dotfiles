@@ -1,3 +1,6 @@
 personal/kitty/kitty-themes
 .installed
 .claude/
+
+# pi extension deps installed via personal/pi/package.json
+personal/pi/node_modules/
