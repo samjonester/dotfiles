@@ -139,39 +139,20 @@ function isTerminalControlSequence(data: string): boolean {
 
 // ── Teammate session detection (Stage 0) ───────────────────────────────────────
 //
-// A spawned teammate runs in a tmux pane with a TUI but no human watching.
-// Interactive dialogs would deadlock the teammate. Detection mirrors the
-// repo-guard extension: TMUX_PANE matches a non-lead member in any team
-// config under ~/.pi/teams/<team>/config.json. Cached after first call —
-// the role of a process doesn't change mid-session.
+// Pi's agent-teams extension sets PI_TEAM_ROLE="teammate" for spawned
+// teammates. Any session you start manually has PI_TEAM_ROLE unset or "lead".
+// Cached after first call — the role of a process doesn't change mid-session.
+//
+// Previous approach scanned ~/.pi/teams/*/config.json for TMUX_PANE matches,
+// but stale configs from dead teams poisoned the lookup after tmux server
+// restarts (pane IDs reset to %0 and walk back into teammate entries from
+// old sessions). The env var is set at spawn time and immune to this.
 
-const TEAM_DIR = path.join(os.homedir(), ".pi", "teams");
 let _teammateCache: boolean | null = null;
 
 function isTeammateSession(): boolean {
   if (_teammateCache !== null) return _teammateCache;
-  const paneId = process.env.TMUX_PANE;
-  if (!paneId) return (_teammateCache = false);
-  if (!fs.existsSync(TEAM_DIR)) return (_teammateCache = false);
-  try {
-    for (const team of fs.readdirSync(TEAM_DIR)) {
-      const configPath = path.join(TEAM_DIR, team, "config.json");
-      if (!fs.existsSync(configPath)) continue;
-      const config = JSON.parse(fs.readFileSync(configPath, "utf-8"));
-      for (const m of (config.members || []) as Array<{
-        paneId?: string;
-        role?: string;
-      }>) {
-        if (m.paneId === paneId && m.role !== "lead") {
-          return (_teammateCache = true);
-        }
-      }
-    }
-  } catch {
-    // If team config is unreadable, assume lead (safer default — we'd rather
-    // show a dialog the user can dismiss than silently block).
-  }
-  return (_teammateCache = false);
+  return (_teammateCache = process.env.PI_TEAM_ROLE === "teammate");
 }
 
 // ── Teammate gate patterns (Stage 0) ─────────────────────────────────────────
