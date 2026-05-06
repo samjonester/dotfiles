@@ -42,11 +42,10 @@ The following dotfiles extensions intentionally **override** their shop-pi-fy up
 | `memory` | Persistent memory bank |
 | `notify` | Custom notification rules |
 | `retitle` | Out-of-band Haiku-based session naming — refines name across first 3 turns, respects manual renames |
-| `session-banner` | Display-only fork — naming delegated to retitle, custom footer suppresses duplicate `• name` (see extension README) |
 | `shell-mode` | Personal shell-mode behavior |
 | `subagent` | Subprocess-based delegation. Upstream `agent-teams` defers to this fork's registration (see agent-teams/index.ts:333). |
 
-When syncing with upstream pi-core changes, **check each fork's README** for the upstream-tracking note — some files (`session-banner/footer.ts`) deliberately mirror pi-core internals and need manual sync on pi version bumps.
+When syncing with upstream pi-core changes, **check each fork's README** for the upstream-tracking note.
 
 ## Dotfiles-only extensions
 
@@ -54,7 +53,7 @@ These have no shop-pi-fy upstream — they're personal extensions that exist onl
 
 | Extension | Purpose |
 |---|---|
-| `custom-footer` | Custom footer rendering rules |
+| `custom-footer` | Custom footer: session title, CWD, token stats, context %, model, extension statuses |
 | `lfg` | `/lfg` quick-launch shortcuts |
 | `pi-autoresearch` | Autoresearch loop tooling (init/run/log experiments) |
 | `pi-figma-remote-mcp` | Figma MCP bridge configuration |
