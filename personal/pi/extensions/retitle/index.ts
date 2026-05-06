@@ -50,6 +50,12 @@ Rules:
 - Do not answer questions from the conversation
 - Your ENTIRE response must be the title and nothing else
 
+Identifier rules (CRITICAL):
+- When the conversation references a PR, issue, or branch by number, you MUST include it in the title
+- Format PR/issue numbers as #N (e.g. #681449, #38, #878)
+- If multiple PRs are mentioned, include the primary one (or say "PRs" if the session is about reviewing a batch)
+- The number is more important than generic descriptions — "Review PR #681449" beats "Review PR with feedback"
+
 Emoji guidelines:
 - Pick ONE emoji that captures the primary activity or domain
 - Prefer specific over generic (🔐 over ⚙️ for auth work)
@@ -61,7 +67,11 @@ Examples of valid outputs:
 🛠️ Build session memory pi extension
 🚀 Set up CI pipeline for monorepo
 🎨 Fix button hover states in checkout
-📊 Query ad spend metrics from BigQuery`;
+📊 Query ad spend metrics from BigQuery
+🔍 Review PR #681449 feedback addressed
+🛠️ Address binks feedback on PRs #878 #869
+💬 Batch review PRs #668312 #44522 #668492
+🚀 Check PR #668170 deployment status`;
 
 export default function (pi: ExtensionAPI) {
   let turnCount = 0;
@@ -253,6 +263,13 @@ export default function (pi: ExtensionAPI) {
     if (!auth.ok || !auth.apiKey) return null;
 
     try {
+      const ids = extractIdentifiers(context);
+      let userPrompt = `<conversation>\n${context}\n</conversation>\n\n`;
+      if (ids.length > 0) {
+        userPrompt += `<extracted_identifiers>\n${ids.join("\n")}\n</extracted_identifiers>\n\nThe identifiers above were extracted from the conversation. You MUST include the most relevant one(s) in the title as #N format.\n\n`;
+      }
+      userPrompt += `Generate a short title for this conversation.`;
+
       const response = await complete(
         model,
         {
@@ -263,7 +280,7 @@ export default function (pi: ExtensionAPI) {
               content: [
                 {
                   type: "text" as const,
-                  text: `<conversation>\n${context}\n</conversation>\n\nGenerate a short title for this conversation.`,
+                  text: userPrompt,
                 },
               ],
               timestamp: Date.now(),
@@ -378,4 +395,55 @@ function extractText(content: unknown): string {
     .map((c: any) => c.text)
     .join("\n")
     .trim();
+}
+
+/**
+ * Extract PR numbers, issue numbers, and branch refs from conversation text.
+ * Handles:
+ *   - Graphite URLs: app.graphite.com/github/pr/org/repo/NUMBER
+ *   - GitHub URLs: github.com/org/repo/pull/NUMBER
+ *   - GitHub issue URLs: github.com/org/repo/issues/NUMBER
+ *   - Inline refs: #NUMBER, PR #NUMBER, PR NUMBER, issue #NUMBER
+ */
+function extractIdentifiers(text: string): string[] {
+  const ids = new Map<string, string>(); // number -> formatted label
+
+  // Graphite PR URLs
+  for (const m of text.matchAll(
+    /app\.graphite\.com\/github\/pr\/([^/]+)\/([^/]+)\/([0-9]+)/g,
+  )) {
+    ids.set(m[3], `PR #${m[3]} (${m[1]}/${m[2]})`);
+  }
+
+  // GitHub PR URLs
+  for (const m of text.matchAll(
+    /github\.com\/([^/]+)\/([^/]+)\/pull\/([0-9]+)/g,
+  )) {
+    ids.set(m[3], `PR #${m[3]} (${m[1]}/${m[2]})`);
+  }
+
+  // GitHub issue URLs
+  for (const m of text.matchAll(
+    /github\.com\/([^/]+)\/([^/]+)\/issues\/([0-9]+)/g,
+  )) {
+    if (!ids.has(m[3])) {
+      ids.set(m[3], `Issue #${m[3]} (${m[1]}/${m[2]})`);
+    }
+  }
+
+  // Inline: PR #NUMBER or PR NUMBER (3+ digits to avoid false positives)
+  for (const m of text.matchAll(/\bPR\s*#?(\d{3,})\b/gi)) {
+    if (!ids.has(m[1])) {
+      ids.set(m[1], `PR #${m[1]}`);
+    }
+  }
+
+  // Inline: #NUMBER (3+ digits, not preceded by a word char to avoid hex colors etc)
+  for (const m of text.matchAll(/(?<!\w)#(\d{3,})\b/g)) {
+    if (!ids.has(m[1])) {
+      ids.set(m[1], `#${m[1]}`);
+    }
+  }
+
+  return [...ids.values()];
 }
