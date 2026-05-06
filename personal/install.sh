@@ -190,6 +190,10 @@ darwin*)
   $BREW_EXECUTABLE install neovim
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/nvim ~/.config/
 
+  # Language servers (for Neovim LSP)
+  pnpm add -g typescript-language-server typescript   # TS + JS
+  gem install ruby-lsp                                # Ruby
+
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
   # Install VSCode Extensions & configs

@@ -7,6 +7,13 @@
 # Cargo (Rust) — needed on PATH for non-interactive shells too.
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 
+# Ruby gems user-install bin (ruby-lsp, etc.)
+if command -v ruby >/dev/null 2>&1; then
+  _gem_bin="$(ruby -e 'puts Gem.user_dir')/bin"
+  [[ -d "$_gem_bin" ]] && export PATH="$_gem_bin:$PATH"
+  unset _gem_bin
+fi
+
 # Aliases and functions available in every zsh shell, including pi shell-mode
 # (`!cmd`, `!i cmd`, `!f cmd`) which spawns `$SHELL -c <command>`.
 [ -f "$HOME/dotfiles/personal/aliases.zsh" ] && . "$HOME/dotfiles/personal/aliases.zsh"
