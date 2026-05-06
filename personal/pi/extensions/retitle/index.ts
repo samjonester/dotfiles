@@ -55,6 +55,7 @@ Identifier rules (CRITICAL):
 - Format PR/issue numbers as #N (e.g. #681449, #38, #878)
 - If multiple PRs are mentioned, include the primary one (or say "PRs" if the session is about reviewing a batch)
 - The number is more important than generic descriptions — "Review PR #681449" beats "Review PR with feedback"
+- Include 2-3 words identifying the PR's topic alongside the number when the conversation provides enough context
 
 Emoji guidelines:
 - Pick ONE emoji that captures the primary activity or domain
@@ -68,10 +69,10 @@ Examples of valid outputs:
 🚀 Set up CI pipeline for monorepo
 🎨 Fix button hover states in checkout
 📊 Query ad spend metrics from BigQuery
-🔍 Review PR #681449 feedback addressed
-🛠️ Address binks feedback on PRs #878 #869
+🔍 Review PR #681449 throttle tightening
+🛠️ Address binks on #878 altscreen #869 graphite
 💬 Batch review PRs #668312 #44522 #668492
-🚀 Check PR #668170 deployment status`;
+🚀 Check PR #668170 blog-URL migration deploy`;
 
 export default function (pi: ExtensionAPI) {
   let turnCount = 0;
