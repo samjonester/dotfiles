@@ -72,7 +72,7 @@ If a freshly-added extension doesn't show its tools after `/auto-reload`, restar
 
 ## Edge cases
 
-- **Fork conflict (🛑):** If `<name>` exists in BOTH dotfiles and shop-pi-fy (e.g. `memory`, `retitle`, `notify`, `bash-guard`, `subagent`, `shell-mode`, `context-viz`, `session-banner`, `file-preview`), the dotfiles version wins. Do NOT add it to the manifest. The install.sh skip list filters it.
+- **Fork conflict (🛑):** If `<name>` exists in BOTH dotfiles and shop-pi-fy (e.g. `memory`, `retitle`, `notify`, `bash-guard`, `subagent`, `shell-mode`, `context-viz`, `file-preview`), the dotfiles version wins. Do NOT add it to the manifest. The install.sh skip list filters it.
 - **Already installed:** `/pkg add` is idempotent for symlinks but will error if the target already exists from a different source. Run `/pkg rm <name>` first to clean state.
 - **Custom not-shop-pi-fy extension from a URL:** Use `pi install <git-url>` (built-in pi command). Adds to a different namespace; not covered by this skill.
 - **Resource doesn't exist:** `/pkg list` should be your first check. If `<name>` isn't there, ask Sam if it's an upstream pi-mono extension, an npm package, or something to author from scratch.
