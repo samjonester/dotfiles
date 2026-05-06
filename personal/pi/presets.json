@@ -171,7 +171,7 @@
       "team_force_shutdown",
       "team_cleanup"
     ],
-    "instructions": "Triage session — focus on communications, not code changes. No write/edit tools available."
+    "instructions": "Triage session \u2014 focus on communications, not code changes. No write/edit tools available."
   },
   "investigate": {
     "tools": [
@@ -292,7 +292,7 @@
       "vault_call_tool",
       "write_investigation_summary"
     ],
-    "instructions": "Investigation session — read-only for code. Use log_finding to track hypotheses and discoveries. No write/edit tools available."
+    "instructions": "Investigation session \u2014 read-only for code. Use log_finding to track hypotheses and discoveries. No write/edit tools available."
   },
   "experiment": {
     "tools": [
@@ -336,7 +336,7 @@
       "grokt_get_file",
       "grokt_stats"
     ],
-    "instructions": "Experiment/flag session — feature flags, experiments, and segments. Grokt available for finding flag usage in code."
+    "instructions": "Experiment/flag session \u2014 feature flags, experiments, and segments. Grokt available for finding flag usage in code."
   },
   "workspace": {
     "tools": [
@@ -392,7 +392,7 @@
       "gws_slides_replace",
       "gws_slides_delete"
     ],
-    "instructions": "Google Workspace session — Docs, Sheets, Slides, Calendar, Gmail, Drive. For creating/editing documents, spreadsheets, and presentations."
+    "instructions": "Google Workspace session \u2014 Docs, Sheets, Slides, Calendar, Gmail, Drive. For creating/editing documents, spreadsheets, and presentations."
   },
   "all": {
     "tools": [
@@ -621,6 +621,6 @@
       "write",
       "write_investigation_summary"
     ],
-    "instructions": "All tools enabled — every extension active. Use the right tool for the job."
+    "instructions": "All tools enabled \u2014 every extension active. Use the right tool for the job."
   }
 }

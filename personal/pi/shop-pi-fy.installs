@@ -25,7 +25,6 @@ ext: vim-mode
 
 # Guards / safety
 # 🛑 bash-guard / guard — fork in dotfiles (~/dotfiles/personal/pi/extensions/bash-guard/)
-ext: github-gate
 ext: prefer-graphite
 
 # PR / CI / review

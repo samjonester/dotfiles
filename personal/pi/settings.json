@@ -31,16 +31,31 @@
   "enableSkillCommands": true,
   "lastChangelogVersion": "0.73.0",
   "packages": [
-    "/Users/sam/dotfiles/personal/pi",
+    {
+      "source": "/Users/sam/dotfiles/personal/pi",
+      "extensions": [
+        "-extensions/pi-autoresearch/index.ts"
+      ],
+      "skills": [
+        "-skills/autoresearch-create/SKILL.md",
+        "-skills/autoresearch-finalize/SKILL.md"
+      ]
+    },
     "npm:pi-web-access",
     "npm:pi-messenger",
     "git:github.com/shopify-playground/shop-pi-fy",
     "git:github.com/shopify-playground/pi-tool-gateway-extension",
-    "https://github.com/jhochenbaum/pi-autoresearch-studio",
+    {
+      "source": "https://github.com/jhochenbaum/pi-autoresearch-studio",
+      "extensions": [
+        "-extensions/autoresearch-studio/index.ts"
+      ]
+    },
     "git:github.com/JamesOwenHall/tidy-tools"
   ],
   "npmCommand": [
     "pnpm"
   ],
-  "hideThinkingBlock": false
+  "hideThinkingBlock": false,
+  "extensions": []
 }
