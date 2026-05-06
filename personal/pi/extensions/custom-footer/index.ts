@@ -1,15 +1,16 @@
 /**
- * Custom Footer — customizes the status bar layout.
+ * Custom Footer — status bar with session title, CWD, stats, and extension statuses.
  *
- * Line 0 (conditional): Session name (muted) — only if set
- * Line 1: CWD (dim)   branch (muted)
- * Line 2: tokens  context  model  brain thinking — all left-aligned, dim
+ * Line 0 (conditional): Session title from retitle (accent) — only if set
+ * Line 1: CWD (dim)   branch (muted)   pr-status (from pr-status extension)
+ * Line 2: tokens  context  model  thinking — left-aligned, dim
+ *         Context color: green <50%, yellow 50-75%, red >75%
  * Line 3: Extension statuses + preset at end
  */
 
 import type { AssistantMessage } from "@mariozechner/pi-ai";
-import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
-import { truncateToWidth, visibleWidth } from "@mariozechner/pi-tui";
+import type { ExtensionAPI, ExtensionContext } from "@mariozechner/pi-coding-agent";
+import { truncateToWidth } from "@mariozechner/pi-tui";
 
 function sanitizeStatusText(text: string): string {
   return text
@@ -31,7 +32,9 @@ function formatTokens(count: number): string {
 }
 
 export default function (pi: ExtensionAPI) {
-  pi.on("session_start", async (_event, ctx) => {
+  function installFooter(ctx: ExtensionContext) {
+    if (!ctx.hasUI) return;
+
     ctx.ui.setFooter((tui, theme, footerData) => {
       const unsub = footerData.onBranchChange(() => tui.requestRender());
 
@@ -41,20 +44,20 @@ export default function (pi: ExtensionAPI) {
         render(width: number): string[] {
           const lines: string[] = [];
 
-          // ── Line 0 (conditional): Session name ─────────────
+          // ── Line 0 (conditional): Session title ─────────────
           const sessionName = ctx.sessionManager.getSessionName();
           if (sessionName) {
             lines.push(
               truncateToWidth(
-                theme.fg("muted", sessionName),
+                theme.fg("accent", sessionName),
                 width,
                 theme.fg("dim", "..."),
               ),
             );
           }
 
-          // ── Line 1: CWD  branch ────────────────────────
-          let pwd = process.cwd();
+          // ── Line 1: CWD  branch ────────────────────────────
+          let pwd = ctx.sessionManager.getCwd();
           const home = process.env.HOME || process.env.USERPROFILE;
           if (home && pwd.startsWith(home)) {
             pwd = `~${pwd.slice(home.length)}`;
@@ -67,21 +70,24 @@ export default function (pi: ExtensionAPI) {
             pwdParts.push(theme.fg("muted", "\ue0a0 " + branch));
           }
 
-          const sessionId = ctx.sessionManager.getSessionId();
-          if (sessionId) {
-            const shortId = sessionId.slice(0, 8);
-            pwdParts.push(theme.fg("dim", "\u27D0 " + shortId));
+          // Inline pr-status from the pr-status extension (hide from Line 3)
+          const extensionStatuses = footerData.getExtensionStatuses();
+          const prStatus = extensionStatuses.get("pr-status");
+          if (prStatus) {
+            pwdParts.push(sanitizeStatusText(prStatus));
           }
 
           lines.push(
-            truncateToWidth(pwdParts.join("  "), width, theme.fg("dim", "...")),
+            truncateToWidth(
+              pwdParts.join("  "),
+              width,
+              theme.fg("dim", "..."),
+            ),
           );
 
-          // ── Line 2: stats  context  model  thinking ────
+          // ── Line 2: stats  context  model  thinking ────────
           let totalInput = 0;
           let totalOutput = 0;
-          let totalCacheRead = 0;
-          let totalCacheWrite = 0;
           let totalCost = 0;
 
           for (const e of ctx.sessionManager.getBranch()) {
@@ -89,8 +95,6 @@ export default function (pi: ExtensionAPI) {
               const m = e.message as AssistantMessage;
               totalInput += m.usage.input;
               totalOutput += m.usage.output;
-              totalCacheRead += m.usage.cacheRead;
-              totalCacheWrite += m.usage.cacheWrite;
               totalCost += m.usage.cost.total;
             }
           }
@@ -100,28 +104,26 @@ export default function (pi: ExtensionAPI) {
             contextUsage?.contextWindow ?? ctx.model?.contextWindow ?? 0;
           const contextPercentValue = contextUsage?.percent ?? 0;
           const contextPercent =
-            contextUsage?.percent !== null
+            contextUsage?.percent != null
               ? contextPercentValue.toFixed(1)
               : "?";
 
           const segments: string[] = [];
 
-          // Token stats
+          // Token stats (input, output, cost)
           const tokenParts: string[] = [];
           if (totalInput) tokenParts.push("\u2191" + formatTokens(totalInput));
           if (totalOutput)
             tokenParts.push("\u2193" + formatTokens(totalOutput));
-          if (totalCacheRead)
-            tokenParts.push("R" + formatTokens(totalCacheRead));
-          if (totalCacheWrite)
-            tokenParts.push("W" + formatTokens(totalCacheWrite));
 
           const usingSubscription = ctx.model
             ? ctx.modelRegistry.isUsingOAuth(ctx.model)
             : false;
           if (totalCost || usingSubscription) {
             const costStr =
-              "$" + totalCost.toFixed(3) + (usingSubscription ? " (sub)" : "");
+              "$" +
+              totalCost.toFixed(3) +
+              (usingSubscription ? " (sub)" : "");
             tokenParts.push(costStr);
           }
 
@@ -129,7 +131,7 @@ export default function (pi: ExtensionAPI) {
             segments.push(tokenParts.join(" "));
           }
 
-          // Context usage
+          // Context usage — green <50%, yellow 50-75%, red >75%
           const contextDisplay =
             contextPercent === "?"
               ? "?/" + formatTokens(contextWindow)
@@ -146,28 +148,32 @@ export default function (pi: ExtensionAPI) {
             segments.push("\uD83E\uDDE0 " + thinkingLevel);
           }
 
-          // Build colored line
-          const extensionStatuses = footerData.getExtensionStatuses();
-
+          // Color each segment
           const coloredSegments: string[] = [];
           for (const seg of segments) {
-            if (seg === contextDisplay && contextPercentValue > 90) {
-              coloredSegments.push(theme.fg("error", seg));
-            } else if (seg === contextDisplay && contextPercentValue > 70) {
-              coloredSegments.push(theme.fg("warning", seg));
+            if (seg === contextDisplay) {
+              if (contextPercent === "?") {
+                coloredSegments.push(theme.fg("dim", seg));
+              } else if (contextPercentValue > 75) {
+                coloredSegments.push(theme.fg("error", seg));
+              } else if (contextPercentValue >= 50) {
+                coloredSegments.push(theme.fg("warning", seg));
+              } else {
+                coloredSegments.push(theme.fg("success", seg));
+              }
             } else {
               coloredSegments.push(theme.fg("dim", seg));
             }
           }
 
           const statsLine = coloredSegments.join(theme.fg("dim", "  "));
-          lines.push(truncateToWidth(statsLine, width, theme.fg("dim", "...")));
+          lines.push(
+            truncateToWidth(statsLine, width, theme.fg("dim", "...")),
+          );
 
           // ── Line 3: Extension statuses + preset at end ─────
-          if (extensionStatuses.size > 0) {
-            const hiddenKeys = new Set(["preset", "voice", "worktree"]);
-            // Explicit ordering: listed keys appear first in this order,
-            // unlisted keys follow alphabetically after.
+          {
+            const hiddenKeys = new Set(["preset", "pr-status"]);
             const keyOrder = ["bg-jobs", "bash-guard"];
             const sortedStatuses = Array.from(extensionStatuses.entries())
               .filter(([key]) => !hiddenKeys.has(key))
@@ -181,7 +187,6 @@ export default function (pi: ExtensionAPI) {
               })
               .map(([, text]) => sanitizeStatusText(text));
 
-            // Append preset at the end (always visible)
             const presetStatus = extensionStatuses.get("preset");
             if (presetStatus) {
               const presetText = stripAnsi(sanitizeStatusText(presetStatus));
@@ -191,17 +196,31 @@ export default function (pi: ExtensionAPI) {
               sortedStatuses.push("\uD83E\uDDE9 code");
             }
 
-            if (sortedStatuses.length > 0) {
-              const statusLine = sortedStatuses.join(" ");
-              lines.push(
-                truncateToWidth(statusLine, width, theme.fg("dim", "...")),
-              );
-            }
+            const statusLine = sortedStatuses.join(" ");
+            lines.push(
+              truncateToWidth(statusLine, width, theme.fg("dim", "...")),
+            );
           }
 
           return lines;
         },
       };
     });
+  }
+
+  // ── Lifecycle ─────────────────────────────────────────────────────
+
+  pi.on("session_start", async (_event, ctx) => {
+    installFooter(ctx);
+  });
+
+  pi.on("session_switch", async (_event, ctx) => {
+    installFooter(ctx);
+  });
+
+  // Re-install footer after each turn so the session title updates
+  // as soon as retitle sets the name (retitle fires in agent_end).
+  pi.on("agent_end", async (_event, ctx) => {
+    installFooter(ctx);
   });
 }
