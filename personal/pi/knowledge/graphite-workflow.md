@@ -10,7 +10,17 @@ A cheat sheet for stacked-PR development with [Graphite](https://graphite.dev/).
 - `gt submit` — push + create/update draft PR
 - `gt submit --publish` — move PR from draft → ready for review
 - `gt sync` — rebase stack on latest main
+- `gt sync -f` — force-sync: cleans up stale merged/closed branches + fetches main
 - `gt restack` — rebase dependent branches after amend
+
+## Troubleshooting Submit
+
+When `gt submit` fails with **"PR for the following branch has already been merged but the merged commits are not contained in the latest trunk branch"** or **"Aborting non-interactive submit"**:
+
+1. Run `gt sync -f` — this cleans up stale merged/closed branches and fetches latest main
+2. Then retry `gt submit`
+
+This is the most common submit failure. Do NOT manually `gt branch delete` stale branches — `gt sync -f` handles it cleanly.
 
 ## PR Flow
 
@@ -24,6 +34,7 @@ A cheat sheet for stacked-PR development with [Graphite](https://graphite.dev/).
 ## Stack Management
 
 - `gt log` — show stack
+- `gt ls` — list branches in tree view
 - `gt branch` — list branches
 - `gt checkout <branch>` — switch within stack
 - `gt top` / `gt bottom` — navigate stack
@@ -38,3 +49,6 @@ A cheat sheet for stacked-PR development with [Graphite](https://graphite.dev/).
 ## CI Notes
 
 Some orgs auto-run CI on every push; others run once on draft → ready and then require explicit triggering. Check your org's conventions. Explicit-trigger orgs often expose a command along the lines of `ci run` / `ci run --pipeline <name>` / `ci merge-when-ready`.
+
+## Source
+- Sam Jones, 2026-04-23 (initial), 2026-05-06 (added gt sync -f troubleshooting)
