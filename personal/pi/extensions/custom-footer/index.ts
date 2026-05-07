@@ -1,7 +1,7 @@
 /**
  * Custom Footer — status bar with session title, CWD, stats, and extension statuses.
  *
- * Line 0 (conditional): Session title from retitle (accent) — only if set
+ * Line 0: Session ID (muted) + session title (accent) — always shows ID, title appended when set
  * Line 1: CWD (dim)   branch (muted)   pr-status (from pr-status extension)
  * Line 2: tokens  context  model  thinking — left-aligned, dim
  *         Context color: green <50%, yellow 50-75%, red >75%
@@ -44,12 +44,18 @@ export default function (pi: ExtensionAPI) {
         render(width: number): string[] {
           const lines: string[] = [];
 
-          // ── Line 0 (conditional): Session title ─────────────
-          const sessionName = ctx.sessionManager.getSessionName();
-          if (sessionName) {
+          // ── Line 0: Session ID + session title ─────────────
+          {
+            const sessionId = ctx.sessionManager.getSessionId();
+            const shortId = sessionId.split("-").pop() || sessionId;
+            const sessionName = ctx.sessionManager.getSessionName();
+            const parts: string[] = [theme.fg("muted", shortId)];
+            if (sessionName) {
+              parts.push(theme.fg("accent", sessionName));
+            }
             lines.push(
               truncateToWidth(
-                theme.fg("accent", sessionName),
+                parts.join("  "),
                 width,
                 theme.fg("dim", "..."),
               ),
@@ -131,6 +137,12 @@ export default function (pi: ExtensionAPI) {
             segments.push(tokenParts.join(" "));
           }
 
+          // Cache TTL (from claude-cache-ttl extension)
+          const cacheTtlStatus = extensionStatuses.get("claude-cache-ttl");
+          if (cacheTtlStatus) {
+            segments.push(sanitizeStatusText(cacheTtlStatus));
+          }
+
           // Context usage — green <50%, yellow 50-75%, red >75%
           const contextDisplay =
             contextPercent === "?"
@@ -173,7 +185,7 @@ export default function (pi: ExtensionAPI) {
 
           // ── Line 3: Extension statuses + preset at end ─────
           {
-            const hiddenKeys = new Set(["preset", "pr-status"]);
+            const hiddenKeys = new Set(["preset", "pr-status", "claude-cache-ttl"]);
             const keyOrder = ["bg-jobs", "bash-guard"];
             const sortedStatuses = Array.from(extensionStatuses.entries())
               .filter(([key]) => !hiddenKeys.has(key))
