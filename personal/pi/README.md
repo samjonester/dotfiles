@@ -39,11 +39,8 @@ The following dotfiles extensions intentionally **override** their shop-pi-fy up
 |---|---|
 | `bash-guard` | LLM-jury security guard with custom heuristics |
 | `context-viz` | Personal display tweaks |
-| `file-preview` | Tool-call artifact tracking (footer status + ctrl+shift+y clipboard yank); upstream only has user-message path previews |
-| `memory` | Persistent memory bank |
 | `notify` | Custom notification rules |
 | `retitle` | Out-of-band Haiku-based session naming — refines name across first 3 turns, respects manual renames |
-| `shell-mode` | Personal shell-mode behavior |
 | `subagent` | Subprocess-based delegation. Upstream `agent-teams` defers to this fork's registration (see agent-teams/index.ts:333). |
 
 When syncing with upstream pi-core changes, **check each fork's README** for the upstream-tracking note.

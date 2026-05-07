@@ -66,10 +66,7 @@ ext: quick-mcp-bridge
 # UI / cosmetics
 # 🛑 retitle — fork in dotfiles
 # 🛑 notify — fork in dotfiles
-# 🛑 memory — fork in dotfiles
 # 🛑 context-viz — fork in dotfiles
-# 🛑 file-preview — fork in dotfiles
-# 🛑 shell-mode — fork in dotfiles
 # 🛑 subagent — fork in dotfiles
 
 # Bootstrap
