@@ -29,6 +29,12 @@ Prohibited workarounds:
 
 This does **not** apply to malformed calls (wrong param name, missing required field, bad URL format) — self-correct those without asking.
 
+## Externally Visible Side Effects — Propose, Don't Just Do
+
+Before writing to anything externally visible — wiki (`wiki_write`), Slack, GitHub PRs/comments/issues, or any other external service — propose first and wait for go-ahead. Don't infer permission from rule documents (e.g. "capture findings to wiki"). One-line proposal: what + where, then wait.
+
+Does NOT apply to: in-conversation tool calls, file reads, scratch files in `/tmp`, dotfiles/config edits the user explicitly asked for, memory bank auto-persist.
+
 ## Google Workspace Tools
 
 Two sets of GWS tools are active — prefer based on operation type:
