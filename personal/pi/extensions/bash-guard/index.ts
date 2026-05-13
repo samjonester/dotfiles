@@ -1306,6 +1306,9 @@ function isSingleCommandSafe(cmd: string): boolean {
   let trimmed = cmd.trim();
   if (!trimmed) return true;
 
+  // Note: RTK wrapper (`rtk ` prefix) is stripped at the guard entry point
+  // before any stage runs. No need to strip here.
+
   // Strip leading shell control-flow keywords that appear as fragments after
   // `;` splitting (e.g., `then break` → check `break`; `if [ -f x ]` → check `[ -f x ]`).
   // The keyword itself is safe; only the following command matters.
@@ -2814,7 +2817,10 @@ export default function (pi: ExtensionAPI) {
   pi.on("tool_call", async (event, ctx) => {
     if (!isToolCallEventType("bash", event)) return;
 
-    const command = event.input.command;
+    // Strip RTK wrapper early — rtk-rewrite extension prepends `rtk ` to commands
+    // before bash-guard sees them. All stages (remote mutation, commit, whitelist,
+    // LLM voters) should evaluate the underlying command, not the RTK wrapper.
+    const command = event.input.command.replace(/^\s*rtk\s+/, "");
 
     // Spawned teammates have a TUI but no human watching — dialogs deadlock.
     // Treat them as non-interactive for any blocking-dialog code path.
