@@ -29,7 +29,7 @@
     "gpt-5.3-codex"
   ],
   "enableSkillCommands": true,
-  "lastChangelogVersion": "0.73.0",
+  "lastChangelogVersion": "0.74.0",
   "packages": [
     {
       "source": "/Users/sam/dotfiles/personal/pi",
