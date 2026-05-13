@@ -163,16 +163,34 @@ export default function presetExtension(pi: ExtensionAPI) {
       pi.setThinkingLevel(preset.thinkingLevel);
     }
 
-    // Apply tools if specified
+    // Apply tools if specified.
+    // Presets gate *which tools are active* via an explicit whitelist. But MCP
+    // bridges and adapters register tools dynamically in session_start — those
+    // tools aren't in any preset's list. If the preset fires after them,
+    // setActiveTools silently drops every dynamically-registered tool.
+    // Fix: collect all tool names mentioned across ALL presets (the "known"
+    // universe). Any currently-registered tool NOT in that known set is a
+    // dynamic/extension tool and gets preserved alongside the preset's list.
     if (preset.tools && preset.tools.length > 0) {
       const allToolNames = pi.getAllTools().map((t) => t.name);
+
+      // Tools that appear in ANY preset — these are under preset governance.
+      const governedTools = new Set(
+        Object.values(presets).flatMap((p) => p.tools ?? []),
+      );
+
+      // Dynamic tools: registered but not governed by any preset. Preserve them.
+      const dynamicTools = allToolNames.filter(
+        (name) => !governedTools.has(name),
+      );
+
       const validTools = preset.tools.filter((t) => allToolNames.includes(t));
       const invalidTools = preset.tools.filter(
         (t) => !allToolNames.includes(t),
       );
 
       if (validTools.length > 0) {
-        pi.setActiveTools(validTools);
+        pi.setActiveTools([...validTools, ...dynamicTools]);
       }
 
       if (invalidTools.length > 0) {
@@ -421,9 +439,15 @@ export default function presetExtension(pi: ExtensionAPI) {
         (t) => !allToolNames.includes(t),
       );
 
-      // Re-apply the (now-larger) valid set so async-registered tools become active.
+      // Re-apply with dynamic tools preserved (same logic as applyPreset).
+      const governedTools = new Set(
+        Object.values(presets).flatMap((p) => p.tools ?? []),
+      );
+      const dynamicTools = allToolNames.filter(
+        (name) => !governedTools.has(name),
+      );
       if (validTools.length > 0) {
-        pi.setActiveTools(validTools);
+        pi.setActiveTools([...validTools, ...dynamicTools]);
       }
 
       if (stillMissing.length > 0) {
