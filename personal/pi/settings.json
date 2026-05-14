@@ -57,5 +57,29 @@
     "pnpm"
   ],
   "hideThinkingBlock": false,
+  "customFooter": {
+    "lines": [
+      [
+        "session",
+        "session_name"
+      ],
+      [
+        "path",
+        "git",
+        "ext:pr-status"
+      ],
+      [
+        "model",
+        "thinking",
+        "tokens",
+        "context",
+        "ext:claude-cache-ttl"
+      ],
+      [
+        "ext:preset",
+        "ext:*"
+      ]
+    ]
+  },
   "extensions": []
 }
