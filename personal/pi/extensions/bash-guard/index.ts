@@ -320,6 +320,8 @@ const TEAMMATE_VOTER_SYSTEM_PROMPT = `You are a security reviewer for an autonom
 
 The agent is a TEAMMATE: spawned by the lead to autonomously implement a feature and end up at a DRAFT pull request. There is no human watching to confirm prompts.
 
+Note: Commands may be prefixed with \`rtk\` (Runtime Toolkit) — a transparent wrapper that doesn't change semantics. \`rtk gt submit\` = \`gt submit\`.
+
 You will receive:
 - <command>: the bash command being attempted
 - <git_branch>: the current branch in the working directory the command will run in
@@ -957,6 +959,8 @@ const VOTER_SYSTEM_PROMPT = `You are a security reviewer for a coding assistant 
 
 Context: This is a professional software developer's workstation. The assistant routinely reads project files, session logs, and config files to do its job. Local network requests to dev servers are normal. Python/Node scripts that parse data are normal workflow.
 
+IMPORTANT: Commands may be prefixed with \`rtk\` (Runtime Toolkit). This is a transparent wrapper that does not change command semantics — \`rtk git diff\` is identical to \`git diff\`, \`rtk grep foo bar\` is identical to \`grep foo bar\`. Evaluate the underlying command, not the \`rtk\` prefix. This applies whether \`rtk\` appears at the start or mid-chain (e.g. \`cd /tmp && rtk git log\`).
+
 You will receive a bash command inside <command> tags. The message may also include:
 
 - <previous_decisions> showing commands the user previously reviewed. Each decision shows whether the user allowed or denied the command, and may include user feedback explaining their reasoning.
@@ -1196,6 +1200,13 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*python3?\b/,
   /^\s*base64\b/,
 
+  // ── macOS clipboard ──
+  /^\s*pbcopy\b/,
+  /^\s*pbpaste\b/,
+
+  // ── Package managers (read-only; install intentionally NOT whitelisted) ──
+  /^\s*brew\s+(info|list|search|doctor|outdated|deps|desc|home|cat|log|uses|tap-info)\b/,
+
   // ── MCP tool read operations ──
   /^\s*slack-mcp\s+(get-messages|get-thread|get-unreads|get-channel-sections|get-channel-info|get-status|get-user-profile|get-reactions|get-saved-items|get-file|search|list|test|mcp|auth)\b/,
 
@@ -1306,8 +1317,11 @@ function isSingleCommandSafe(cmd: string): boolean {
   let trimmed = cmd.trim();
   if (!trimmed) return true;
 
-  // Note: RTK wrapper (`rtk ` prefix) is stripped at the guard entry point
-  // before any stage runs. No need to strip here.
+  // Strip RTK wrapper from each segment — the entry point only strips a
+  // leading `rtk ` on the full command, but chained commands like
+  // `cd ... && rtk git diff` still have rtk on inner segments.
+  trimmed = trimmed.replace(/^\s*rtk\s+/, "").trim();
+  if (!trimmed) return true;
 
   // Strip leading shell control-flow keywords that appear as fragments after
   // `;` splitting (e.g., `then break` → check `break`; `if [ -f x ]` → check `[ -f x ]`).
@@ -1424,6 +1438,44 @@ function extractControlFlowBody(command: string): string[] | null {
 }
 
 /**
+ * Replace newlines inside quoted strings with spaces.
+ * Walks character-by-character tracking single/double quote state.
+ * Handles escaped quotes (\\' and \\") and does not collapse
+ * newlines outside quotes (those are real command separators).
+ */
+function collapseQuotedNewlines(input: string): string {
+  const chars = [...input];
+  const out: string[] = [];
+  let inSingle = false;
+  let inDouble = false;
+
+  for (let i = 0; i < chars.length; i++) {
+    const ch = chars[i];
+    const prev = i > 0 ? chars[i - 1] : "";
+
+    // Handle escapes — a backslash before a quote char prevents toggle
+    if (prev === "\\") {
+      out.push(ch);
+      continue;
+    }
+
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle;
+      out.push(ch);
+    } else if (ch === '"' && !inSingle) {
+      inDouble = !inDouble;
+      out.push(ch);
+    } else if (ch === "\n" && (inSingle || inDouble)) {
+      // Inside quotes — collapse newline to space
+      out.push(" ");
+    } else {
+      out.push(ch);
+    }
+  }
+  return out.join("");
+}
+
+/**
  * Determine if a bash command can skip the security guard.
  *
  * Handles compound commands (&&, ||, ;, newlines), pipe chains,
@@ -1443,13 +1495,14 @@ function isWhitelisted(command: string): boolean {
     "<< $1_STRIPPED",
   );
 
-  // Collapse multiline python3/node -c "..." and -c '...' arguments.
-  // The \n-based COMMAND_SEPARATOR would otherwise shatter these into
-  // fragments that individually fail whitelist matching.
-  normalized = normalized.replace(
-    /\b(python3?|node)\s+-c\s+(["'])((?:(?!\2)[\s\S])*?)\2/g,
-    (_, interpreter, quote) => `${interpreter} -c ${quote}COLLAPSED${quote}`,
-  );
+  // Collapse newlines inside quoted strings so COMMAND_SEPARATOR doesn't
+  // shatter multi-line arguments into individual "segments". Handles:
+  //   - shadowenv exec -- bin/rails runner 'multi\nline\nruby'
+  //   - python3 -c "import os\nprint(os.getcwd())"
+  //   - gh api ... --input - <<'EOF' (heredocs already stripped above)
+  // Walk character-by-character tracking quote state; replace \n with
+  // space inside quotes. Escaped quotes (\' and \") are handled.
+  normalized = collapseQuotedNewlines(normalized);
 
   // Strip safe stderr redirects before any analysis — these never
   // create files or change command semantics
@@ -2817,10 +2870,12 @@ export default function (pi: ExtensionAPI) {
   pi.on("tool_call", async (event, ctx) => {
     if (!isToolCallEventType("bash", event)) return;
 
-    // Strip RTK wrapper early — rtk-rewrite extension prepends `rtk ` to commands
-    // before bash-guard sees them. All stages (remote mutation, commit, whitelist,
-    // LLM voters) should evaluate the underlying command, not the RTK wrapper.
-    const command = event.input.command.replace(/^\s*rtk\s+/, "");
+    // RTK (Runtime Toolkit) is a transparent wrapper that prepends `rtk ` to
+    // commands. It doesn't change semantics — `rtk git diff` = `git diff`.
+    // We do NOT strip rtk here: voters and mutation gates see the original
+    // command with rtk context (via VOTER_SYSTEM_PROMPT). The whitelist in
+    // isSingleCommandSafe() strips rtk per-segment so pattern matching works.
+    const command = event.input.command;
 
     // Spawned teammates have a TUI but no human watching — dialogs deadlock.
     // Treat them as non-interactive for any blocking-dialog code path.
