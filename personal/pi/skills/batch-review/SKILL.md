@@ -248,5 +248,15 @@ In practice, the sequential subagent dispatch in Step 3b makes monitoring unnece
 - NEVER auto-advance between batches — always wait for user input
 - NEVER submit reviews without user approval — present drafts first
 - NEVER use cron polling — the sequential `subagent` calls are inherently blocking
+- NEVER do a single-pass ad-hoc review for any PR in the batch — every PR gets the full review pipeline
 - Handle WTP slot exhaustion gracefully — inform the user, offer alternatives
 - Clean up temp files and WTP slots after each batch, not at the end
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "This PR in the batch is tiny, I'll review it inline" | Every PR gets the full multi-agent review pipeline. Batch doesn't mean some get shortcuts. The pipeline catches things you miss regardless of PR size. |
+| "I'll combine the findings from multiple PRs into one review" | Each PR gets its own review cycle and its own user-action gate. Cross-PR findings get separate threads. Combining loses the per-PR decision point. |
+| "The first batch had no issues, I'll speed through the rest" | Each batch is independent. Prior batch results don't predict current batch quality. Maintain the same rigor throughout. |
+| "A WTP slot failed, I'll review this PR from diff only" | Diff-only review is explicitly a degraded mode (Step 1a of review skill). Warn the user, don't silently downgrade. |

@@ -418,3 +418,20 @@ If `gt restack` fails with conflicts:
 ### One option's tests fail
 
 Don't block other options. Report the failure, let the implementer fix it, re-validate. Submit all options that pass; note the failing one in its PR description.
+
+---
+
+## Common Rationalizations
+
+Check yourself against these before taking shortcuts:
+
+| Rationalization | Reality |
+|---|---|
+| "This is a simple feature, I'll skip the planning pipeline" | The planning pipeline (questioner → planners → judge) is **never optional** per AGENTS.md. Simple-looking problems are where hidden constraints live. Run the pipeline. |
+| "The questioner already asked enough, I'll move to planners" | Do not advance until the questioner has produced its final refined problem statement. Incomplete questions → wrong plans → wasted implementation. |
+| "I'll implement directly instead of using subagents" | Implementation must go through the `implement` skill's subagent pipeline, even for N=1. Context isolation prevents cascade failures. |
+| "This existing code looks wrong, I'll fix it while I'm here" | Chesterton's Fence: understand why it exists before changing it. Check git blame, read tests, find callers. If the plan didn't ask for the change, don't make it — flag it. |
+| "I'll skip the self-review step, the plan is solid" | Plans describe intent; implementation introduces bugs. The review skill catches things the plan can't predict. Never skip it. |
+| "A git command failed, I'll try a different approach" | Stop. Diagnose. Ask the user. Git failures in worktrees often signal state problems that workarounds make worse. |
+| "I'll work in the main checkout since the worktree has issues" | The main checkout may have unstaged work from other sessions. Stay in the worktree. Ask the user if it has issues. |
+| "The teammate timed out, I'll just do it myself" | Re-spawn the teammate. Doing it yourself in the lead context defeats the isolation model and bloats context. |

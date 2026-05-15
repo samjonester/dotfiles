@@ -525,10 +525,33 @@ WTP_BIN="$HOME/src/github.com/shopify-playground/wtp/bin/_wtp"
 
 For local reviews, no cleanup is needed.
 
+## Multi-Agent Pipeline is Mandatory
+
+The multi-agent review pipeline (classify → dispatch reviewers → judge) is **never optional**. Every review, regardless of PR size or apparent simplicity, runs through subagent dispatch. You are the orchestrator — you do NOT review code yourself.
+
+The only exception: when the user explicitly names specific reviewers (Step 3b), you dispatch those specific agents instead of auto-classifying. You still dispatch agents, never review directly.
+
+## Common Rationalizations
+
+Check yourself against these before taking shortcuts:
+
+| Rationalization | Reality |
+|---|---|
+| "This is a tiny PR, I can review it myself" | Size doesn't determine whether multi-agent catches things you miss. The pipeline exists because single-perspective review has blind spots regardless of diff size. Dispatch reviewers. |
+| "The PR is a simple rename/config change — full review is overkill" | Mechanical changes are where hidden semantic breaks hide. The correctness reviewer catches callers the diff doesn't show. Dispatch reviewers. |
+| "The author is senior, light review is fine" | Author seniority doesn't prevent bugs. Seniority sometimes correlates with *more* complex changes that need more scrutiny, not less. |
+| "I already see the issue, I'll just report it directly" | You see ONE issue. The pipeline runs 5-8 specialists in parallel who see different things. Your single-pass observation becomes the executive summary after the judge validates all findings. |
+| "Dispatching subagents is slow, I'll be faster" | You'll be faster at producing a *worse* review. The 30-60s dispatch time is the cost of coverage. |
+| "The tool/subagent failed, I'll just review it myself as fallback" | Diagnose the failure, retry once, then report INCOMPLETE per Step 5d. A partial multi-agent review beats a complete single-agent review. Never fall back to single-pass. |
+| "A git command failed, I'll work around it" | Stop. Diagnose. Ask the user. Don't improvise with alternative git commands, temp branches, or manual patches. |
+| "This could be exploited, so it's CRITICAL" | "Could be" ≠ "is reachable in production." Check the actual call path. If the input is already validated upstream, the severity drops. |
+| "No tests were added, so this needs REQUEST_CHANGES" | Missing tests are a valid observation but not always blocking. If the code is well-tested indirectly or the PR is a config change, tests may be unnecessary. Calibrate severity to actual risk. |
+
 ## Constraints
 
 - NEVER submit reviews to GitHub, Graphite, or any external system
 - NEVER push code without explicit user approval
+- NEVER review code yourself — always dispatch through the subagent pipeline
 - Output the review as formatted text for the human to act on
-- You are advisory only — the human makes the final call
+- You are the orchestrator — classify, dispatch, judge, present
 - Handle reviewer and judge failures per the degraded mode guidance in Step 5d

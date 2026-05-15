@@ -136,3 +136,15 @@ Follow the AGENTS.md guidelines for responding to Binks reviews:
 > No change needed — the code already handles this case via the `validate_row_inputs` guard on line 168.
 >
 > Feedback on this finding: The concern about unhandled nil is incorrect. The early return in `validate_row_inputs` ensures `platform` is non-nil before reaching the taxonomy parse step. The analysis missed the control flow from the extracted method.
+
+## Common Rationalizations
+
+Check yourself against these before taking shortcuts:
+
+| Rationalization | Reality |
+|---|---|
+| "Binks is usually wrong, I'll dismiss this without checking" | Binks catches real bugs — PR #878 had 3 valid findings across 3 rounds, each a genuine correctness issue. Always read the code before assessing. Dismiss only with evidence. |
+| "I'll address this in a follow-up" | Follow-ups get lost. If the fix is small (< 30 min) and the code is already checked out, fix it now. Only defer if the fix requires a separate design decision. |
+| "This is just a style nit, thumbs-down and move on" | Binks doesn't flag style nits — it flags correctness and safety issues. If it looks like a nit, you probably misread the finding. Re-read the code path it's pointing at. |
+| "The finding references code I didn't change, so it's not relevant" | Binks analyzes the PR's behavioral impact, not just the diff lines. A change in file A can break an invariant in file B. Verify the claim. |
+| "A git command failed while fixing — I'll work around it" | Stop. Diagnose. Ask the user. Don't improvise with alternative git commands or skip the fix. A broken worktree state will compound when Binks fires again after the next push. |

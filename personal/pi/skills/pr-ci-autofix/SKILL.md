@@ -58,3 +58,12 @@ Use this skill when the user wants PR CI monitored continuously and wants automa
 
 - Always call `CronList` before `CronDelete` to pick the correct task ID.
 - Remove stale watch loops after terminal completion.
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "This test failure is unrelated to the PR, I'll skip it" | Verify first. Check if the test file overlaps with changed files. If genuinely unrelated (infra flake, base-branch break), note it explicitly in the commit message and let the user decide. |
+| "I'll fix this unrelated failure while I'm here" | Scope creep. The PR's commit should only contain fixes for failures caused by the PR's changes. Unrelated fixes go in separate branches. |
+| "A git command failed during the fix, I'll try another approach" | Stop. Diagnose. Ask. Git failures during CI-fix loops often signal rebase conflicts or state drift that alternative commands make worse. |
+| "CI is red but I think the fix is right, I'll push again" | Never push a fix without running the verification command locally first. Verify, then push. Blind retries waste CI minutes. |

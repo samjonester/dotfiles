@@ -176,6 +176,18 @@ Files created: [list]
 Files modified: [list]
 ```
 
+### Collect "Noticed" observations
+
+After all steps complete, collect "Noticed (not in scope)" sections from each step summary. If any step surfaced observations, present them as a separate list after the final status:
+
+```
+Out-of-scope observations (from implementer steps):
+  - Step 2: [description of observed issue]
+  - Step 5: [description of potential improvement]
+```
+
+These are NOT action items — they're observations for the user to triage independently. Do not act on them.
+
 ## Token Budget Awareness
 
 The entire point of this skill is context isolation. Key invariants:
@@ -205,9 +217,26 @@ Implementation progress: 4/8 steps complete
 Resume with: "implement steps 5-8 from docs/PLAN-PHASE2.md"
 ```
 
+## Common Rationalizations
+
+Check yourself against these before taking shortcuts:
+
+| Rationalization | Reality |
+|---|---|
+| "I'll just implement it all at once — the steps are small enough" | Step isolation exists to prevent context accumulation across steps, not because individual steps are hard. Doing it all at once means one step's mistake cascades into every subsequent step. Dispatch subagents. |
+| "These changes are closely related, I'll combine the steps" | Closely related ≠ safe to combine. Each step has its own verification gate. Combining skips intermediate verification — bugs from step 2 compound silently into step 3. |
+| "I'll test it all at the end" | Bugs compound. A bug in step 1 makes steps 2-5 wrong. The final verification catches symptoms, not root causes. Verify per step. |
+| "The plan doesn't mention this but it's obviously needed" | If the plan doesn't mention it, it's either (a) not needed, or (b) a planning gap. Flag it to the user rather than silently expanding scope. Scope creep in subagents is invisible to the orchestrator. |
+| "A tool or git command failed during a step — I'll work around it" | Stop. Diagnose. Ask the user. Don't improvise with alternative commands, manual patches, or skipping the step. Failed tools mean the verification gate can't be trusted either. |
+| "The subagent timed out, I'll just do it myself in this context" | You doing it yourself defeats context isolation — the whole point of this skill. Retry the subagent. If it fails again, ask the user. |
+| "I already have the code in context from a previous step" | Good — pre-load it into the subagent's task prompt. Don't use that as an excuse to skip the subagent and do it inline. |
+| "This code looks unused, I'll remove it" | You're seeing a subset of the codebase. Check git blame and callers before removing anything. If uncertain, flag it and move on — Chesterton's Fence. |
+| "This pattern is outdated, I'll modernize it" | The plan didn't ask for modernization. If the pattern works, leave it. Scope creep disguised as improvement is still scope creep. |
+
 ## Constraints
 
 - NEVER skip the verification step — catching errors per-step is far cheaper than debugging at the end
 - NEVER pass full file contents between steps — summaries only
 - NEVER let the orchestrator's context grow beyond the plan + step summaries
+- NEVER implement steps directly — always dispatch through subagents
 - If a step requires reading files not in its Read list, that's a planning error — note it and add the file, but flag it for plan improvement

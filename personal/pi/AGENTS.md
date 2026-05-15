@@ -16,6 +16,12 @@
 
 Many external services have dedicated tools registered via pi extensions. **Always use a dedicated tool when one exists** instead of reaching for `fetch_content`, Chrome DevTools, `curl`, or direct API calls. Dedicated tools handle auth, pagination, rate limiting, and output formatting — direct access will usually fail or produce worse results. Do not use `fetch_content`, Chrome DevTools, or `curl` for a service that has a dedicated tool.
 
+| Rationalization | Reality |
+|---|---|
+| "I know the API, curl is faster" | Dedicated tools handle auth, pagination, and rate limits. Your curl call will fail on the first auth redirect or token refresh. |
+| "The MCP tool isn't registered, I'll use fetch_content" | If the tool isn't registered, that's an infrastructure issue — diagnose it per 'Tool Failures', don't route around it. |
+| "I'll just quickly check the endpoint directly" | 'Quickly' turns into 3 turns debugging auth headers. Use the tool that already handles this. |
+
 ## Tool Failures — Diagnose, Stop, Ask
 
 When a tool or MCP server fails for **infrastructure reasons** (connection error, auth failure, server down, schema mismatch, rate limit, etc.): briefly diagnose (tool, error, likely cause), **stop**, and ask the user how to proceed. Do not improvise.
@@ -29,11 +35,25 @@ Prohibited workarounds:
 
 This does **not** apply to malformed calls (wrong param name, missing required field, bad URL format) — self-correct those without asking.
 
+| Rationalization | Reality |
+|---|---|
+| "I'll just try a slightly different approach" | That's improvising. If the tool failed for infrastructure reasons, a variation won't fix auth/connection/server issues. Stop and ask. |
+| "I can get the same data from a different tool" | Switching tools to route around a failure is explicitly prohibited. The user may need to fix auth, restart a service, or know the tool is down. |
+| "I'll use curl/fetch_content as a quick fallback" | This is the #1 prohibited workaround. Dedicated tools handle auth and formatting — raw HTTP will fail differently and waste more turns. |
+| "It might work if I retry" | One retry for transient errors is fine. Burning 3+ turns with variations is not. If retry #1 fails, stop and ask. |
+
 ## Externally Visible Side Effects — Propose, Don't Just Do
 
 Before writing to anything externally visible — wiki (`wiki_write`), Slack, GitHub PRs/comments/issues, or any other external service — propose first and wait for go-ahead. Don't infer permission from rule documents (e.g. "capture findings to wiki"). One-line proposal: what + where, then wait.
 
 Does NOT apply to: in-conversation tool calls, file reads, scratch files in `/tmp`, dotfiles/config edits the user explicitly asked for, memory bank auto-persist.
+
+| Rationalization | Reality |
+|---|---|
+| "The user said 'handle it' so I'll just post" | "Handle it" means prepare + propose. External writes always need explicit go-ahead. |
+| "The skill instructions say to post comments" | Skill instructions describe *what* to do, not *when* to publish. Propose first. |
+| "It's just a draft PR / thumbs-up reaction" | Drafts and reactions are still externally visible. Propose. |
+| "I'll save time by posting while I have the data" | The user reviews the content, not the efficiency. Propose. |
 
 ## Google Workspace Tools
 
@@ -80,7 +100,14 @@ Use standard markdown (not Slack mrkdwn). Full guide in knowledge file `slack-fo
 
 ### Multi-model planning workflow
 
-When asked to "plan", "propose options", "evaluate approaches", or similar planning tasks, use this workflow:
+When asked to "plan", "propose options", "evaluate approaches", or similar planning tasks, **always** use this workflow. The multi-model pipeline (questioner → divergent planners → judge) is **never optional**, regardless of how simple the problem appears. You are the orchestrator — you do NOT plan directly.
+
+| Rationalization | Reality |
+|---|---|
+| "This is a simple change, I can just plan it myself" | Simple-looking problems are where hidden constraints live. The questioner finds ambiguities you'd assume away. The planners find approaches you wouldn't consider. |
+| "I already know the right approach" | Confidence is not evidence. The divergent planners exist to surface alternatives you're anchored against. |
+| "Running 3 subagents is overkill for this" | The pipeline takes 2-3 minutes. A bad plan wastes hours of implementation. The cost asymmetry always favors running the pipeline. |
+| "The user seems to want a quick answer" | Give them the quick answer *from the pipeline*. The questioner is fast (Sonnet). If the user explicitly says "skip planning" or "just do it", that's different — follow their redirect. |
 
 #### Step 0: Question (fast pre-pass)
 
@@ -151,6 +178,13 @@ For plans without the Implementation Steps section (legacy plans or external doc
 - **Use `/btw` for quick lookups** — syntax checks, API questions, "how does X work?" queries that are informational, not action-driving. Zero trace in conversation history. Press `p` to promote if the answer reveals something actionable, `n` to break out to a full session.
 - **Use `/fork` + `/back` for tangents** — when a question turns into substantial work, `/fork` (or `Ctrl+Shift+F`) creates a new session from the current branch. Use `/back` to return to the parent session when done. When selecting a fork point, always pick a message **after** the first assistant response — forking from before the first response triggers a pi bug where the parent link isn't persisted.
 - For long implementation sessions (>50 tool calls), suggest compacting with `/compact` to reduce context size and speed up responses
+
+| Rationalization | Reality |
+|---|---|
+| "The user might need the earlier context" | If the earlier work produced an artifact (plan, PR, file), the handoff prompt points at it. The context itself isn't needed — the artifact is the source of truth. |
+| "Compacting is good enough" | Compact preserves summaries but keeps the full token load. A fresh session with a one-line handoff is always leaner and faster. |
+| "We're in the middle of something" | If you can write a one-line handoff, you're at a boundary. The work product exists on disk — the session is just the conversation about it. |
+
 - **Proactively suggest `/session new` when a natural task boundary is reached.** Watch for these signals, and when one fires, write a one-line handoff prompt, `pbcopy` it, and tell the user "Fresh session recommended — prompt copied to clipboard: `/session new`". Trigger signals:
   - A plan/spec/design doc was just finalized and the next step is implementation (doc = complete source of truth)
   - A multi-step task completed (PR submitted, investigation concluded, triage finished) and the user's next ask is unrelated
@@ -167,6 +201,17 @@ For plans without the Implementation Steps section (legacy plans or external doc
 - Prefer pure service objects over shared behavior via inheritance, base classes, mixins, modules, or concerns. Each service should be self-contained and explicit about its dependencies.
 - Services should return a Result object (e.g., `Result.success(...)` / `Result.failure(...)`) rather than raising exceptions.
 - Temporal activity patterns: see knowledge file `temporal-patterns.md` (auto-loaded when relevant).
+- **Chesterton's Fence**: Before removing or substantially changing existing code, understand why it exists. Check git blame, read tests, find callers. If the reason isn't clear, ask — don't assume it's cruft.
+- **Source verification for framework code**: When writing code against external framework APIs (React, Rails, Temporal, Figma Plugin API, MUI, Playwright), verify the current pattern against official docs before implementing from memory. Use `code_search`, `web_search`, or the `librarian` skill to confirm. Flag unverified patterns explicitly: "⚠️ UNVERIFIED: implemented from training data, not current docs — verify before shipping."
+
+| Rationalization | Reality |
+|---|---|
+| "This code looks unused, I'll remove it" | You're seeing a subset of the codebase. `lsp_references` or `grokt_search` first. |
+| "This pattern is outdated, I'll modernize it" | If it works and no one asked you to modernize it, leave it. Scope creep disguised as improvement is still scope creep. |
+| "This inheritance hierarchy is wrong, I should refactor to composition" | Maybe, but that's a planning task, not a drive-by refactor. Propose it — don't just do it. |
+| "I'm confident about this API" | Confidence is not evidence. Training data contains outdated patterns. One `code_search` or `web_search` prevents hours of rework. The `textAutoResize` drift bug cost 4 debugging passes. |
+| "Fetching docs wastes tokens" | Hallucinating an API wastes more. A single fetch is cheaper than a multi-turn debugging session when the pattern turns out to be wrong. |
+| "The code compiles so the pattern is correct" | Tests verify behavior, not API correctness. A deprecated pattern can pass tests today and break on the next framework version upgrade. |
 
 ## Workflow
 
@@ -186,7 +231,13 @@ For full details on layout, fork conventions, and tool-name maintenance, read `~
 
 ## Code Review
 
-When asked to review code, review a PR, or review current changes, load the `review` skill. It classifies the PR by change type, size, and risk to select 3-8 relevant reviewers (not all 15), dispatches them in sequential batches, validates findings with `review-judge`, and produces consolidated output. PR reviews are checked out into a WTP worktree so reviewers can read the full codebase.
+When asked to review code, review a PR, or review current changes, **always** load the `review` skill. Never do an ad-hoc single-pass review.
+
+| Rationalization | Reality |
+|---|---|
+| "The user just wants quick feedback, not a full review" | If they said "review," load the skill. If they wanted a quick look, they'd say "glance at" or "any obvious issues." |
+| "I'll do a quick pass first, then load the skill if needed" | The quick pass becomes the review. You'll never go back and load the skill after already providing feedback. Load it first. |
+| "This is a small diff, the full pipeline is overkill" | Small diffs are where single-perspective blind spots are most dangerous — you feel confident and miss things. The pipeline catches what confidence hides. | It classifies the PR by change type, size, and risk to select 3-8 relevant reviewers (not all 15), dispatches them in sequential batches, validates findings with `review-judge`, and produces consolidated output. PR reviews are checked out into a WTP worktree so reviewers can read the full codebase.
 
 When asked to review **multiple PRs** ("review these PRs", "batch review #1 #2 #3"), load the `batch-review` skill instead. It classifies all PRs, groups them into batches, gathers diffs via `bg_run`, dispatches reviewers from the lead via `subagent`, and gates between batches so you can approve/comment/request-changes before the next batch starts.
 
@@ -281,6 +332,14 @@ Suggest autoresearch (`/skill:autoresearch-create`) for iterative optimization l
 - **Publishing PRs for review**: Never use `gh pr ready` — it only updates GitHub and doesn't sync to Graphite. Use `gt submit --publish` to move a PR from draft to published. This is the correct way to mark a PR ready for review in the Graphite workflow.
 - **New branch work requires explicit approval before commit and submit.** When implementing new features or changes on a new branch, always pause and present the completed work for review **while changes are still unstaged**. Do not run `git add`, `gt create`, `gt modify`, or `gt submit` until the user approves. Present a summary of changes (files modified, key decisions, anything noteworthy) and wait for explicit greenlight. This does not apply to amendments on existing branches where the user has already reviewed the direction (e.g., CI fixes, review feedback).
 
+| Rationalization | Reality |
+|---|---|
+| "The git command failed, I'll try a different git command" | Stop. Diagnose. Ask. Git failures often signal state problems (wrong branch, dirty worktree, detached HEAD) that a different command won't fix — it'll make worse. |
+| "I'll just force-push to fix the state" | Force-push destroys remote history. Never force-push without explicit user approval, even to "fix" a state problem. |
+| "I'll revert this file to unblock myself" | Unstaged changes may be intentional work from other sessions. Reverting without approval can destroy hours of work. Ask first. |
+| "The bash-guard blocked my command, I'll pipe echo y into it" | The guard exists to protect you. If it blocked a command, either the command is genuinely dangerous or you need to set the right policy (`/guard commits auto`). Don't bypass — follow the user's instructions. |
+| "I'll work in the main checkout since the worktree has issues" | The main checkout may have unstaged work from other sessions. Stay in the worktree. If the worktree has issues, ask the user — don't silently switch. |
+
 ## CI Triggering (shop/world)
 
 CI no longer auto-runs on push (changed 4/13). Trigger explicitly with `devx ci run` after final submit. Full details in knowledge file `graphite-workflow.md` (auto-loaded when relevant).
@@ -292,3 +351,10 @@ CI no longer auto-runs on push (changed 4/13). Trigger explicitly with `devx ci 
 - When the user redirects with specific instructions (e.g., "move to X first", "use Y instead"), follow the redirect exactly — don't try to accomplish the original intent through a different path.
 - If a bash command is blocked and the user provides instructions, follow those instructions precisely. Don't retry the same command with minor modifications (like piping `echo "y"` into it).
 - When creating resources in external services (GitHub repos, deployments), confirm the target org/account/name with the user first. Don't assume defaults.
+
+| Rationalization | Reality |
+|---|---|
+| "The user clearly wants me to do this, 'can you' is just politeness" | Treat it as a question. Respond with analysis. If they want execution, they'll say 'do it' or 'go ahead'. |
+| "The user said 'review this' so I'll do a quick pass myself" | 'Review' means load the review skill. Always. If they wanted a quick glance, they'd say 'any obvious issues?' |
+| "I know a better way to accomplish what the user asked" | Follow the user's instructions exactly. If you think there's a better approach, propose it — don't silently substitute your own. |
+| "The user didn't respond to my question, so I'll proceed with my best guess" | Wait. Ask again if needed. Don't fill silence with assumptions. |

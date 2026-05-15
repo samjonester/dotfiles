@@ -245,3 +245,12 @@ slack-mcp test                                                    # Verify auth
 - `get-reactions` CLI has broken array args — don't use for batch queries
 - Verdant Express bot ≠ human response — always check for actual human engagement in threads
 - Use `--oldest` parameter with the unread anchor timestamp from `get-unreads` to start at the right point
+
+## Common Rationalizations
+
+| Rationalization | Reality |
+|---|---|
+| "This thread is long, I'll summarize from the first message" | Read the whole thread. Resolution often happens in the last 2-3 messages. Summarizing from the top misses whether the issue is resolved. |
+| "No one replied, so it's low priority" | No reply could mean it fell through the cracks. Check the author — if they're on the VIP list or the message is a question directed at you, it's high priority regardless of reply count. |
+| "I'll mark this as no-action-needed since it looks informational" | Read before classifying. "Informational" threads often contain buried questions, decisions, or action items in replies. |
+| "The bot already answered this question" | Verdant Express bot ≠ human response. Always verify a human engaged. Bot-only threads may still need your input. |
