@@ -46,6 +46,8 @@ This does **not** apply to malformed calls (wrong param name, missing required f
 
 Before writing to anything externally visible — wiki (`wiki_write`), Slack, GitHub PRs/comments/issues, or any other external service — propose first and wait for go-ahead. Don't infer permission from rule documents (e.g. "capture findings to wiki"). One-line proposal: what + where, then wait.
 
+**Slack is hard-gated.** `slack_post` and `slack_send_message_draft` are intercepted by the `slack-guard` extension with a y/n confirmation dialog. Even if you think the user wants you to post, the dialog will fire. Draft the message content, show it to the user in-conversation, and only call the tool after explicit approval. Never bundle a Slack post into a multi-step workflow without a pause for confirmation.
+
 Does NOT apply to: in-conversation tool calls, file reads, scratch files in `/tmp`, dotfiles/config edits the user explicitly asked for, memory bank auto-persist.
 
 | Rationalization | Reality |
