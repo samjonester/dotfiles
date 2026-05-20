@@ -8,6 +8,9 @@
  *   gt submit, etc.). Always prompts with a lightweight y/n dialog — no LLM
  *   voters, no override memory. Deny shows a text input for redirect instructions.
  *   Runs even when the guard is toggled off (instant, zero cost).
+ *   Exception: when Stage 1.5's commit policy is 'auto-allow', safe pushes
+ *   (git push, gt submit, gt stack submit) targeting the current non-protected
+ *   branch are silently auto-allowed — see canAutoAllowPush.
  *
  * Stage 1.5 — Commit gate (session-scoped policy):
  *   Pattern-matches commit-like commands (gt create, gt modify, gt absorb,
@@ -16,7 +19,8 @@
  *     c = confirm each commit individually (y/n per command)
  *     n = deny (with optional redirect instructions)
  *   Policy persists for the session; resets on new session. Change mid-session
- *   with `/guard commits auto|confirm|reset`.
+ *   with `/guard commits auto|confirm|reset`. When auto-allow is active, push
+ *   commands targeting the current branch are also silently allowed (Stage 1).
  *
  * Stage 2 — Adversarial security review (LLM voters):
  *   Runs 3 parallel security reviews using fast models. Based on vote consensus:
@@ -435,6 +439,16 @@ const REMOTE_MUTATION_PATTERNS: RemoteMutationPattern[] = [
   { pattern: /\bgt\s+submit\b/, label: "gt submit" },
   { pattern: /\bgt\s+stack\s+submit\b/, label: "gt stack submit" },
 
+  // GitHub Actions
+  {
+    pattern: /\bgh\s+workflow\s+(run|enable|disable)\b/,
+    label: "gh workflow (mutating)",
+  },
+  {
+    pattern: /\bgh\s+run\s+(rerun|cancel|delete)\b/,
+    label: "gh run (mutating)",
+  },
+
   // Shopify deploy
   { pattern: /\bquick\s+deploy\b/, label: "quick deploy" },
 ];
@@ -467,6 +481,97 @@ type CommitPolicy = "unset" | "auto-allow" | "confirm-each";
 
 function matchCommitCommand(command: string): CommitPattern | undefined {
   return COMMIT_PATTERNS.find(({ pattern }) => pattern.test(command));
+}
+
+// ── Push auto-allow helpers (Stage 1 × Stage 1.5 bridge) ─────────────────────────────────
+// When commit policy is 'auto-allow', safe pushes to the current branch skip
+// the Stage 1 remote mutation dialog entirely. These helpers classify commands.
+
+/**
+ * Detect dangerous force-push indicators in a git push command.
+ * --force-with-lease is SAFE (used by gt submit and CI auto-fix loops).
+ * --force (without -with-lease), -f, and + refspec prefix are DANGEROUS.
+ */
+function isDangerousPush(command: string): boolean {
+  const m = command.match(/\bgit\s+push\b([^|;&]*)/);
+  if (!m) return false;
+  const args = m[1];
+  if (/--force(?!-with-lease)\b/.test(args)) return true;
+  if (/(?:^|\s)-[a-zA-Z]*f[a-zA-Z]*(?:\s|$)/.test(args)) return true;
+  if (/\s\+\S/.test(args)) return true;
+  return false;
+}
+
+/**
+ * Extract the explicit target branch from a git push command, if any.
+ * Returns null when the command pushes the current branch implicitly,
+ * the string branch name when an explicit target is found, or 'deletion'
+ * when the refspec is a branch deletion (e.g., `git push origin :branch`).
+ */
+function parsePushTargetBranch(
+  command: string,
+): string | null | "deletion" {
+  const m = command.match(/\bgit\s+push\b([^|;&]*)/);
+  if (!m) return null;
+  const tokens = m[1]
+    .trim()
+    .split(/\s+/)
+    .filter((t) => t && !t.startsWith("-"));
+  // tokens[0] = remote (e.g., "origin"), tokens[1] = refspec
+  if (tokens.length < 2) return null;
+  let refspec = tokens[1].replace(/^\+/, "");
+  if (refspec === "HEAD" || refspec === "") return null;
+  const colon = refspec.indexOf(":");
+  if (colon >= 0) {
+    const src = refspec.slice(0, colon);
+    const dst = refspec
+      .slice(colon + 1)
+      .replace(/^refs\/heads\//, "");
+    if (src === "") return "deletion"; // :branch = delete remote branch
+    return dst || null;
+  }
+  return refspec;
+}
+
+/**
+ * Check if a remote mutation qualifies for silent auto-allow when commit
+ * policy is 'auto-allow'. Only push-type commands (git push, gt submit,
+ * gt stack submit) can qualify. Returns false for all other remote mutations.
+ *
+ * Conditions for auto-allow:
+ * - getCurrentBranch() returns a known, non-protected branch
+ * - No dangerous force flags (--force/-f/+ refspec) for git push
+ * - No --publish flag for gt submit / gt stack submit
+ * - Explicit target branch (if any) matches current branch
+ * - Not a deletion refspec
+ */
+async function canAutoAllowPush(command: string): Promise<boolean> {
+  const cwd = extractEffectiveCwd(command, process.cwd());
+
+  // gt submit / gt stack submit
+  if (/\bgt\s+(stack\s+)?submit\b/.test(command)) {
+    // --publish changes PR state from draft to ready — always confirm
+    if (/--publish\b/.test(command)) return false;
+    const branch = await getCurrentBranch(cwd);
+    if (!branch || branch === "HEAD") return false;
+    if (PROTECTED_BRANCH_RE.test(branch)) return false;
+    return true;
+  }
+
+  // git push
+  if (/\bgit\s+push\b/.test(command)) {
+    if (isDangerousPush(command)) return false;
+    const branch = await getCurrentBranch(cwd);
+    if (!branch || branch === "HEAD") return false;
+    if (PROTECTED_BRANCH_RE.test(branch)) return false;
+    const target = parsePushTargetBranch(command);
+    if (target === "deletion") return false;
+    if (target === null) return true; // push to upstream of current branch
+    return target === branch;
+  }
+
+  // Anything else (gh pr, gh issue, quick deploy, etc.) — always dialog
+  return false;
 }
 
 // ── Teammate gate (Stage 0) ── helpers ─────────────────────────────────────────
@@ -1146,6 +1251,8 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*gh\s+repo\s+(view|list)\b/,
   /^\s*gh\s+project\s+(view|list|field-list)\b/,
   /^\s*gh\s+auth\s+(status|token|refresh|login|setup-git)\b/,
+  /^\s*gh\s+run\s+(view|list|watch)\b/,
+  /^\s*gh\s+workflow\s+(view|list)\b/,
 
   // ── Graphite read operations ──
   /^\s*gt\s+(ls|log|status|diff|branch\s+list)\b/,
@@ -1171,6 +1278,9 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*\$\{?WTP_BIN\}?\b/, // variable-expanded WTP invocations
   /^\s*\$\{?HOME\}?\/src\/.*\/wtp\/bin\/_wtp\b/, // full-path WTP invocations
   /^\s*devx\s+(ci|pi|skill|config)\b/,
+
+  // ── Tech checkout (read-only) ──
+  /^\s*tec\s+(checkout|list|status|info|show)\b/,
 
   // ── File system operations (non-destructive) ──
   /^\s*mkdir\s+-p\b/,
@@ -2898,6 +3008,15 @@ export default function (pi: ExtensionAPI) {
     // ── Stage 1: Remote mutation gate (always active, deterministic, no voters) ──
     const remoteMutation = matchRemoteMutation(command);
     if (remoteMutation) {
+      // Push auto-allow: when commit policy is auto-allow, safe pushes to the
+      // current branch are silently allowed — no dialog, no notification.
+      if (
+        commitPolicy === "auto-allow" &&
+        (await canAutoAllowPush(command))
+      ) {
+        return undefined;
+      }
+
       if (!canPrompt) {
         return {
           block: true,
