@@ -57,6 +57,7 @@
 	# Prevent showing files whose names contain non-ASCII symbols as unversioned.
 	# http://michael-kuehnel.de/git/2014/11/21/git-mac-osx-and-german-umlaute.html
 	precomposeunicode = false
+	fastIndex = false
 
 [color "branch"]
 
@@ -114,3 +115,16 @@
 	relativePaths = true
 [feature]
 	manyFiles = true
+[user]
+	email = action@github.com
+	name = GitHub Page Create Action
+[http]
+	lowSpeedLimit = 1000
+	lowSpeedTime = 30
+[credential "https://*.quick.shopify.io"]
+	helper = 
+	helper = /Users/sam/.config/quick/quick-git-credential.sh
+[http "https://*.quick.shopify.io/"]
+	extraHeader = X-Requested-With: XMLHttpRequest
+[shop-world "stale-pr-cutoff"]
+	main = 1780401527
