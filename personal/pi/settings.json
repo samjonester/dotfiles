@@ -1,62 +1,9 @@
 {
-  "defaultProvider": "anthropic",
-  "defaultModel": "claude-opus-4-6",
-  "defaultThinkingLevel": "high",
-  "theme": "gruvbox-rainbow",
-  "thinkingBudgets": {
-    "minimal": 1024,
-    "low": 4096,
-    "medium": 10240,
-    "high": 32768
-  },
   "compaction": {
     "enabled": true,
-    "reserveTokens": 16384,
-    "keepRecentTokens": 20000
+    "keepRecentTokens": 20000,
+    "reserveTokens": 16384
   },
-  "retry": {
-    "enabled": true,
-    "maxRetries": 3
-  },
-  "enabledModels": [
-    "anthropic-250k-prefer-using-this-one/claude-opus-4-7",
-    "anthropic/claude-opus-4-7",
-    "anthropic-250k-prefer-using-this-one/claude-opus-4-6",
-    "anthropic-250k-prefer-using-this-one/claude-sonnet-4-6",
-    "anthropic/claude-opus-4-6",
-    "anthropic/claude-sonnet-4-6",
-    "anthropic/claude-haiku-4-5",
-    "gpt-5.3-codex"
-  ],
-  "enableSkillCommands": true,
-  "lastChangelogVersion": "0.75.3",
-  "packages": [
-    {
-      "source": "/Users/sam/dotfiles/personal/pi",
-      "extensions": [
-        "-extensions/pi-autoresearch/index.ts"
-      ],
-      "skills": [
-        "-skills/autoresearch-create/SKILL.md",
-        "-skills/autoresearch-finalize/SKILL.md"
-      ]
-    },
-    "npm:pi-web-access",
-    "npm:pi-messenger",
-    "git:github.com/shopify-playground/shop-pi-fy",
-    "git:github.com/shopify-playground/pi-tool-gateway-extension",
-    {
-      "source": "https://github.com/jhochenbaum/pi-autoresearch-studio",
-      "extensions": [
-        "-extensions/autoresearch-studio/index.ts"
-      ]
-    },
-    "git:github.com/JamesOwenHall/tidy-tools"
-  ],
-  "npmCommand": [
-    "pnpm"
-  ],
-  "hideThinkingBlock": false,
   "customFooter": {
     "lines": [
       [
@@ -81,5 +28,58 @@
       ]
     ]
   },
-  "extensions": []
+  "defaultModel": "claude-opus-4-8",
+  "defaultProvider": "anthropic",
+  "defaultThinkingLevel": "high",
+  "enableSkillCommands": true,
+  "enabledModels": [
+    "anthropic/claude-opus-4-8",
+    "anthropic-250k-prefer-using-this-one/claude-opus-4-6",
+    "anthropic-250k-prefer-using-this-one/claude-sonnet-4-6",
+    "anthropic/claude-opus-4-6",
+    "anthropic/claude-sonnet-4-6",
+    "anthropic/claude-haiku-4-5",
+    "gpt-5.5",
+    "gpt-5.5-pro"
+  ],
+  "extensions": [],
+  "hideThinkingBlock": false,
+  "lastChangelogVersion": "0.77.0",
+  "npmCommand": [
+    "pnpm"
+  ],
+  "packages": [
+    {
+      "extensions": [
+        "-extensions/pi-autoresearch/index.ts"
+      ],
+      "skills": [
+        "-skills/autoresearch-create/SKILL.md",
+        "-skills/autoresearch-finalize/SKILL.md"
+      ],
+      "source": "/Users/sam/dotfiles/personal/pi"
+    },
+    "npm:pi-web-access",
+    "npm:pi-messenger",
+    "git:github.com/shopify-playground/shop-pi-fy",
+    "git:github.com/shopify-playground/pi-tool-gateway-extension",
+    {
+      "extensions": [
+        "-extensions/autoresearch-studio/index.ts"
+      ],
+      "source": "https://github.com/jhochenbaum/pi-autoresearch-studio"
+    },
+    "git:github.com/JamesOwenHall/tidy-tools"
+  ],
+  "retry": {
+    "enabled": true,
+    "maxRetries": 3
+  },
+  "theme": "gruvbox-rainbow",
+  "thinkingBudgets": {
+    "high": 32768,
+    "low": 4096,
+    "medium": 10240,
+    "minimal": 1024
+  }
 }

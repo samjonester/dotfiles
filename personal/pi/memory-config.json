@@ -1,0 +1,9 @@
+{
+  "injection": {
+    "activeProjects": "every-turn",
+    "dailyContext": "every-turn",
+    "knowledge": "first-turn",
+    "history": "first-turn",
+    "autoPersist": "per-session"
+  }
+}
