@@ -3,7 +3,7 @@
  *
  * **This is a personal fork.** Source: pi-coding-agent's `examples/extensions/subagent/`.
  * Diverges architecturally from upstream shop-pi-fy's `agent-teams/subagent-tool.ts`,
- * which spawns visible teammates in tmux panes via RPC. This fork instead spawns
+ * which spawns visible teammates in cmux panes via RPC. This fork instead spawns
  * isolated subprocesses with `--mode json -p --no-session` and captures their
  * structured output — trading visibility for simplicity and predictability.
  *

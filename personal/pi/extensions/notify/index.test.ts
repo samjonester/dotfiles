@@ -6,20 +6,10 @@ vi.mock("node:child_process", () => ({
 	execFileSync: vi.fn(() => ""),
 }));
 
-vi.mock("node:fs", () => ({
-	openSync: vi.fn(() => 99),
-	writeSync: vi.fn(),
-	closeSync: vi.fn(),
-}));
-
-// Static imports AFTER vi.mock — gives us typed references to the mocks.
-// When the source code does require("node:child_process"), vitest returns
-// the same mock object because vi.mock is module-scoped.
+// Static import AFTER vi.mock — gives us a typed reference to the mock.
 import { execFileSync } from "node:child_process";
-import { writeSync } from "node:fs";
 
 const mockExecFileSync = vi.mocked(execFileSync);
-const mockWriteSync = vi.mocked(writeSync);
 
 // ── Helpers ────────────────────────────────────────────────────────────────
 
@@ -54,7 +44,7 @@ function createMockPi() {
 }
 
 // Save/restore env vars touched by the module
-const ENV_KEYS = ["TERM_PROGRAM", "TMUX", "TMUX_PANE", "KITTY_PID", "TERM", "PI_MODE"];
+const ENV_KEYS = ["CMUX_WORKSPACE_ID", "CMUX_SURFACE_ID", "PI_MODE"];
 let savedEnv: Record<string, string | undefined>;
 
 beforeEach(() => {
@@ -75,7 +65,7 @@ afterEach(() => {
 	vi.resetModules();
 });
 
-// Helper: import a fresh module instance (bypasses outerTermCache)
+// Helper: import a fresh module instance
 async function freshInit() {
 	const mod = await import("./index.js");
 	const pi = createMockPi();
@@ -87,6 +77,13 @@ async function freshInit() {
 async function triggerNotification(pi: ReturnType<typeof createMockPi>, content: string = "done") {
 	await pi.fireOn("agent_end", { messages: [{ role: "assistant", content }] });
 	vi.advanceTimersByTime(6000);
+}
+
+// Helper: find the `cmux notify` call (if any)
+function findCmuxCall() {
+	return mockExecFileSync.mock.calls.find(
+		(c: any[]) => c[0] === "cmux" && (c[1] as string[])?.[0] === "notify",
+	);
 }
 
 // ── Tests ──────────────────────────────────────────────────────────────────
@@ -107,16 +104,15 @@ describe("notify extension", () => {
 	describe("debounce behavior", () => {
 		it("agent_start cancels pending notification from agent_end", async () => {
 			vi.useFakeTimers();
+			process.env.CMUX_WORKSPACE_ID = "ws-uuid";
 			const pi = await freshInit();
 
 			await pi.fireOn("agent_end", { messages: [{ role: "assistant", content: "done" }] });
 			await pi.fireOn("agent_start");
 			vi.advanceTimersByTime(6000);
 
-			// Neither notification path should have been called
-			expect(mockExecFileSync).not.toHaveBeenCalledWith(
-				"terminal-notifier", expect.anything(), expect.anything(),
-			);
+			// No notification path should have been called
+			expect(findCmuxCall()).toBeUndefined();
 			expect(mockExecFileSync).not.toHaveBeenCalledWith(
 				"osascript", expect.anything(), expect.anything(),
 			);
@@ -128,14 +124,13 @@ describe("notify extension", () => {
 	describe("notify:disable", () => {
 		it("suppresses notifications when disabled", async () => {
 			vi.useFakeTimers();
+			process.env.CMUX_WORKSPACE_ID = "ws-uuid";
 			const pi = await freshInit();
 			await pi.fireEvent("notify:disable");
 
 			await triggerNotification(pi);
 
-			expect(mockExecFileSync).not.toHaveBeenCalledWith(
-				"terminal-notifier", expect.anything(), expect.anything(),
-			);
+			expect(findCmuxCall()).toBeUndefined();
 
 			vi.useRealTimers();
 		});
@@ -145,6 +140,7 @@ describe("notify extension", () => {
 		it("emits JSON to stdout in PI_MODE=rpc and short-circuits", async () => {
 			vi.useFakeTimers();
 			process.env.PI_MODE = "rpc";
+			process.env.CMUX_WORKSPACE_ID = "ws-uuid";
 			const writeSpy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
 
 			const pi = await freshInit();
@@ -153,187 +149,83 @@ describe("notify extension", () => {
 			expect(writeSpy).toHaveBeenCalledWith(
 				expect.stringContaining('"type":"desktop_notification"'),
 			);
-			// Should not fall through to terminal-notifier
-			expect(mockExecFileSync).not.toHaveBeenCalledWith(
-				"terminal-notifier", expect.anything(), expect.anything(),
-			);
+			// Should not fall through to cmux
+			expect(findCmuxCall()).toBeUndefined();
 
 			vi.useRealTimers();
 		});
 	});
 
-	describe("OSC notification path", () => {
-		it("writes OSC 9 escape for iTerm2", async () => {
+	describe("cmux notification path", () => {
+		it("calls `cmux notify` targeting the surface when inside cmux", async () => {
 			vi.useFakeTimers();
-			process.env.TERM_PROGRAM = "iTerm2";
+			process.env.CMUX_WORKSPACE_ID = "ws-uuid";
+			process.env.CMUX_SURFACE_ID = "surf-uuid";
 
 			const pi = await freshInit();
-			await triggerNotification(pi);
+			await triggerNotification(pi, "build done");
 
-			expect(mockWriteSync).toHaveBeenCalledWith(99, expect.stringContaining("\x1b]9;"));
+			const call = findCmuxCall();
+			expect(call).toBeDefined();
+			const args = call![1] as string[];
+			expect(args).toContain("--title");
+			expect(args).toContain("--body");
+			expect(args[args.indexOf("--body") + 1]).toBe("build done");
+			expect(args).toContain("--surface");
+			expect(args[args.indexOf("--surface") + 1]).toBe("surf-uuid");
+			// Surface set → should NOT also pass --workspace
+			expect(args).not.toContain("--workspace");
 
 			vi.useRealTimers();
 		});
 
-		it("writes OSC 99 base64 for kitty", async () => {
+		it("falls back to --workspace when only CMUX_WORKSPACE_ID is set", async () => {
 			vi.useFakeTimers();
-			process.env.KITTY_PID = "12345";
+			process.env.CMUX_WORKSPACE_ID = "ws-uuid";
+			// No CMUX_SURFACE_ID
 
 			const pi = await freshInit();
 			await triggerNotification(pi);
 
-			expect(mockWriteSync).toHaveBeenCalledWith(99, expect.stringContaining("\x1b]99;"));
+			const call = findCmuxCall();
+			expect(call).toBeDefined();
+			const args = call![1] as string[];
+			expect(args).toContain("--workspace");
+			expect(args[args.indexOf("--workspace") + 1]).toBe("ws-uuid");
+			expect(args).not.toContain("--surface");
 
 			vi.useRealTimers();
 		});
 
-		it("writes OSC 777 for Ghostty", async () => {
+		it("does not invoke cmux when outside cmux", async () => {
 			vi.useFakeTimers();
-			process.env.TERM_PROGRAM = "Ghostty";
-
+			// No CMUX_* env
 			const pi = await freshInit();
 			await triggerNotification(pi);
 
-			expect(mockWriteSync).toHaveBeenCalledWith(99, expect.stringContaining("\x1b]777;notify;"));
+			expect(findCmuxCall()).toBeUndefined();
+			// Should fall back to osascript
+			const osaCall = mockExecFileSync.mock.calls.find((c: any[]) => c[0] === "osascript");
+			expect(osaCall).toBeDefined();
 
 			vi.useRealTimers();
 		});
 	});
 
-	describe("terminal-notifier tmux integration", () => {
-		// For these tests: Apple_Terminal + tmux → terminal-notifier path with -execute
-		function setupTmuxEnv(paneId?: string, socket = "/tmp/tmux-501/default") {
-			process.env.TERM_PROGRAM = "Apple_Terminal";
-			process.env.TMUX = `${socket},12345,0`;
-			if (paneId) process.env.TMUX_PANE = paneId;
-
-			mockExecFileSync.mockImplementation((cmd: string, args?: readonly string[]) => {
-				const a = args as string[] | undefined;
-				if (cmd === "tmux" && a?.[0] === "show-environment") return "TERM_PROGRAM=Apple_Terminal";
-				if (cmd === "tmux" && a?.[0] === "display-message" && a?.includes("#{client_tty}")) return "/dev/ttys004";
-				if (cmd === "tmux" && a?.[0] === "display-message" && a?.includes("#{pane_id}")) return "%0";
-				if (cmd === "which") return "/opt/homebrew/bin/tmux";
-				if (cmd === "tty") return "/dev/ttys004";
-				if (cmd === "terminal-notifier") return "";
-				return "";
-			});
-		}
-
-		it("includes tmux select-window and select-pane using TMUX_PANE", async () => {
+	describe("osascript fallback", () => {
+		it("uses osascript when cmux notify throws", async () => {
 			vi.useFakeTimers();
-			setupTmuxEnv("%3");
-
-			const pi = await freshInit();
-			await triggerNotification(pi);
-
-			const tnCall = mockExecFileSync.mock.calls.find(
-				(c: any[]) => c[0] === "terminal-notifier",
-			);
-			expect(tnCall).toBeDefined();
-
-			const args: string[] = tnCall![1] as string[];
-			const executeIdx = args.indexOf("-execute");
-			expect(executeIdx).toBeGreaterThan(-1);
-
-			const executeCmd = args[executeIdx + 1];
-			expect(executeCmd).toContain("select-window");
-			expect(executeCmd).toContain("select-pane");
-			expect(executeCmd).toContain("%3");
-			expect(executeCmd).toContain("/tmp/tmux-501/default");
-			expect(executeCmd).toContain("/opt/homebrew/bin/tmux");
-
-			vi.useRealTimers();
-		});
-
-		it("uses TMUX_PANE without calling display-message for pane_id", async () => {
-			vi.useFakeTimers();
-			setupTmuxEnv("%7");
-
-			const pi = await freshInit();
-			await triggerNotification(pi);
-
-			// Verify pane_id display-message was NOT called (TMUX_PANE should suffice)
-			const paneIdCall = mockExecFileSync.mock.calls.find(
-				(c: any[]) => c[0] === "tmux" && (c[1] as string[])?.includes("#{pane_id}"),
-			);
-			expect(paneIdCall).toBeUndefined();
-
-			// But the execute command should still have the pane
-			const tnCall = mockExecFileSync.mock.calls.find(
-				(c: any[]) => c[0] === "terminal-notifier",
-			);
-			const executeCmd = (tnCall![1] as string[])[(tnCall![1] as string[]).indexOf("-execute") + 1];
-			expect(executeCmd).toContain("%7");
-
-			vi.useRealTimers();
-		});
-
-		it("falls back to display-message when TMUX_PANE is unset", async () => {
-			vi.useFakeTimers();
-			setupTmuxEnv(undefined); // No TMUX_PANE
-
-			const pi = await freshInit();
-			await triggerNotification(pi);
-
-			// Should have called display-message for pane_id
-			const paneIdCall = mockExecFileSync.mock.calls.find(
-				(c: any[]) => c[0] === "tmux" && (c[1] as string[])?.includes("#{pane_id}"),
-			);
-			expect(paneIdCall).toBeDefined();
-
-			const tnCall = mockExecFileSync.mock.calls.find(
-				(c: any[]) => c[0] === "terminal-notifier",
-			);
-			const executeCmd = (tnCall![1] as string[])[(tnCall![1] as string[]).indexOf("-execute") + 1];
-			expect(executeCmd).toContain("%0"); // from display-message mock
-
-			vi.useRealTimers();
-		});
-
-		it("shell-escapes socket paths with spaces", async () => {
-			vi.useFakeTimers();
-			setupTmuxEnv("%3", "/tmp/tmux socket/default");
-
-			const pi = await freshInit();
-			await triggerNotification(pi);
-
-			const tnCall = mockExecFileSync.mock.calls.find(
-				(c: any[]) => c[0] === "terminal-notifier",
-			);
-			expect(tnCall).toBeDefined();
-
-			const args = tnCall![1] as string[];
-			const executeCmd = args[args.indexOf("-execute") + 1];
-			// Socket path with space should be single-quoted
-			expect(executeCmd).toContain("'/tmp/tmux socket/default'");
-
-			vi.useRealTimers();
-		});
-
-		it("omits tmux commands when not in tmux", async () => {
-			vi.useFakeTimers();
-			process.env.TERM_PROGRAM = "Apple_Terminal";
-			// No TMUX env
-
+			process.env.CMUX_WORKSPACE_ID = "ws-uuid";
 			mockExecFileSync.mockImplementation((cmd: string) => {
-				if (cmd === "tty") return "/dev/ttys004";
-				if (cmd === "terminal-notifier") return "";
+				if (cmd === "cmux") throw new Error("cmux not running");
 				return "";
 			});
 
 			const pi = await freshInit();
 			await triggerNotification(pi);
 
-			const tnCall = mockExecFileSync.mock.calls.find(
-				(c: any[]) => c[0] === "terminal-notifier",
-			);
-			expect(tnCall).toBeDefined();
-
-			const args = tnCall![1] as string[];
-			const executeCmd = args[args.indexOf("-execute") + 1];
-			expect(executeCmd).toContain("osascript");
-			expect(executeCmd).not.toContain("select-window");
-			expect(executeCmd).not.toContain("select-pane");
+			const osaCall = mockExecFileSync.mock.calls.find((c: any[]) => c[0] === "osascript");
+			expect(osaCall).toBeDefined();
 
 			vi.useRealTimers();
 		});
@@ -414,11 +306,11 @@ describe("notify extension", () => {
 			const writeSpy = vi.spyOn(process.stdout, "write").mockReturnValue(true);
 
 			const pi = await freshInit();
-			pi.setSessionName("fix tmux bug");
+			pi.setSessionName("fix build bug");
 			await triggerNotification(pi);
 
 			const parsed = JSON.parse(writeSpy.mock.calls[0][0] as string);
-			expect(parsed.title).toBe("π: fix tmux bug");
+			expect(parsed.title).toBe("π: fix build bug");
 
 			vi.useRealTimers();
 		});

@@ -1,5 +1,5 @@
 ---
-description: Open a PR in an isolated worktree for review — new tmux window, WTP checkout, dev up
+description: Open a PR in an isolated worktree for review — new cmux workspace, WTP checkout, dev up
 ---
 Set up an isolated environment for reviewing a PR. This is the full "open a PR" workflow in one command.
 
@@ -29,10 +29,10 @@ if [ -z "$(git status --porcelain)" ]; then
 fi
 ```
 
-### 4. Open a new tmux window with Pi
-Name the tmux window after the PR (e.g., `PR-524035` or truncated title).
+### 4. Open a new cmux workspace with Pi
+Name the cmux workspace after the PR (e.g., `PR-524035` or truncated title).
 ```bash
-tmux new-window -n "PR-<number>" -c "$TARGET_DIR" \; send-keys 'TMPDIR=$HOME/.pi/tmp devx pi' Enter
+cmux new-workspace --name "PR-<number>" --cwd "$TARGET_DIR" --command 'TMPDIR=$HOME/.pi/tmp devx pi' --focus true
 ```
 
 ### 5. Run dev up in the background
@@ -47,6 +47,6 @@ Print a summary:
 - PR number and title
 - Branch name
 - WTP slot and path
-- "dev up running in new window — switch to it with `C-Space <n>` or `C-Space s`"
+- "dev up running in the new workspace (opened focused) — switch back via cmux's workspace sidebar"
 
-Ideal: ~5 tool calls total (resolve → claim → sync → open window → report).
+Ideal: ~5 tool calls total (resolve → claim → sync → open workspace → report).

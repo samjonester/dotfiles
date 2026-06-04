@@ -79,7 +79,7 @@ grep -r "pattern_A" app/services/same_domain/ -l
 
 ## Scope Boundaries
 
-- **Consistency vs Shopify conventions** — do NOT assess Shopify-specific patterns (LHM migrations, Graphite stacks, packwerk boundaries). If a Shopify conventions reviewer is present, that's its job. Focus on project-internal conventions that are established by the codebase's own code, not by external documentation.
+- **Consistency vs Shopify conventions** — do NOT assess Shopify-specific patterns (LHM migrations, PR stacks, packwerk boundaries). If a Shopify conventions reviewer is present, that's its job. Focus on project-internal conventions that are established by the codebase's own code, not by external documentation.
 - **Consistency vs naming** — you may flag naming convention divergences (e.g., `fetch_X` vs `get_X` across the codebase) since that requires empirical evidence. `review-naming` focuses on whether individual names communicate intent; you focus on whether names follow the _codebase's established conventions_.
 
 ## Important Constraints

@@ -42,6 +42,10 @@ setup_pi() {
   ln -vsfn "$dotfiles_pi/models.json"        "$pi_dir/models.json"
   ln -vsfn "$dotfiles_pi/auto-lint.json"     "$pi_dir/auto-lint.json"
 
+  # Memory config (injection frequency, auto-persist mode)
+  mkdir -p "$HOME/.pi/memory"
+  ln -vsfn "$dotfiles_pi/memory-config.json"  "$HOME/.pi/memory/config.json"
+
   # Knowledge: real directory layering dotfiles-versioned (public) + local private files
   mkdir -p "$HOME/.pi/memory/knowledge"
   if [ -d "$dotfiles_pi/knowledge" ]; then
@@ -140,12 +144,25 @@ darwin*)
   # Terminal
   chsh -s $(which zsh)
   $BREW_EXECUTABLE install --cask font-jetbrains-mono-nerd-font
+  $BREW_EXECUTABLE install --cask font-sauce-code-pro-nerd-font
   $BREW_EXECUTABLE install kitty
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
   git clone --depth 1 https://github.com/dexpota/kitty-themes.git ~/.config/kitty/kitty-themes
+  $BREW_EXECUTABLE install zellij
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/zellij ~/.config/
+  # cmux: Ghostty-based terminal with agent-aware vertical tabs (Kepler-approved)
+  $BREW_EXECUTABLE install --cask cmux
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/cmux ~/.config/
+  # cmux reads ~/.config/ghostty/config for terminal behavior (font, theme, opacity).
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/ghostty ~/.config/
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
 
   setup_pi
+
+  # Install cmux <-> pi hook bridge (session restore + lifecycle in sidebar).
+  # Writes ~/.pi/agent/extensions/cmux-session.ts (cmux-managed, auto-upgraded).
+  # Must run AFTER setup_pi so the extensions dir exists.
+  command -v cmux >/dev/null && cmux hooks pi install --yes || true
 
   # Terminal Tooling
   $BREW_EXECUTABLE install bat
@@ -194,6 +211,20 @@ darwin*)
   pnpm add -g typescript-language-server typescript   # TS + JS
   gem install ruby-lsp                                # Ruby
 
+  # Pi agent tooling
+  pnpm add -g @tobilu/qmd                              # Semantic search for pi memory + wiki
+  (cd ~/.local/share/pnpm/global/5 && pnpm approve-builds -g) # Approve better-sqlite3 native build
+  # Index wiki + memory for semantic search (qmd resolves symlinks;
+  # dotted dirs need the /tmp symlink workaround for collection add)
+  mkdir -p /tmp/qmd-setup
+  ln -sfn "$HOME/.llm-wiki" /tmp/qmd-setup/wiki
+  ln -sfn "$HOME/.pi/memory" /tmp/qmd-setup/memory
+  (cd /tmp/qmd-setup && qmd collection add wiki wiki 2>/dev/null || true)
+  (cd /tmp/qmd-setup && qmd collection add memory memory 2>/dev/null || true)
+  qmd update 2>/dev/null || true
+  qmd embed 2>/dev/null || true
+  rm -rf /tmp/qmd-setup
+
   curl --proto '=https' --tlsv1.2 -sSf https://sh.rustup.rs | sh
 
   # Install VSCode Extensions & configs
@@ -209,6 +240,11 @@ linux*)
     # Terminal
     sudo apt-get install -y kitty
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/kitty ~/.config/
+    # Zellij is not in Ubuntu apt repos; install via cargo (Rust required)
+    if command -v cargo >/dev/null 2>&1; then
+      cargo install --locked zellij
+    fi
+    ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/zellij ~/.config/
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
 
     setup_pi

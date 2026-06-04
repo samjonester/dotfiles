@@ -1,23 +1,24 @@
 #!/usr/bin/env bash
-# workspace (aliased as `lfg`) - create or reattach tmux sessions
+# workspace (aliased as `lfg`) - create or switch cmux workspaces
 #
 # Usage:
-#   lfg                              (pick session or create new)
-#   lfg -n <name> ["prompt"]         (attach/create session by name)
-#   lfg ["prompt"]                   (inside tmux: window → worktree → dir → pi)
-#   lfg --pane ["prompt"]            (inside tmux: skip name → worktree → dir → pi)
+#   lfg                              (pick workspace or create new)
+#   lfg -n <name> ["prompt"]         (focus/create workspace by name)
+#   lfg ["prompt"]                   (inside cmux: workspace → worktree → dir → pi)
+#   lfg --pane ["prompt"]            (inside cmux: skip name → worktree → dir → pi)
 #
-# Behavior depends on context:
-#   Outside tmux — session picker flow (or -n to skip it)
-#   Inside tmux  — window picker, then worktree picker (WTP), then dir → pi
-#   --pane       — pane mode: skip the name step entirely
+# Behavior depends on context (cmux exposes a single activity unit — the
+# workspace — so the old tmux session/window split collapses into one flow):
+#   Outside cmux — workspace picker; new names spawn a workspace running pi
+#   Inside cmux  — workspace picker, then worktree picker (WTP), then dir → pi
+#   --pane       — pane mode: skip the name step entirely (caller already split)
 #
 # Worktree picker (WTP integration):
-#   Shows active pool worktrees. Type/paste a PR #, Graphite/GitHub URL, or
+#   Shows active pool worktrees. Type/paste a PR #, GitHub URL, or
 #   branch name to claim a pool and land in areas/platforms/mozart. Press Esc
 #   to skip and use the zoxide directory picker instead.
 #
-# Requires: fzf, tmux, zoxide
+# Requires: fzf, cmux, zoxide
 # Optional: _wtp (worktree pool manager), gh (GitHub CLI)
 
 set -euo pipefail
@@ -27,33 +28,44 @@ set_tab_title() {
     printf '\033]2;%s\007' "$1"
 }
 
-# ─── Session picker (outside tmux) ───────────────────────────────────────────
+# ─── Workspace listing (shared by both pickers) ──────────────────────────────
 
-_lfg_list_sessions() {
-    tmux list-sessions -F '#{session_name}|#{?session_attached,attached,detached}|#{session_windows} windows' 2>/dev/null | while IFS='|' read -r name status windows; do
-        [[ -z "$name" ]] && continue
+# Emit one line per cmux workspace in the focused window:
+#   "● <name>  (workspace:N)"  for the selected/current workspace
+#   "○ <name>  (workspace:N)"  for the rest
+# cmux list-workspaces prints: "* workspace:16  <name>  [selected]" or
+#                              "  workspace:19  <name>".
+_lfg_list_workspaces() {
+    cmux list-workspaces 2>/dev/null | while IFS= read -r line; do
+        [[ -z "$line" ]] && continue
         local icon="○"
-        [[ "$status" == "attached" ]] && icon="●"
-        echo "${icon} ${name}  (${status}, ${windows})"
+        [[ "$line" == \** ]] && icon="●"
+        # Strip the leading "* " / "  " marker, then the trailing "[selected]".
+        line="${line#\* }"; line="${line#  }"
+        local ref name
+        ref="${line%%  *}"            # workspace:16
+        name="${line#*  }"            # <name>  [selected]
+        name="${name%  \[selected\]}"
+        echo "${icon} ${name}  (${ref})"
     done
 }
 
 pick_session() {
     local fzf_input self
-    fzf_input=$(_lfg_list_sessions)
+    fzf_input=$(_lfg_list_workspaces)
     self="$0"
 
     local fzf_exit=0 result
     result=$(printf '%s' "$fzf_input" | fzf \
         --print-query \
         --exact \
-        --prompt="session ❯ " \
-        --header="Enter: select or type new  │  Del: kill session" \
+        --prompt="workspace ❯ " \
+        --header="Enter: select or type new  │  Del: close workspace" \
         --header-first \
         --height=~50% \
         --reverse \
         --no-info \
-        --bind "del:execute-silent($self --kill-session {})+reload($self --list-sessions)" \
+        --bind "del:execute-silent($self --kill-workspace {})+reload($self --list-workspaces)" \
         2>/dev/null) || fzf_exit=$?
 
     [[ $fzf_exit -ge 2 ]] && return 1
@@ -62,8 +74,12 @@ pick_session() {
     query=$(head -1 <<< "$result")
     selected=$(sed -n '2p' <<< "$result")
 
+    # Existing workspace selected — return its ref (REF:workspace:N) so the
+    # caller focuses it directly (names aren't guaranteed unique).
     if [[ "$selected" == [●○]* ]]; then
-        echo "$selected" | sed 's/^[●○] //; s/  (.*//'
+        local ref
+        ref=$(echo "$selected" | sed 's/.*(\(workspace:[0-9]*\)).*/\1/')
+        echo "REF:${ref}"
         return 0
     fi
 
@@ -75,27 +91,19 @@ pick_session() {
     return 1
 }
 
-# ─── Window picker (inside tmux) ─────────────────────────────────────────────
+# ─── Workspace picker (inside cmux) ──────────────────────────────────────────
 
-pick_window() {
-    # List windows in the current tmux session
-    local windows
-    windows=$(tmux list-windows -F '#{window_index}|#{window_name}|#{window_active}' 2>/dev/null)
-
-    local fzf_input=""
-    while IFS='|' read -r idx wname active; do
-        [[ -z "$idx" ]] && continue
-        local icon="○"
-        [[ "$active" == "1" ]] && icon="●"
-        fzf_input+="${icon} ${wname}  (${idx})"$'\n'
-    done <<< "$windows"
+pick_workspace() {
+    # List workspaces in the focused cmux window
+    local fzf_input
+    fzf_input=$(_lfg_list_workspaces)
 
     local fzf_exit=0 result
     result=$(printf '%s' "$fzf_input" | fzf \
         --print-query \
         --exact \
-        --prompt="window ❯ " \
-        --header="Select window or type new name" \
+        --prompt="workspace ❯ " \
+        --header="Select workspace or type new name" \
         --header-first \
         --height=~50% \
         --reverse \
@@ -108,27 +116,27 @@ pick_window() {
     query=$(head -1 <<< "$result")
     selected=$(sed -n '2p' <<< "$result")
 
-    # User selected an existing window from the list
+    # User selected an existing workspace from the list
     if [[ "$selected" == [●○]* ]]; then
-        # If it's the current window (●), continue the flow (worktree → dir → pi)
+        # If it's the current workspace (●), continue the flow (worktree → dir → pi)
         if [[ "$selected" == "●"* ]]; then
             return 0
         fi
-        # Different window → navigate there
-        local win_idx
-        win_idx=$(echo "$selected" | sed 's/.*(\([0-9]*\))/\1/')
-        tmux select-window -t ":${win_idx}"
-        return 2  # Signal: navigated to existing window
+        # Different workspace → switch to it
+        local ws_ref
+        ws_ref=$(echo "$selected" | sed 's/.*(\(workspace:[0-9]*\)).*/\1/')
+        cmux select-workspace --workspace "$ws_ref" >/dev/null 2>&1
+        return 2  # Signal: navigated to existing workspace
     fi
 
-    # User typed a name — check if it matches an existing window
+    # User typed a name — check if it matches an existing workspace
     if [[ -n "$query" ]]; then
-        local match_idx
-        match_idx=$(tmux list-windows -F '#{window_name}|#{window_index}' 2>/dev/null \
-            | grep -i "^${query}|" | head -1 | cut -d'|' -f2)
-        if [[ -n "$match_idx" ]]; then
-            tmux select-window -t ":${match_idx}"
-            return 2  # Signal: navigated to existing window
+        local match_ref
+        match_ref=$(_lfg_list_workspaces \
+            | grep -iF "${query}  (" | head -1 | sed 's/.*(\(workspace:[0-9]*\)).*/\1/')
+        if [[ -n "$match_ref" ]]; then
+            cmux select-workspace --workspace "$match_ref" >/dev/null 2>&1
+            return 2  # Signal: navigated to existing workspace
         fi
         echo "$query"
         return 0
@@ -165,8 +173,8 @@ _classify_wtp_input() {
         echo "pr:$input"
         return 0
     fi
-    # Graphite or GitHub PR URL → extract number
-    if [[ "$input" == *graphite.com* ]] || [[ "$input" == *github.com* ]]; then
+    # GitHub PR URL → extract number
+    if [[ "$input" == *github.com* ]]; then
         local num
         num=$(echo "$input" | grep -oE '[0-9]+' | tail -1)
         if [[ -n "$num" ]]; then
@@ -188,12 +196,11 @@ _classify_wtp_input() {
     echo ""
 }
 
-# Check if a branch belongs to a Graphite stack already claimed in a pool.
-# Walks up parents via `gt branch info` until it finds a match or hits main.
+# Check if a branch belongs to a PR stack already claimed in a pool.
+# Walks up PR base-ref chain to find a match against claimed pool branches.
 # Outputs: pool slot name (e.g. "pool-2") or empty.
 _find_stack_pool() {
     local target="$1"
-    local any_pool_src=""
 
     # Build parallel arrays of claimed slots + branches
     local pool_slots=() pool_branches=()
@@ -201,22 +208,20 @@ _find_stack_pool() {
         [[ "$branch_val" == "free" || -z "$branch_val" ]] && continue
         pool_slots+=("$slot")
         pool_branches+=("$branch_val")
-        # Use any claimed pool's src dir for gt commands
-        [[ -z "$any_pool_src" ]] && any_pool_src="$HOME/world/trees/$slot/src"
     done < <("$WTP_BIN" status 2>/dev/null)
 
-    [[ -z "$any_pool_src" ]] && return 1
+    [[ ${#pool_slots[@]} -eq 0 ]] && return 1
 
     # Direct match
     for i in "${!pool_branches[@]}"; do
         [[ "${pool_branches[$i]}" == "$target" ]] && echo "${pool_slots[$i]}" && return 0
     done
 
-    # Walk up parents
+    # Walk up PR base refs via GitHub API
     local current="$target" max_depth=10
     while [[ $max_depth -gt 0 ]]; do
         local parent
-        parent=$(cd "$any_pool_src" && gt branch info "$current" --no-interactive 2>/dev/null | grep '^Parent:' | sed 's/^Parent: //')
+        parent=$(gh pr list --repo shop/world --head "$current" --json baseRefName --jq '.[0].baseRefName' 2>/dev/null)
         [[ -z "$parent" || "$parent" == "main" || "$parent" == "master" ]] && break
         for i in "${!pool_branches[@]}"; do
             [[ "${pool_branches[$i]}" == "$parent" ]] && echo "${pool_slots[$i]}" && return 0
@@ -255,7 +260,7 @@ _resolve_wtp() {
             ;;
     esac
 
-    # Stack-aware pool detection: walk up Graphite parents to find if this
+    # Stack-aware pool detection: walk up PR base refs to find if this
     # branch belongs to a stack already checked out in a claimed pool.
     local stack_pool
     stack_pool=$(_find_stack_pool "$branch")
@@ -479,39 +484,45 @@ pick_directory() {
     return 1
 }
 
-# ─── Enter tmux session (outside tmux flow) ──────────────────────────────────
+# ─── Enter cmux workspace (outside-cmux / bootstrap flow) ──────────────────────────────────
 
-enter_session() {
-    local session_name="$1"
+# Reached when lfg runs from a non-cmux terminal (CMUX_WORKSPACE_ID unset).
+# cmux commands still target the focused cmux window via the auto-discovered
+# socket, so we either focus an existing workspace or spawn a new one that
+# launches pi. (There is no tmux-style "attach to detached session" — cmux
+# is a GUI app whose workspaces are always live / restorable.)
+enter_workspace() {
+    local target="$1"          # "REF:workspace:N" (from picker) or a plain name
     local dir="${2:-}"
     local prompt="${3:-}"
 
-    set_tab_title "$session_name"
+    # Existing workspace selected in the picker → focus it by ref.
+    if [[ "$target" == REF:* ]]; then
+        cmux select-workspace --workspace "${target#REF:}" >/dev/null 2>&1
+        exit 0
+    fi
+
+    set_tab_title "$target"
 
     local pi_cmd="TMPDIR=$HOME/.pi/tmp devx pi"
     [[ -n "$prompt" ]] && pi_cmd="$pi_cmd $(printf '%q' "$prompt")"
 
-    # Inside tmux already → switch client
-    if [[ -n "${TMUX:-}" ]]; then
-        if ! tmux has-session -t "=$session_name" 2>/dev/null; then
-            tmux new-session -d -s "$session_name" -c "${dir:-$HOME}"
-            tmux send-keys -t "=$session_name:" "$pi_cmd" Enter
-        fi
-        exec tmux switch-client -t "=$session_name"
+    # Plain name (e.g. via -n): focus an exact-name match if one exists,
+    # otherwise spawn a new workspace running pi.
+    local match_ref
+    match_ref=$(_lfg_list_workspaces \
+        | grep -iF "${target}  (" | head -1 | sed 's/.*(\(workspace:[0-9]*\)).*/\1/')
+    if [[ -n "$match_ref" ]]; then
+        cmux select-workspace --workspace "$match_ref" >/dev/null 2>&1
+        exit 0
     fi
 
-    # Existing session → attach
-    if tmux has-session -t "=$session_name" 2>/dev/null; then
-        exec tmux attach-session -t "=$session_name"
-    fi
-
-    # New session
-    tmux new-session -d -s "$session_name" -c "${dir:-$HOME}"
-    tmux send-keys -t "=$session_name:" "$pi_cmd" Enter
-    exec tmux attach-session -t "=$session_name"
+    cmux new-workspace --name "$target" --cwd "${dir:-$HOME}" \
+        --command "$pi_cmd" --focus true >/dev/null 2>&1
+    exit 0
 }
 
-# ─── Exec pi in current shell (inside tmux) ──────────────────────────────────
+# ─── Exec pi in current shell (inside cmux) ──────────────────────────────────
 
 exec_pi() {
     local prompt="${1:-}"
@@ -531,8 +542,8 @@ exec_pi() {
                 mode="dir"; continue
             fi
             [[ $pick_exit -ne 0 ]] && exit 0
-            # Auto-name the window from worktree label
-            [[ -n "$WT_LABEL" ]] && tmux rename-window "$WT_LABEL" 2>/dev/null || true
+            # Auto-name the workspace from worktree label
+            [[ -n "$WT_LABEL" ]] && cmux rename-workspace "$WT_LABEL" 2>/dev/null || true
             break
         else
             dir=$(pick_directory) || pick_exit=$?
@@ -554,14 +565,14 @@ exec_pi() {
 
 main() {
     # Internal subcommands for fzf bindings
-    if [[ "${1:-}" == "--list-sessions" ]]; then
-        _lfg_list_sessions
+    if [[ "${1:-}" == "--list-workspaces" ]]; then
+        _lfg_list_workspaces
         return 0
     fi
-    if [[ "${1:-}" == "--kill-session" ]]; then
-        local name
-        name=$(echo "${2:-}" | sed 's/^[●○] //; s/  (.*//')
-        [[ -n "$name" ]] && tmux kill-session -t "=$name" 2>/dev/null
+    if [[ "${1:-}" == "--kill-workspace" ]]; then
+        local ref
+        ref=$(echo "${2:-}" | sed 's/.*(\(workspace:[0-9]*\)).*/\1/')
+        [[ "$ref" == workspace:* ]] && cmux close-workspace --workspace "$ref" 2>/dev/null
         return 0
     fi
 
@@ -584,11 +595,11 @@ main() {
         esac
     done
 
-    # ── Inside tmux ──────────────────────────────────────────────────────
+    # ── Inside cmux ──────────────────────────────────────────────────────
 
-    if [[ -n "${TMUX:-}" ]]; then
+    if [[ -n "${CMUX_WORKSPACE_ID:-}" ]]; then
 
-        # Start WTP prefetch in background while window picker runs
+        # Start WTP prefetch in background while the workspace picker runs
         _prefetch_worktrees
         trap 'rm -f "$_LFG_WT_RAW" "$_LFG_WT_FZF" "$_LFG_WT_HDR"' EXIT
 
@@ -598,37 +609,37 @@ main() {
             return 0
         fi
 
-        # Window mode: pick or create window, then dir → pi
-        local pick_exit=0 window_name=""
-        window_name=$(pick_window) || pick_exit=$?
+        # Workspace mode: pick or create a workspace, then dir → pi
+        local pick_exit=0 workspace_name=""
+        workspace_name=$(pick_workspace) || pick_exit=$?
 
-        # Exit code 2 = navigated to existing window; temp window closes on exit
+        # Exit code 2 = switched to an existing workspace; this transient one stays
         [[ $pick_exit -eq 2 ]] && exit 0
         # Exit code 1 = cancelled
         [[ $pick_exit -eq 1 ]] && exit 0
 
-        # Got a new window name — rename current window
-        [[ -n "$window_name" ]] && tmux rename-window "$window_name"
+        # Got a new workspace name — rename the current workspace
+        [[ -n "$workspace_name" ]] && cmux rename-workspace "$workspace_name" >/dev/null 2>&1
 
         exec_pi "$prompt"
         return 0
     fi
 
-    # ── Outside tmux ─────────────────────────────────────────────────────
+    # ── Outside cmux (bootstrap) ──────────────────────────────────────────
 
     if [[ -z "$session_name" ]]; then
         session_name=$(pick_session) || exit 0
     fi
 
-    # Existing session — just attach
-    if tmux has-session -t "=$session_name" 2>/dev/null; then
-        enter_session "$session_name"
+    # Picker returned an existing workspace ref — just focus it (no dir picker).
+    if [[ "$session_name" == REF:* ]]; then
+        enter_workspace "$session_name"
     fi
 
-    # New session — pick directory
+    # New name (or -n <name>) — pick directory, then spawn a workspace running pi.
     local dir
     dir=$(pick_directory) || exit 0
-    enter_session "$session_name" "$dir" "$prompt"
+    enter_workspace "$session_name" "$dir" "$prompt"
 }
 
 main "$@"

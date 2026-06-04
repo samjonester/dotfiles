@@ -8,7 +8,7 @@ Rules for working with git worktrees. CWD confusion and stash mismanagement are 
 
 1. **Switch CWD to the worktree immediately.** The moment you confirm a worktree exists (or create one), `cd` into it. Stay there for the entire task.
 2. **All commands run from the worktree.** Tests, builds, git ops, `gh` CLI, API calls -- everything. Never `cd` to the main checkout.
-3. **Never copy files between worktree and main checkout.** Commit and push from the worktree directly. `gt modify` and `gt submit` work from worktrees.
+3. **Never copy files between worktree and main checkout.** Commit and push from the worktree directly. `git commit --amend` and `git push` work directly from worktrees.
 4. **Check branch state before committing.** `git branch --show-current` -- if empty, you're in detached HEAD. Checkout the branch first.
 5. **Always use `-b` when creating worktrees for new work.** `git worktree add <path> origin/main` = detached HEAD (can't commit). Use `git worktree add -b <branch> <path> <base>`.
 6. **Worktree = fully self-contained workspace.** Dependencies, tests, commits, push -- all happen there. Treat it like a separate clone.
@@ -18,8 +18,8 @@ Rules for working with git worktrees. CWD confusion and stash mismanagement are 
 1. **Never stash without user approval.** Stashing is destructive. If stash pop conflicts, recovery is messy. Always ask first.
 2. **After stash pop, ALWAYS run `git status`.** Stash pop with conflicts leaves a mixed state: some files staged, some unstaged, some with conflict markers. Never assume it was clean.
 3. **After conflict resolution, stage ALL files.** When stash pop has conflicts, only non-conflicting files are auto-staged. The conflicted file is unstaged with markers. After resolving, `git add` everything -- not just the conflicted file.
-4. **Verify commit contents before push.** `git show --stat` or `gt diff` to confirm the commit includes all expected files. Especially after stash/merge/rebase.
-5. **Prefer commit-then-rebase over stash-then-restack.** Commit WIP first, then `gt sync` + `gt restack`. Merge conflicts are explicit and affect the commit directly. Avoids the stash pop failure mode.
+4. **Verify commit contents before push.** `git show --stat` or `git diff` to confirm the commit includes all expected files. Especially after stash/merge/rebase.
+5. **Prefer commit-then-rebase over stash-then-restack.** Commit WIP first, then `git fetch origin main && git rebase origin/main`. Merge conflicts are explicit and affect the commit directly. Avoids the stash pop failure mode.
 6. **If restack fails with unstaged changes, commit first.** Don't reach for stash. A messy commit you can amend is safer than a stash you might lose.
 7. **Never discard unstaged changes without user approval.** Includes `git checkout -- .`, `git restore`, `git stash`, `git clean`.
 
@@ -32,7 +32,7 @@ When you have unstaged changes and need them on a different branch in a new work
 ```bash
 git worktree add -b <branch-name> <path> <base>
 # Then use the edit tool on absolute paths in the worktree -- no copy, no patch
-cd <path> && gt modify && gt submit
+cd <path> && git add -A && git commit --amend --no-edit && git push
 ```
 
 **DON'T:**

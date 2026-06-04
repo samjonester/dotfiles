@@ -250,13 +250,13 @@ or Pi spawns them as background processes. Close any right pane with <kbd class=
   <tr><td>Go to definition</td><td><kbd>gd</kbd>. References: <kbd>gr</kbd>. Back: <kbd>C-o</kbd>.</td></tr>
 </table>
 
-<h3>Git workflow: lazygit + Graphite</h3>
+<h3>Git workflow: lazygit</h3>
 <p>Shell aliases: <code>lg</code> = lazygit, <code>dpi</code> = devx pi, <code>g</code> = git.</p>
 <table>
   <tr><th>Action</th><th>How</th></tr>
   <tr><td>Interactive git</td><td><kbd>⎵gg</kbd> in nvim, or <code>/lazygit</code> in Pi (splits a pane, auto-detects working directory)</td></tr>
-  <tr><td>Stage + commit (via Pi)</td><td>Pi uses <code>gt create</code> / <code>gt modify</code> — bash-guard gates commits, you approve.</td></tr>
-  <tr><td>Submit PR</td><td>Pi runs <code>gt submit</code> — Graphite handles the PR.</td></tr>
+  <tr><td>Stage + commit (via Pi)</td><td>Pi uses <code>git commit</code> / <code>git commit --amend</code> — bash-guard gates commits, you approve.</td></tr>
+  <tr><td>Submit PR</td><td>Pi runs <code>git push</code> + <code>gh pr create</code>.</td></tr>
   <tr><td>Watch CI</td><td><em>"watch CI for PR #524035"</em> — loads pr-ci-autofix skill, polls Buildkite, notifies on completion.</td></tr>
 </table>
 

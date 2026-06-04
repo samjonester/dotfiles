@@ -70,7 +70,7 @@ Examples of valid outputs:
 🎨 Fix button hover states in checkout
 📊 Query ad spend metrics from BigQuery
 🔍 Review PR #681449 throttle tightening
-🛠️ Address binks on #878 altscreen #869 graphite
+🛠️ Address binks on #878 altscreen #869 prefer-gt
 💬 Batch review PRs #668312 #44522 #668492
 🚀 Check PR #668170 blog-URL migration deploy`;
 
@@ -401,20 +401,12 @@ function extractText(content: unknown): string {
 /**
  * Extract PR numbers, issue numbers, and branch refs from conversation text.
  * Handles:
- *   - Graphite URLs: app.graphite.com/github/pr/org/repo/NUMBER
  *   - GitHub URLs: github.com/org/repo/pull/NUMBER
  *   - GitHub issue URLs: github.com/org/repo/issues/NUMBER
  *   - Inline refs: #NUMBER, PR #NUMBER, PR NUMBER, issue #NUMBER
  */
 function extractIdentifiers(text: string): string[] {
   const ids = new Map<string, string>(); // number -> formatted label
-
-  // Graphite PR URLs
-  for (const m of text.matchAll(
-    /app\.graphite\.com\/github\/pr\/([^/]+)\/([^/]+)\/([0-9]+)/g,
-  )) {
-    ids.set(m[3], `PR #${m[3]} (${m[1]}/${m[2]})`);
-  }
 
   // GitHub PR URLs
   for (const m of text.matchAll(

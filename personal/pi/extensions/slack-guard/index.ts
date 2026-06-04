@@ -24,7 +24,7 @@ import {
   Spacer,
   Text,
   type Theme,
-} from "@anthropic-ai/tui";
+} from "@mariozechner/pi-tui";
 import { execFile } from "node:child_process";
 
 const GATED_TOOLS = new Set(["slack_post", "slack_send_message_draft"]);

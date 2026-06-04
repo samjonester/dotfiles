@@ -5,16 +5,16 @@
  *
  * Stage 1 — Remote mutation gate (deterministic, instant):
  *   Pattern-matches commands that modify remote state (git push, gh pr create,
- *   gt submit, etc.). Always prompts with a lightweight y/n dialog — no LLM
+ *   etc.). Always prompts with a lightweight y/n dialog — no LLM
  *   voters, no override memory. Deny shows a text input for redirect instructions.
  *   Runs even when the guard is toggled off (instant, zero cost).
  *   Exception: when Stage 1.5's commit policy is 'auto-allow', safe pushes
- *   (git push, gt submit, gt stack submit) targeting the current non-protected
+ *   (git push) targeting the current non-protected
  *   branch are silently auto-allowed — see canAutoAllowPush.
  *
  * Stage 1.5 — Commit gate (session-scoped policy):
- *   Pattern-matches commit-like commands (gt create, gt modify, gt absorb,
- *   git commit). On first encounter in a session, shows a policy dialog:
+ *   Pattern-matches commit-like commands (git commit, git commit --amend).
+ *   On first encounter in a session, shows a policy dialog:
  *     a = auto-allow all commits this session
  *     c = confirm each commit individually (y/n per command)
  *     n = deny (with optional redirect instructions)
@@ -34,8 +34,7 @@
  *   Spawned teammates have a TUI but no human watching — interactive dialogs
  *   would deadlock. When isTeammateSession() is true, we replace Stage 1 / 1.5
  *   for a narrow set of "draft-PR-safe" commands:
- *     • Commit-like commands (gt create/modify/absorb, git commit) → auto-allow
- *     • `gt submit` / `gt stack submit` (without --publish) → contextual voter pass
+ *     • Commit-like commands (git commit, git commit --amend) → auto-allow
  *     • `git push` (no force, non-protected target) → contextual voter pass
  *   Voter pass receives current branch + user message context. Unanimous YES
  *   from at least 2 voters allows; anything else blocks with a reason the model
@@ -97,22 +96,54 @@ import * as path from "path";
 // Current approach: filter control sequences in handleInput only. No writes to
 // stdout — the TUI owns the output stream exclusively.
 
-// ── User alert (macOS notification only) ──────────────────────────────────────
+// ── User alert (cmux-aware notification) ──────────────────────────────────────
 
 /**
  * Alert the user that bash-guard needs their attention.
- * Uses macOS system notification (visible even when terminal isn't focused)
- * and a terminal BEL to trigger tmux's monitor-bell window flag.
  *
- * BEL was previously avoided because kitty's window_alert_on_bell triggered
- * tmux focus events (\x1b[I) that PTY read splitting delivered as bare \x1b,
- * which matchesKey() interpreted as ESC — auto-dismissing the dialog in a loop.
+ * Strategy depends on whether we're inside cmux:
+ * - Inside cmux (CMUX_SURFACE_ID set): fire `cmux notify` so the alert is
+ *   bound to this pane — blue ring, sidebar badge, dock badge, Tink sound
+ *   (same channel cmux uses for waiting agent sessions). No osascript banner,
+ *   which would otherwise post a rogue system-wide notification untethered
+ *   from the pane.
+ * - Outside cmux: fall back to osascript display notification so kitty /
+ *   iTerm / raw ssh still get a macOS-native popup.
+ *
+ * BEL is always emitted — it triggers tmux's monitor-bell window flag for
+ * users still on tmux, and cmux/other terminals ignore it harmlessly. BEL
+ * was previously avoided because kitty's window_alert_on_bell triggered tmux
+ * focus events (\x1b[I) that PTY read splitting delivered as bare \x1b, which
+ * matchesKey() interpreted as ESC — auto-dismissing the dialog in a loop.
  * This is now safe: isTerminalControlSequence() filters bare ESC and all CSI
  * sequences in every dialog handleInput handler.
  */
 function alertUser(label: string) {
   // BEL: triggers tmux monitor-bell (shows ! flag on the window in the status bar)
   process.stderr.write("\x07");
+
+  // Inside cmux: structured notification bound to this pane. Replaces (does
+  // not augment) the osascript banner so we don't double-notify.
+  const surfaceId = process.env.CMUX_SURFACE_ID;
+  if (surfaceId) {
+    const args = [
+      "notify",
+      "--surface",
+      surfaceId,
+      "--title",
+      "🔒 Bash Guard",
+      "--body",
+      label,
+    ];
+    const workspaceId = process.env.CMUX_WORKSPACE_ID;
+    if (workspaceId) {
+      args.splice(1, 0, "--workspace", workspaceId);
+    }
+    execFile("cmux", args, () => {});
+    return;
+  }
+
+  // Outside cmux: macOS-native notification.
   execFile(
     "osascript",
     ["-e", `display notification "${label}" with title "🔒 Bash Guard"`],
@@ -170,15 +201,10 @@ interface TeammateBlockedPattern {
 /**
  * Commands that are NEVER allowed for unattended teammates. The lead must
  * perform these. Order matters: more specific patterns (e.g. --publish)
- * come before general matches (e.g. plain gt submit).
+ * come before general matches.
  */
 const TEAMMATE_BLOCKED_PATTERNS: TeammateBlockedPattern[] = [
   // Publishing draft → ready
-  {
-    pattern: /\bgt\s+(stack\s+)?submit\b[^|;&]*--publish\b/,
-    label: "gt submit --publish",
-    reason: "publishes draft → ready; lead must approve.",
-  },
   {
     pattern: /\bgh\s+pr\s+ready\b/,
     label: "gh pr ready",
@@ -261,7 +287,6 @@ const TEAMMATE_BLOCKED_PATTERNS: TeammateBlockedPattern[] = [
  * (must verify branch is appropriate). Checked AFTER blocked patterns.
  */
 const TEAMMATE_VOTABLE_PATTERNS: { pattern: RegExp; label: string }[] = [
-  { pattern: /\bgt\s+(stack\s+)?submit\b/, label: "gt submit (draft)" },
   { pattern: /\bgit\s+push\b/, label: "git push" },
 ];
 
@@ -320,11 +345,9 @@ async function getCurrentBranch(cwd: string): Promise<string | null> {
 
 // ── Teammate voter prompt (Stage 0 contextual review) ─────────────────────
 
-const TEAMMATE_VOTER_SYSTEM_PROMPT = `You are a security reviewer for an autonomous AI coding assistant running unattended on a developer's workstation. Your job is to decide if a git/graphite command is safe to run without human supervision.
+const TEAMMATE_VOTER_SYSTEM_PROMPT = `You are a security reviewer for an autonomous AI coding assistant running unattended on a developer's workstation. Your job is to decide if a git command is safe to run without human supervision.
 
 The agent is a TEAMMATE: spawned by the lead to autonomously implement a feature and end up at a DRAFT pull request. There is no human watching to confirm prompts.
-
-Note: Commands may be prefixed with \`rtk\` (Runtime Toolkit) — a transparent wrapper that doesn't change semantics. \`rtk gt submit\` = \`gt submit\`.
 
 You will receive:
 - <command>: the bash command being attempted
@@ -336,15 +359,13 @@ You will receive:
 Vote YES only if ALL of these hold:
 - <git_branch> is clearly a feature branch — NOT main, master, production, prod, staging, release/*, hotfix/*
 - The command does not include --force, --force-with-lease, -f, or a + refspec
-- The command does not include --publish
-- For \`gt submit\` / \`gt stack submit\`: it would create or update a DRAFT PR
 - For \`git push\`: the target is a feature branch on origin (or a fork) — not a protected branch
 - The lead's last instruction is consistent with the agent making a draft PR (e.g. "end at a draft PR", "submit draft", "create a feature branch")
 
 Vote NO if ANY of these hold:
 - <git_branch> is a protected branch (main/master/production/staging/release/hotfix)
 - The command targets a protected branch via positional ref or src:dst refspec
-- Force push, --publish, or any flag that leaves draft state
+- Force push or any flag that leaves draft state
 - The lead's last instruction does NOT clearly authorize autonomous commit/submit (e.g. they said "don't commit", or there's no relevant context)
 - The command does anything beyond pushing the current feature branch as a draft PR
 - ANYTHING ambiguous — when in doubt, vote NO. The lead can re-issue the command directly.
@@ -435,10 +456,6 @@ const REMOTE_MUTATION_PATTERNS: RemoteMutationPattern[] = [
     label: "gh api (mutating)",
   },
 
-  // Graphite
-  { pattern: /\bgt\s+submit\b/, label: "gt submit" },
-  { pattern: /\bgt\s+stack\s+submit\b/, label: "gt stack submit" },
-
   // GitHub Actions
   {
     pattern: /\bgh\s+workflow\s+(run|enable|disable)\b/,
@@ -471,9 +488,6 @@ interface CommitPattern {
 }
 
 const COMMIT_PATTERNS: CommitPattern[] = [
-  { pattern: /\bgt\s+create\b/, label: "gt create" },
-  { pattern: /\bgt\s+modify\b/, label: "gt modify" },
-  { pattern: /\bgt\s+absorb\b/, label: "gt absorb" },
   { pattern: /\bgit\s+commit\b/, label: "git commit" },
 ];
 
@@ -489,7 +503,7 @@ function matchCommitCommand(command: string): CommitPattern | undefined {
 
 /**
  * Detect dangerous force-push indicators in a git push command.
- * --force-with-lease is SAFE (used by gt submit and CI auto-fix loops).
+ * --force-with-lease is SAFE (used by CI auto-fix loops).
  * --force (without -with-lease), -f, and + refspec prefix are DANGEROUS.
  */
 function isDangerousPush(command: string): boolean {
@@ -535,28 +549,17 @@ function parsePushTargetBranch(
 
 /**
  * Check if a remote mutation qualifies for silent auto-allow when commit
- * policy is 'auto-allow'. Only push-type commands (git push, gt submit,
- * gt stack submit) can qualify. Returns false for all other remote mutations.
+ * policy is 'auto-allow'. Only git push can qualify. Returns false for all
+ * other remote mutations.
  *
  * Conditions for auto-allow:
  * - getCurrentBranch() returns a known, non-protected branch
- * - No dangerous force flags (--force/-f/+ refspec) for git push
- * - No --publish flag for gt submit / gt stack submit
+ * - No dangerous force flags (--force/-f/+ refspec)
  * - Explicit target branch (if any) matches current branch
  * - Not a deletion refspec
  */
 async function canAutoAllowPush(command: string): Promise<boolean> {
   const cwd = extractEffectiveCwd(command, process.cwd());
-
-  // gt submit / gt stack submit
-  if (/\bgt\s+(stack\s+)?submit\b/.test(command)) {
-    // --publish changes PR state from draft to ready — always confirm
-    if (/--publish\b/.test(command)) return false;
-    const branch = await getCurrentBranch(cwd);
-    if (!branch || branch === "HEAD") return false;
-    if (PROTECTED_BRANCH_RE.test(branch)) return false;
-    return true;
-  }
 
   // git push
   if (/\bgit\s+push\b/.test(command)) {
@@ -651,7 +654,7 @@ async function teammateGate(
     return "allow";
   }
 
-  // 3. Votable mutations — gt submit (draft) or git push to feature branch.
+  // 3. Votable mutations — git push to feature branch.
   for (const { pattern, label } of TEAMMATE_VOTABLE_PATTERNS) {
     if (!pattern.test(command)) continue;
 
@@ -1093,7 +1096,7 @@ Vote YES for:
 - Python/Node/shell scripts that read, parse, transform, or print local data → YES
 - Multi-line scripts combining grep, find, python3 -c, jq, etc. to process local files (session logs, jsonl, config) — assess each command, but these are normal data-processing workflows → YES
 - Reading from /nix/store/ (read-only Nix store), ~/.pi/ (pi config), or session log directories → YES
-- Local CLI tools: slack-mcp, pi, bk (Buildkite), gh, gt (Graphite) with read-only subcommands → YES
+- Local CLI tools: slack-mcp, pi, bk (Buildkite), gh with read-only subcommands → YES
 - Reading company-internal GitHub repos (Shopify/infrastructure, Shopify/minerva, etc.) via gh api, gh search code, or gh repo view — this is routine developer work on an authenticated, VPN-connected workstation → YES
 - Network requests to localhost, 127.0.0.1, or *.shop.dev (local dev servers) → YES
 - Shell loops (for/while) composed of safe commands (grep, curl to localhost, gh api reads, git reads) → YES
@@ -1240,6 +1243,7 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*git\s+(status|log|diff|show|branch|tag|remote|fetch)\b/,
   /^\s*git\s+(reflog|blame|annotate|shortlog)\b/,
   /^\s*git\s+(ls-files|rev-parse|describe|merge-base|name-rev)\b/,
+  /^\s*git\s+(symbolic-ref|cat-file|show-ref|for-each-ref|var|ls-remote|check-ref-format|check-ignore)\b/,
   /^\s*git\s+worktree\s+list\b/,
   /^\s*git\s+stash\s+(list|show)\b/,
   /^\s*git\s+config\s+(--get|--list|-l)\b/,
@@ -1254,14 +1258,6 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*gh\s+run\s+(view|list|watch)\b/,
   /^\s*gh\s+workflow\s+(view|list)\b/,
 
-  // ── Graphite read operations ──
-  /^\s*gt\s+(ls|log|status|diff|branch\s+list)\b/,
-
-  // ── Graphite write operations (dev workflow, not destructive) ──
-  // Note: gt submit is handled by the remote mutation gate (Stage 1)
-  // Note: gt create/modify/absorb are handled by the commit gate (Stage 1.5)
-  /^\s*gt\s+(continue|add|restack|checkout|track|sync)\b/,
-  /^\s*gt\s+branch\s+(delete|rename)\b/,
 
   // ── GitHub CLI API (read-only by default; mutating methods caught by Stage 1,
   //    data flags caught by hasDangerousFlags) ──
@@ -1327,6 +1323,11 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   // ── Terminal multiplexer (window management, not arbitrary execution) ──
   /^\s*tmux\s+(new-window|split-window|select-window|list-windows|list-sessions|send-keys|select-pane|resize-pane|kill-pane|kill-window|display-message|set-option)\b/,
 
+  // ── cmux terminal/window manager (UI, panes, notifications, read-only inspection) ──
+  // Dangerous subcommands (vm/cloud/rpc/ssh, hooks install, auth login/logout) blocked via hasDangerousFlags.
+  // `cmux send` treated like `tmux send-keys` — blast radius limited to user's own panes.
+  /^\s*cmux\b/,
+
   // ── Ruby/Gem read operations ──
   /^\s*gem\s+(contents|list|search|info|spec|which|environment)\b/,
 
@@ -1381,6 +1382,12 @@ function hasDangerousFlags(cmd: string): boolean {
     if (/\s(-f\s|-F\s|--raw-field\s|--input\s)/.test(cmd)) {
       return true;
     }
+  }
+  // cmux: block VM control, raw RPC, SSH sessions, hooks install, auth login/logout
+  if (/^\s*cmux\b/.test(cmd)) {
+    if (/^\s*cmux\s+(vm|cloud|rpc|ssh|login|logout)\b/.test(cmd)) return true;
+    if (/^\s*cmux\s+hooks\s+\S+\s+install\b/.test(cmd)) return true;
+    if (/^\s*cmux\s+auth\s+(login|logout)\b/.test(cmd)) return true;
   }
   // Note: git push --force check removed — all git push is handled by remote mutation gate
   // ln: only allow symlinks targeting known-safe directories (dotfiles, .pi, /tmp)
@@ -1462,7 +1469,7 @@ function isSingleCommandSafe(cmd: string): boolean {
     const isAssignment = /^\s*(?:export\s+)?[A-Za-z_]\w*=/.test(trimmed);
     const isEchoLike = /^\s*(?:echo|printf)\b/.test(trimmed);
     const isSafeOuter =
-      /^\s*(?:grep|rg|cat|head|tail|wc|ls|file|stat|diff|basename|dirname)\b/.test(
+      /^\s*(?:grep|rg|cat|head|tail|wc|ls|file|stat|diff|basename|dirname|cp|mv|mkdir|test|\[)\b/.test(
         trimmed,
       );
     if (!isAssignment && !isEchoLike && !isSafeOuter) return false;
@@ -2837,11 +2844,15 @@ export default function (pi: ExtensionAPI) {
       // Teammate gate status (read-only — detection is automatic)
       if (arg === "teammate") {
         const isTm = isTeammateSession();
-        const paneId = process.env.TMUX_PANE ?? "(unset)";
+        // Detection is via PI_TEAM_ROLE (multiplexer-agnostic). Surface id is
+        // informational only — CMUX_SURFACE_ID under cmux, TMUX_PANE under tmux.
+        const role = process.env.PI_TEAM_ROLE ?? "(unset)";
+        const surface =
+          process.env.CMUX_SURFACE_ID ?? process.env.TMUX_PANE ?? "(unset)";
         ctx.ui.notify(
           isTm
-            ? `🤝 Teammate session detected (TMUX_PANE=${paneId}). Stage 0 gate active: commits auto-allow, gt submit / git push voted contextually, --publish / merge / force-push hard-blocked.`
-            : `Lead session (TMUX_PANE=${paneId}). Stage 0 teammate gate inactive — standard guard stages apply.`,
+            ? `🤝 Teammate session detected (PI_TEAM_ROLE=${role}, surface=${surface}). Stage 0 gate active: commits auto-allow, git push voted contextually, --publish / merge / force-push hard-blocked.`
+            : `Lead session (PI_TEAM_ROLE=${role}, surface=${surface}). Stage 0 teammate gate inactive — standard guard stages apply.`,
           "info",
         );
         return;

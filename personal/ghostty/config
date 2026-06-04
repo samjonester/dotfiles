@@ -1,0 +1,41 @@
+# Ghostty config — read by cmux for terminal behavior.
+# Docs: https://ghostty.org/docs/config/reference
+# Reload after editing: `cmux reload-config` (no app restart needed)
+
+# --- Font ---
+# Sauce Code Pro Nerd Font = Adobe Source Code Pro patched with Nerd Font glyphs
+# (Powerline, git status icons, devicons, etc.). Installed via:
+#   brew install --cask font-sauce-code-pro-nerd-font  (see personal/install.sh).
+# The "Mono" variant (SauceCodePro Nerd Font Mono) forces all glyphs to the same
+# advance width — slightly better cell alignment in terminals at the cost of
+# some icons being scaled down. Switch to that if you see misaligned columns.
+font-family = SauceCodePro Nerd Font
+font-size = 15
+
+# --- Theme ---
+# Gruvbox dark, matching personal/kitty/current-theme.conf.
+# Ghostty's theme= directive supports a light/dark pair separated by comma —
+# the active theme follows macOS appearance.
+theme = dark:Gruvbox Dark,light:Gruvbox Light
+
+# --- Cursor ---
+cursor-style = block
+cursor-style-blink = false
+
+# --- Window / chrome ---
+# cmux owns the tab bar; keep Ghostty's own chrome minimal.
+window-padding-x = 6
+window-padding-y = 4
+
+# --- Bell ---
+# Match kitty: no audio bell. cmux's pane-flash + notifications cover the visual side.
+audio-bell-volume = 0
+
+# --- Scrollback ---
+# NOTE: scrollback-limit is in BYTES per terminal surface, not lines.
+# Ghostty's default is 10000000 (10 MB). The old 500000 (500 KB) was ~20x
+# smaller than default and scrolled off almost immediately in long pi sessions.
+# 100 MB gives generous history for agents that stream lots of output.
+# Allocated lazily, so it won't consume memory upfront. Runtime-changeable,
+# but only affects NEW terminal surfaces — reload-config then open new panes.
+scrollback-limit = 100000000

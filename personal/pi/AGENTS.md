@@ -194,8 +194,8 @@ For plans without the Implementation Steps section (legacy plans or external doc
   - The user asks "should I compact?" or "fresh session?" — evaluate honestly; fresh often beats compact when the handoff is a single file path
   - A subagent or skill just ran and produced a finalized artifact (plan, review, finalized patch)
     When suggesting, the handoff prompt should be ONE line pointing at the artifact (file path, PR number, or skill) plus any critical state the doc doesn't capture (branch name, working tree status, user preferences confirmed in the current session).
-- When spawning a new tmux window, always give it a short descriptive name (e.g., `tmux new-window -n 'dev-server'`)
-- When spawning a task into a separate tmux window (e.g., planning, investigation), treat that window as the user's workspace for that task. Don't pull results back into the parent session — it duplicates context and pollutes history, making it hard to scroll back to the original work (like a triage) that triggered the spawn. Just confirm the window is open and let the user work there directly.
+- When spawning a new cmux workspace, always give it a short descriptive name (e.g., `cmux new-workspace --name 'dev-server' --focus true`)
+- When spawning a task into a separate cmux workspace (e.g., planning, investigation), treat that workspace as the user's workspace for that task. Don't pull results back into the parent session — it duplicates context and pollutes history, making it hard to scroll back to the original work (like a triage) that triggered the spawn. Just confirm the workspace is open and let the user work there directly.
 - When spawning teammates via `team_spawn`, consider whether the task needs tools outside the default `code` preset. The tool auto-infers from keywords, but pass `preset` explicitly when the task domain is clear: `triage` (Slack/calendar/email), `investigate` (Observe/vault/data), `workspace` (Docs/Sheets/Slides), `code+` (browser/Figma), `experiment` (feature flags/grokt), `all` (cross-domain). If the default preset lacks a required tool, the teammate will fail silently.
 
 ## Service Design
@@ -246,7 +246,7 @@ When asked to review **multiple PRs** ("review these PRs", "batch review #1 #2 #
 **Rules:**
 
 - Never dispatch the review skill from inside a teammate — always from the lead or via `batch-review`
-- Never use `team_spawn` for diff gathering — use `bg_run` (no tmux pane, no context overhead)
+- Never use `team_spawn` for diff gathering — use `bg_run` (no cmux pane, no context overhead)
 - Never use cron polling for review progress — `subagent` calls are blocking and return results directly
 
 ### Submitting review comments
@@ -258,8 +258,7 @@ Full calibration guide and API templates in knowledge files `review-calibration.
 
 ## PR Links
 
-- When linking to PRs in the `shop/world` repo, **always use Graphite links** (`https://app.graphite.com/github/pr/shop/world/<number>`) instead of GitHub links (`https://github.com/shop/world/pull/<number>`). Graphite is the primary review interface.
-- For repos outside `shop/world` that don't use Graphite, GitHub links are fine.
+- Use standard GitHub links for all PRs: `https://github.com/<org>/<repo>/pull/<N>`.
 
 ## PR Descriptions
 
@@ -285,7 +284,7 @@ When asked to generate/draft/write a PR description in Mozart:
 
 ## Mozart Plan & Implement
 
-When asked to plan and build a Mozart feature end-to-end, or to "give me options and implement them", load `mozart-plan-and-implement`. This orchestrates the full pipeline: planning (via the multi-model planning workflow), implementation (directly for N=1, or with parallel agent-teams for N>1), validation (dedicated validator teammate with dev server), and PR submission. It handles WTP slots, Graphite branch topology, and teammate coordination.
+When asked to plan and build a Mozart feature end-to-end, or to "give me options and implement them", load `mozart-plan-and-implement`. This orchestrates the full pipeline: planning (via the multi-model planning workflow), implementation (directly for N=1, or with parallel agent-teams for N>1), validation (dedicated validator teammate with dev server), and PR submission. It handles WTP slots, branch management, and teammate coordination.
 
 ## Mozart Worktree Routing (WTP)
 
@@ -306,7 +305,7 @@ When responding to Binks or assessing PR feedback, load the `binks-review` skill
 Binks reveals findings serially — PR #878 had 3 rounds over ~2 hours, 30-50 min idle between rounds. Prefer **one long-lived `binks_pr_<N>_watcher` teammate** per PR rather than respawning per round (which re-pays teammate-gate friction every time). Loop:
 
 1. Wait for Binks to settle on current HEAD (`gh pr checks <N> --watch` or poll — gate lands 5-30 min after push; follow-ups take up to 30-50 min more).
-2. Fetch findings, assess via the `binks-review` skill, fix valid ones, `gt modify`, push `--force-with-lease`. Post replies / 👍👎 reactions / thread resolves; until R2 ships, hand back to lead for the `gh` API mutations.
+2. Fetch findings, assess via the `binks-review` skill, fix valid ones, `git add -A && git commit --amend --no-edit`, then `git push --force-with-lease`. Post replies / 👍👎 reactions / thread resolves; until R2 ships, hand back to lead for the `gh` API mutations.
 3. Resume. Don't declare done after round 1 even if the gate is green — wait 1-2 hr after each push (complex PRs surface findings serially, e.g. #878's alt-screen extractor had 3 separate bugs). One watcher per PR — no multiplexing, no parallel watchers. Treat `shop-pi-fy` Binks the same as `shop/world` — it fires, just slower.
 
 ## Loop Scheduler
@@ -324,15 +323,15 @@ Suggest autoresearch (`/skill:autoresearch-create`) for iterative optimization l
 
 ## Git Safety
 
-- **When working in a worktree, NEVER touch the main checkout.** All commands — file edits, builds, tests, `gh` API calls, `gt` commands — must run from the worktree directory. The main checkout may have unstaged work from other sessions. `gt modify` and `gt submit` work directly from a worktree — there is no need to copy files back to the main checkout. If the task says "work in worktree X", `cd` to X and stay there for the entire task. Full worktree discipline guide in knowledge file `worktree-discipline.md` (auto-loaded when relevant).
+- **When working in a worktree, NEVER touch the main checkout.** All commands — file edits, builds, tests, `gh` API calls, git commands — must run from the worktree directory. The main checkout may have unstaged work from other sessions. `git commit --amend` and `git push` work directly from a worktree — there is no need to copy files back to the main checkout. If the task says "work in worktree X", `cd` to X and stay there for the entire task. Full worktree discipline guide in knowledge file `worktree-discipline.md` (auto-loaded when relevant).
 - **Never revert, checkout, or discard unstaged changes without explicit user approval.** Unstaged changes may be intentional work from other active sessions. Always assume they are. If there are conflicts or ambiguity with your task, ask before touching them. This includes `git checkout -- <file>`, `git restore`, `git stash`, and any command that would discard working tree changes.
-- Always highlight local git/graphite commands after executing them.
-- Never use `git commit` directly — use `gt modify` to amend the current commit, or `gt create` to start a new branch in the Graphite stack. The world repo uses Graphite for all branch/commit management.
+- Always highlight local git commands after executing them.
+- Use `git commit` for new commits, `git commit --amend` for amendments, `git push -u origin <branch>` for initial push, and `gh pr create --draft` for PR creation.
 - Never `git init` inside an existing git repository (creates nested repos). If a new standalone repo is needed, create it outside the current project tree first (e.g., `~/src/github.com/...`), then work there.
-- Commit commands (`gt create`, `gt modify`, `gt absorb`) are gated by the bash-guard commit gate (Stage 1.5). On first commit in a session, you'll be prompted for a session-scoped policy: auto-allow all, confirm each, or deny. Change mid-session with `/guard commits auto|confirm|reset`.
+- Commit commands (`git commit`, `git commit --amend`) are gated by the bash-guard commit gate (Stage 1.5). On first commit in a session, you'll be prompted for a session-scoped policy: auto-allow all, confirm each, or deny. Change mid-session with `/guard commits auto|confirm|reset`.
 - The commit gate listens for natural-language policy signals in user messages. Saying "allow commits", "auto-allow commits", or "commits are fine" at any point sets the policy to auto-allow. Saying "confirm commits" or "I want to approve each commit" sets it to confirm-each. You can also use `/guard commits auto|confirm|reset` directly.
-- **Publishing PRs for review**: Never use `gh pr ready` — it only updates GitHub and doesn't sync to Graphite. Use `gt submit --publish` to move a PR from draft to published. This is the correct way to mark a PR ready for review in the Graphite workflow.
-- **New branch work requires explicit approval before commit and submit.** When implementing new features or changes on a new branch, always pause and present the completed work for review **while changes are still unstaged**. Do not run `git add`, `gt create`, `gt modify`, or `gt submit` until the user approves. Present a summary of changes (files modified, key decisions, anything noteworthy) and wait for explicit greenlight. This does not apply to amendments on existing branches where the user has already reviewed the direction (e.g., CI fixes, review feedback).
+- **Publishing PRs for review**: Use `gh pr ready <N>` to move a draft PR to ready for review.
+- **New branch work requires explicit approval before commit and submit.** When implementing new features or changes on a new branch, always pause and present the completed work for review **while changes are still unstaged**. Do not run `git add`, `git commit`, or `git push` until the user approves. Present a summary of changes (files modified, key decisions, anything noteworthy) and wait for explicit greenlight. This does not apply to amendments on existing branches where the user has already reviewed the direction (e.g., CI fixes, review feedback).
 
 | Rationalization | Reality |
 |---|---|
@@ -344,7 +343,7 @@ Suggest autoresearch (`/skill:autoresearch-create`) for iterative optimization l
 
 ## CI Triggering (shop/world)
 
-CI no longer auto-runs on push (changed 4/13). Trigger explicitly with `devx ci run` after final submit. Full details in knowledge file `graphite-workflow.md` (auto-loaded when relevant).
+CI no longer auto-runs on push (changed 4/13). Trigger explicitly with `devx ci run` after final submit. Full details in knowledge file `git-workflow.md` (auto-loaded when relevant).
 
 ## Judgment & Autonomy
 

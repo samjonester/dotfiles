@@ -13,6 +13,7 @@ personal/pi/
 ├── presets.json       Preset definitions (code, investigate, all, etc.)
 ├── models.json        Provider/model overrides (e.g. maxTokens for 250k-context Anthropic provider)
 ├── auto-lint.json     Auto-lint rules
+├── memory-config.json → ~/.pi/memory/config.json (injection frequency, auto-persist mode)
 ├── agents/            Symlinked file-by-file into ~/.pi/agent/agents/ (layered with shop-pi-fy agents)
 ├── extensions/        Auto-loaded by package mechanism (no symlinks needed)
 ├── skills/            → ~/.pi/agent/skills/
@@ -55,8 +56,8 @@ These have no shop-pi-fy upstream — they're personal extensions that exist onl
 | `lfg` | `/lfg` quick-launch shortcuts |
 | `pi-autoresearch` | Autoresearch loop tooling (init/run/log experiments) |
 | `pi-figma-remote-mcp` | Figma MCP bridge configuration |
-| `pitw` | Pi tmux/window helpers |
-| `tm` | Tmux pane management |
+| `pitw` | `/btw` quick ephemeral side questions (uses conversation context) |
+| `tm` | `/tm` spawn a teammate with a task in one step |
 | `preset.ts` | Preset loading + `pendingToolValidation` mechanism for async-loaded tool extensions |
 
 ## Agent files

@@ -22,12 +22,12 @@ Auto-route based on these signals. Don't ask the user unless genuinely ambiguous
 - Task references a known skill that runs in its own session (`review`, `slack-triage`, `mozart-validate`, `mozart-plan-and-implement`, `binks-review`, `pr-ci-autofix`, `autoresearch-create`, ...)
 - Task needs a different working directory (worktree, separate repo)
 - Task needs a non-default preset (`triage`, `investigate`, `workspace`, `code+`, `experiment`, `all`)
-- User says "as a teammate", "spawn", "in tmux", "background", or similar
+- User says "as a teammate", "spawn", "in cmux", "background", or similar
 
 **Choose subagent when ANY of:**
 - Verb implies a single-shot artifact: `draft`, `summarize`, `extract`, `format`, `translate`, `analyze`, `propose`, `compare`, `lookup`, `cite`
 - Task is a focused research question with a clear, bounded answer
-- User says "as a subagent", "without spawning a tmux", "just give me", "return"
+- User says "as a subagent", "without spawning a workspace", "just give me", "return"
 
 **Override**: any explicit phrase ("as a subagent" / "as a teammate" / "with preset X") wins over heuristics.
 

@@ -1,0 +1,97 @@
+{
+  "$schema": "https://raw.githubusercontent.com/manaflow-ai/cmux/main/web/data/cmux.schema.json",
+  "schemaVersion": 1,
+
+  // Reload after editing: `cmux reload-config` (reloads cmux.json + Ghostty; no restart needed)
+  // Theme + terminal font live in ~/.config/ghostty/config (personal/ghostty/config).
+
+  "app": {
+    // Cmd-click a file path -> open in nvim in a new cmux tab via
+    // ~/dotfiles/bin/cmux-open-file. Built-in cmux viewer disabled
+    // so we can route everything through nvim (real LSP, real editor).
+    "openSupportedFilesInCmux": true,
+    "openMarkdownInCmuxViewer": true,
+    "preferredEditor": ""
+  },
+
+  "terminal": {
+    "copyOnSelect": false,
+    "showScrollBar": true
+  },
+
+  // Cmd-click web links (and shell `open http(s)://...`) go to the macOS
+  // default browser instead of cmux's embedded browser. The embedded browser
+  // isn't authenticated for IT-gated SSO links.
+  "browser": {
+    "openTerminalLinksInCmuxBrowser": false,
+    "interceptTerminalOpenCommandInCmuxBrowser": false
+  },
+
+  "sidebar": {
+    "showPullRequests": true,
+    "showProgress": true,
+    "showPorts": false,
+    "branchLayout": "inline"
+  },
+
+  "sidebarAppearance": {
+    "matchTerminalBackground": true,
+    "tintOpacity": 0.08,
+    "darkModeTintColor":  "#282828",
+    "lightModeTintColor": "#fbf1c7"
+  },
+
+  "workspaceColors": {
+    "indicatorStyle": "washRail",
+    "selectionColor": "#458588",
+    "notificationBadgeColor": "#fb4934",
+    "colors": {
+      "Red":      "#cc241d",
+      "Crimson":  "#9d0006",
+      "Orange":   "#d65d0e",
+      "Amber":    "#fabd2f",
+      "Yellow":   "#d79921",
+      "Olive":    "#979022",
+      "Green":    "#98971a",
+      "Teal":     "#689d6a",
+      "Aqua":     "#8ec07c",
+      "Blue":     "#458588",
+      "Navy":     "#076678",
+      "Indigo":   "#665c54",
+      "Purple":   "#b16286",
+      "Magenta":  "#d3869b",
+      "Rose":     "#fb4934",
+      "Brown":    "#7c6f64",
+      "Charcoal": "#3c3836"
+    }
+  },
+
+  "workspaceGroups": {
+    "byCwd": {
+      "~/world/trees/*":                                { "color": "#cc241d", "icon": "ladybug.fill" },
+      "~/dotfiles":                                     { "color": "#98971a", "icon": "gearshape.2.fill" },
+      "~/src/github.com/shopify-playground/*":          { "color": "#b16286", "icon": "paintbrush.fill" },
+      "~/.pi/agent/git/shopify-playground/shop-pi-fy*": { "color": "#d79921", "icon": "wrench.adjustable.fill" }
+    }
+  },
+
+  "notifications": {
+    "dockBadge": true,
+    "unreadPaneRing": true,
+    "paneFlash": false,
+    "sound": "Tink"
+  },
+
+  "automation": {
+    "suppressSubagentNotifications": true
+  },
+
+  "shortcuts": {
+    "bindings": {
+      "focusLeft":  "ctrl+cmd+h",
+      "focusDown":  "ctrl+cmd+j",
+      "focusUp":    "ctrl+cmd+k",
+      "focusRight": "ctrl+cmd+l"
+    }
+  }
+}
