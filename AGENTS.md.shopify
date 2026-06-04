@@ -1,68 +1,45 @@
 # Pi Configuration for Shopify Development
 
-This file should be copied to `~/src/shopify/AGENTS.md` to provide context for pi.
+This file provides context for pi when working in a Shopify monorepo.
 
 ## Project Context
 
-You're working in a Shopify monorepo with the following characteristics:
-- Large codebase requiring sparse checkout
-- Uses Graphite for PR stacks
+- Large monorepo requiring sparse checkout
+- Uses standard git + gh CLI for PR management
 - Uses `dev` command for server management
-- Worktrees are stored in `.pi/worktrees/`
-
-## Available Skills
-
-- `/skill:review-pr` - Set up isolated environment for PR review
-- `/skill:new-feature` - Start new feature work with Graphite stack
-- `/skill:resume-work` - Resume existing work
-- `/skill:worktree-status` - Show all worktrees and their status
+- Worktrees managed via WTP (`_wtp`)
 
 ## Workflow Preferences
 
 ### PR Reviews
 When user asks to review a PR, proactively:
-1. Suggest using `/skill:review-pr`
+1. Suggest using the `review` skill
 2. Remind them about sparse checkout if needed
-3. Show PR description and stack context
+3. Show PR description and context
 
 ### New Features
 When starting new work:
-1. Use descriptive worktree names: `feature-{name}`
-2. Initialize Graphite stack immediately
+1. Use WTP for worktree management (`_wtp`)
+2. Create feature branches with `git checkout -b <branch>`
 3. Follow conventional commit format
+4. Push with `git push -u origin <branch>` and `gh pr create --draft`
 
-### Graphite Commands
-Common commands to suggest:
-- `gt stack` - View current stack
-- `gt create` - New PR in stack
-- `gt checkout` - Navigate within stack
-- `gt sync` - Update and prune branches
-- `gt submit` - Push changes
+### Common Commands
+- `git log --oneline` — view recent commits
+- `git push` — push changes
+- `gh pr create --draft` — create draft PR
+- `gh pr ready <N>` — mark PR ready for review
+- `devx ci run` — trigger CI (doesn't auto-run on push)
 
 ### Server Management
 - Only one `dev up` server at a time
 - Always `dev down` before switching worktrees
-- Use different ports if needed: `dev up -p 3001`
-
-## Sparse Checkout Paths
-
-Default paths for sparse checkout (customize as needed):
-```
-app/
-config/
-db/
-lib/
-test/
-Gemfile*
-package.json
-```
 
 ## Code Style
 
 - Ruby: Follow Rubocop configuration
 - JavaScript/TypeScript: Follow ESLint configuration
 - Commit messages: Conventional commits (feat:, fix:, chore:, etc.)
-- PR titles: Clear and concise, under 70 characters
 
 ## Testing
 
@@ -76,13 +53,3 @@ Before submitting PRs:
 1. **Sparse checkout missing files**: Run `git sparse-checkout reapply`
 2. **Worktree conflicts**: Use `git worktree remove --force`
 3. **Server port in use**: Find and kill with `killport 3000`
-4. **Graphite out of sync**: Run `gt sync --force`
-
-## Terminal Setup
-
-Recommended layout:
-- Left pane: pi
-- Right top: Neovim for quick edits
-- Right bottom: Terminal for git/server commands
-
-Use tmux or terminal splits for best experience.
