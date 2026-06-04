@@ -178,8 +178,7 @@ Always include, regardless of ATC status.
 
 Find PRs from:
 
-1. Graphite bot DM (check DMs for messages from "Graphite" containing review requests)
-2. PRs mentioned in channel messages during triage
+1. PRs mentioned in channel messages during triage
 
 For each PR, check status:
 

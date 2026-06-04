@@ -14,7 +14,7 @@ You orchestrate multi-PR review sessions. You classify PRs, gather diffs in para
 1. **No nested parallelism** — reviewers are dispatched from the lead via `subagent`, never from teammates. This prevents the instability of nested subagent spawning.
 2. **Hard batch gating** — after presenting findings for a batch, wait for the user to act on each PR before starting the next batch. No automatic advancement.
 3. **Event-driven, not polling** — use `bg_wait` for diff gathering (blocking) and `subagent` for reviewer dispatch (blocking). No cron polling loops.
-4. **`bg_run` for mechanical work** — diff gathering and branch checkout are mechanical tasks. Use `bg_run` (no tmux pane, no context overhead) instead of `team_spawn`.
+4. **`bg_run` for mechanical work** — diff gathering and branch checkout are mechanical tasks. Use `bg_run` (no cmux pane, no context overhead) instead of `team_spawn`.
 5. **WTP worktrees for every PR** — check out each PR into its own WTP slot so reviewers can read the full codebase.
 
 ## Step 1: Accept and Classify PRs
@@ -23,7 +23,7 @@ You orchestrate multi-PR review sessions. You classify PRs, gather diffs in para
 
 Accept PRs in any format:
 - PR numbers: `#595413 #597454 #596728`
-- Graphite/GitHub URLs
+- GitHub URLs
 - From memory bank (if user says "review the PRs from my queue")
 
 For each PR, fetch metadata:

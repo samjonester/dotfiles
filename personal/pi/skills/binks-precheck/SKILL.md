@@ -9,7 +9,7 @@ Run the Binks code review engine locally against the current diff, then systemat
 
 ## When to use
 
-- Before `gt submit` on a new branch — catch findings before CI
+- Before pushing a new branch — catch findings before CI
 - After fixing Binks bot comments — verify fixes don't introduce new findings
 - Before marking a PR ready for review — clean up the diff proactively
 
@@ -21,7 +21,7 @@ Run the Binks code review engine locally against the current diff, then systemat
 
 ## Inputs
 
-- **Title** (optional) — PR title for context. Auto-detected from Graphite/git if omitted.
+- **Title** (optional) — PR title for context. Auto-detected from git/gh if omitted.
 - **Description** (optional) — PR description for context. Reduces false positives significantly.
 - **Output directory** (optional) — defaults to temp dir. Use `--output-dir` to persist results.
 
@@ -32,15 +32,9 @@ Run the Binks code review engine locally against the current diff, then systemat
 Before running binks, collect the PR title and description to reduce false positives:
 
 ```bash
-# Try Graphite first (preferred in world repo)
-TITLE=$(gt branch info --json 2>/dev/null | jq -r '.title // empty')
-DESCRIPTION=$(gt branch info --json 2>/dev/null | jq -r '.description // empty')
-
-# Fallback to gh if Graphite doesn't have it
-if [ -z "$TITLE" ]; then
-  TITLE=$(gh pr view --json title -q '.title' 2>/dev/null)
-  DESCRIPTION=$(gh pr view --json body -q '.body' 2>/dev/null)
-fi
+# Get title/description from GitHub PR if one exists
+TITLE=$(gh pr view --json title -q '.title' 2>/dev/null)
+DESCRIPTION=$(gh pr view --json body -q '.body' 2>/dev/null)
 ```
 
 If neither source has a title, ask the user for a one-line summary of the changes. The `--title` and `--description` flags are critical for reducing false positives — Binks uses them to understand intent.
@@ -171,11 +165,10 @@ Produce a final summary:
 If fixes were applied, stage and commit:
 
 ```bash
-git add -A
-gt modify --no-edit
+git add -A && git commit --amend --no-edit
 ```
 
-Do NOT auto-submit or auto-push. The user decides when to `gt submit` and `devx ci run`. This skill is about catching issues early, not automating the push workflow.
+Do NOT auto-submit or auto-push. The user decides when to push and `devx ci run`. This skill is about catching issues early, not automating the push workflow.
 
 ## Cleanup
 

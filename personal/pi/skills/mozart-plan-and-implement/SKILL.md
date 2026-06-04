@@ -1,6 +1,6 @@
 ---
 name: mozart-plan-and-implement
-description: End-to-end workflow from idea to implemented PR(s). Plans via the multi-model planning pipeline, then implements — directly for 1 option, or with parallel agent-teams for N options. Handles WTP slots, Graphite branches, and a dedicated validator teammate with dev server. Triggers on requests like "plan and implement", "give me options and build them", "build this feature end to end", or when the user has an idea they want taken through planning to shipped PR(s).
+description: End-to-end workflow from idea to implemented PR(s). Plans via the multi-model planning pipeline, then implements — directly for 1 option, or with parallel agent-teams for N options. Handles WTP slots, git branches, and a dedicated validator teammate with dev server. Triggers on requests like "plan and implement", "give me options and build them", "build this feature end to end", or when the user has an idea they want taken through planning to shipped PR(s).
 ---
 
 # Mozart: Plan and Implement
@@ -82,7 +82,7 @@ If not already in a Mozart WTP slot, claim one per [../\_shared/wtp-checkout.md]
 ### Step 2.2: Create branch
 
 ```bash
-gt create -m "<commit message from plan>" -a
+git checkout -b <branch-name> && git add -A && git commit -m "<commit message from plan>"
 ```
 
 ### Step 2.3: Implement
@@ -110,8 +110,8 @@ Ensure dev server is running, then execute Playwright validation per [../mozart-
 ### Step 2.7: Submit
 
 ```bash
-gt modify -a -m "<final commit message>"
-gt submit --no-edit --no-interactive
+git add -A && git commit --amend -m "<final commit message>"
+git push
 ```
 
 Update PR description with validation results.
@@ -143,39 +143,34 @@ pwd  # must be under .../areas/platforms/mozart
 If the options stack on a base PR that doesn't exist yet, create it first:
 
 ```bash
-gt create -m "<base commit message>" -a
-gt submit --no-edit --no-interactive --draft
+git checkout -b <base-branch-name> && git add -A && git commit -m "<base commit message>"
+git push -u origin HEAD && gh pr create --draft --fill
 ```
 
 Record the base branch name for use in step 3.2.
 
 ### Step 3.2: Pre-create all sibling branches
 
-**The lead creates ALL branches sequentially** to avoid Graphite stack races. Do this BEFORE spawning any teammates.
+**The lead creates ALL branches sequentially** to avoid branch creation races. Do this BEFORE spawning any teammates.
 
 For each option (e.g., Option A, Option B, Option C):
 
 ```bash
 # Switch to base branch
-gt checkout <base-branch>
+git checkout <base-branch>
 
-# Create the option branch as a child of base
-gt create -m "<Option X: one-line summary>" -a --no-interactive
+# Create the option branch off of base
+git checkout -b <option-branch-name>
+git add -A && git commit -m "<Option X: one-line summary>"
 
 # Record the branch name
 # e.g., MM-DD-option-a-short-description
 ```
 
-After creating all branches, restack once:
-
-```bash
-gt restack
-```
-
 Then return to the base branch:
 
 ```bash
-gt checkout <base-branch>
+git checkout <base-branch>
 ```
 
 ### Step 3.3: Claim WTP slots
@@ -232,7 +227,7 @@ Branch: <option-a-branch> (already checked out)
    This dispatches specialized reviewers (correctness, testing, design, etc.) in parallel
    and consolidates findings through a judge. Fix any CRITICAL or HIGH issues found,
    re-run tests/lint, and re-stage.
-7. DO NOT run gt modify, gt submit, or any Graphite commands — the lead handles all git operations
+7. DO NOT run git commit, git push, or any git write operations — the lead handles all git operations
 8. DO NOT start a dev server — the validator handles that
 9. When done, send a summary to @team_lead with:
    - Files changed
@@ -309,10 +304,10 @@ The lead monitors progress via `team_status` and incoming messages.
 cd <SLOT_N_DIR>/src/areas/platforms/mozart
 # The implementer already ran `git add -A` — verify:
 git status
-gt modify -a -m "<Option N: descriptive commit message>"
+git add -A && git commit --amend -m "<Option N: descriptive commit message>"
 ```
 
-Note: `gt modify` works from any worktree that has the branch checked out. The commit is stored in the shared `.git` and visible to all worktrees.
+Note: `git commit --amend` works from any worktree that has the branch checked out. The commit is stored in the shared `.git` and visible to all worktrees.
 
 3. If the option needs FE validation, message the validator:
 
@@ -337,13 +332,13 @@ After all options are implemented and validated, submit ALL PRs sequentially fro
 
 ```bash
 # From the lead's worktree or any implementer slot
-# First, restack to ensure all branches are up to date with base
-gt restack
+# First, rebase to ensure all branches are up to date with base
+git rebase <base-branch>
 
-# Then submit each option branch individually
+# Then push each option branch individually
 for each option branch:
-  gt checkout <option-branch>
-  gt submit --no-edit --no-interactive
+  git checkout <option-branch>
+  git push -u origin HEAD
 ```
 
 Update each PR description with:
@@ -407,12 +402,12 @@ When in doubt, **ask the user** after presenting the judge output: "The judge re
 
 Tell the user: "Need N+1 WTP slots but only M are free. Run `wtp grow <count>` to add more."
 
-### Graphite restack conflicts
+### Rebase conflicts
 
-If `gt restack` fails with conflicts:
+If `git rebase` fails with conflicts:
 
 1. Resolve conflicts in the affected branch
-2. `git add -A && gt restack --continue`
+2. `git add -A && git rebase --continue`
 3. If the conflict is between sibling options (they modify the same file in the base), this is expected — resolve per-branch
 
 ### One option's tests fail

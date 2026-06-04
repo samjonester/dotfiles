@@ -1,6 +1,6 @@
 ---
 name: pr-ci-autofix
-description: Watch CI for a PR (number or URL), notify on success, or triage/fix failures and confirm `gt modify` + `gt submit` before re-running the loop.
+description: Watch CI for a PR (number or URL), notify on success, or triage/fix failures and confirm `git commit --amend` + `git push` before re-running the loop.
 ---
 
 # PR CI Autofix
@@ -36,8 +36,8 @@ Use this skill when the user wants PR CI monitored continuously and wants automa
      5. Notify user with root cause + fix summary
 
 5. Before retrying CI, explicitly ask for confirmation:
-   - "Would you like me to run `gt modify` and `gt submit` to retrigger CI?"
-   - Only if user says yes: run `gt modify`, then `gt submit`, then `devx ci run` (CI no longer auto-triggers on push in shop/world)
+   - "Would you like me to run `git commit --amend` and `git push` to retrigger CI?"
+   - Only if user says yes: run `git add -A && git commit --amend --no-edit`, then `git push`, then `devx ci run` (CI no longer auto-triggers on push in shop/world)
    - Re-start monitoring loop for the updated PR/build
 
 ## Defaults
@@ -51,7 +51,7 @@ Use this skill when the user wants PR CI monitored continuously and wants automa
 - Monitoring loop: `/loop`, `CronCreate`, `CronList`, `CronDelete`
 - PR resolution: `gh pr view` (via `bash`)
 - Buildkite triage: `bk_build_info`, `bk_failed_jobs`, `bk_job_failure`
-- Git/stack actions: `gt modify`, `gt submit` (never `git commit`)
+- Git actions: `git commit --amend`, `git push`
 - CI trigger: `devx ci run` (required after submit — CI no longer auto-runs on push in shop/world)
 
 ## Scheduler hygiene

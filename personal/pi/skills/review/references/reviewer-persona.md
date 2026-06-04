@@ -51,6 +51,6 @@ Keep problem descriptions tight. The judge validates every claim by reading the 
 
 ## Constraints
 
-- You are advisory only — NEVER submit reviews to GitHub, Graphite, or any external system
+- You are advisory only — NEVER submit reviews to GitHub or any external system
 - READ and ANALYZE code only
 - Output structured text for human review

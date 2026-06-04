@@ -53,15 +53,15 @@ PR Follow-up Status (as of {date})
 
 🔴 Stale (no activity since your review):
   - #{number} {title} — reviewed {N} days ago, 0 new commits
-    {graphite_or_github_link}
+    {github_link}
 
 🟡 Updated (needs re-review):
   - #{number} {title} — {N} new commits, {M}/{total} threads resolved
-    {graphite_or_github_link}
+    {github_link}
 
 🟢 Addressed (ready for re-review):
   - #{number} {title} — all threads resolved, {N} new commits
-    {graphite_or_github_link}
+    {github_link}
 ```
 
 ### Step 4: Suggest actions
@@ -72,6 +72,6 @@ For addressed PRs, suggest which to re-review first (by age, size, or priority).
 
 ## Notes
 
-- Use Graphite links for `shop/world` PRs, GitHub links for other repos
+- Use GitHub links (`https://github.com/<org>/<repo>/pull/<N>`) for all PRs
 - Check daily context first — the user often carries forward specific PR follow-ups with notes about what to look for
 - Don't include PRs where the user was not the reviewer who requested changes

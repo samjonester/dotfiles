@@ -15,7 +15,7 @@ Parse the user's input to determine the review source. Try each in order:
 
 ### 1a. PR number or URL
 
-If the user provided a PR number (e.g., `#1234`, `PR 1234`) or URL (GitHub/Graphite):
+If the user provided a PR number (e.g., `#1234`, `PR 1234`) or URL (GitHub):
 
 ```bash
 # For PR number — detect the repo from the current directory
@@ -549,7 +549,7 @@ Check yourself against these before taking shortcuts:
 
 ## Constraints
 
-- NEVER submit reviews to GitHub, Graphite, or any external system
+- NEVER submit reviews to GitHub or any external system
 - NEVER push code without explicit user approval
 - NEVER review code yourself — always dispatch through the subagent pipeline
 - Output the review as formatted text for the human to act on

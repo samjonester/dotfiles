@@ -70,8 +70,8 @@ For findings assessed as valid and worth fixing:
 3. Run `dev typecheck` to verify (if available in the worktree)
 4. Stage, amend, submit:
    ```bash
-   git add -A && gt modify --no-edit
-   gt submit --no-edit --stack
+   git add -A && git commit --amend --no-edit
+   git push --force-with-lease
    devx ci run
    ```
 
