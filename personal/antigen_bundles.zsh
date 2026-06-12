@@ -22,6 +22,7 @@
 
 antigen theme https://github.com/denysdovhan/spaceship-zsh-theme spaceship
 SPACESHIP_DIR_PREFIX="\n"
+SPACESHIP_DIR_TRUNC=5
 SPACESHIP_DIR_TRUNC_REPO=false
 SPACESHIP_GIT_STATUS_SHOW=false
 SPACESHIP_GIT_PREFIX="\n"
