@@ -127,4 +127,4 @@
 [http "https://*.quick.shopify.io/"]
 	extraHeader = X-Requested-With: XMLHttpRequest
 [shop-world "stale-pr-cutoff"]
-	main = 1780401527
+	main = 1781099635

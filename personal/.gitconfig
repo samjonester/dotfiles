@@ -73,7 +73,7 @@
     rc = rebase --continue
     ri = rebase -i --autosquash
     rim = !git ri origin/main
-    frm = !git f && git rebase origin/main
+    frm = !git f origin main && git rebase origin/main
     unstage = reset HEAD
     fix = !sh -c 'REV=$(git rev-parse $1) && git commit --fixup $@ && git rebase -i --autosquash $REV^' -
     l = !git l -n 10
