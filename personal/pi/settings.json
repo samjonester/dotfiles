@@ -28,7 +28,7 @@
       ]
     ]
   },
-  "defaultModel": "claude-opus-4-8",
+  "defaultModel": "claude-opus-4-6",
   "defaultProvider": "anthropic",
   "defaultThinkingLevel": "high",
   "enableSkillCommands": true,
@@ -44,7 +44,7 @@
   ],
   "extensions": [],
   "hideThinkingBlock": false,
-  "lastChangelogVersion": "0.77.0",
+  "lastChangelogVersion": "0.78.1",
   "npmCommand": [
     "pnpm"
   ],
