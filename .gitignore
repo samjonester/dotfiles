@@ -4,3 +4,9 @@ personal/kitty/kitty-themes
 
 # pi extension deps installed via personal/pi/package.json
 personal/pi/node_modules/
+
+# pi config with Shopify proprietary content (unversioned 2026-06-12)
+personal/pi/skills/mozart-blog-url-generation/SKILL.md
+personal/pi/skills/mozart-be-validation/SKILL.md
+personal/pi/skills/mozart-fe-validation/SKILL.md
+personal/pi/agents/task-runner.md
