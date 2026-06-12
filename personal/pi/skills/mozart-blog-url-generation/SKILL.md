@@ -64,7 +64,9 @@ Validate every user-supplied enum value against the matching list in `taxonomy` 
 | `platform`      | `taxonomy.platforms.generation_supported` | `"platform 'reddit' not valid. Valid values: meta, google"` (reject reddit/pinterest/tiktok up front — they appear in `taxonomy.platforms.publishing_supported` but generation-only supports meta/google) |
 | `cta_type`      | `taxonomy.cta_types.supported`            | `"cta_type 'BUY_NOW' not valid. Valid values: LEARN_MORE, SIGN_UP, INSTALL_MOBILE_APP, CONTACT_US, START_FOR_FREE"` |
 | `business_line` | `taxonomy.business_lines`                 | `"business_line 'Foo' not valid. Valid values: Audience Priming, Reach Expansion, Replatformer, Retail, Standard, Upmarket"` |
-| `market`        | `taxonomy.markets`                        | `"market 'XX' not valid. Valid values: AU, AU&UK&IE, BR, CA, ..."`                                         |
+| `market`           | `taxonomy.markets`                        | `"market 'XX' not valid. Valid values: AU, AU&UK&IE, BR, CA, ..."`                                         |
+| `creative_message` | `taxonomy.creative_tactics`               | `"creative_message 'INVALID' not valid. Valid values: BLOG, TESTIMONIAL, ..."` |
+| `source`           | `taxonomy.sources`                        | `"source 'BAD' not valid. Valid values: TOOLS_AI, ..."` (note: backend accepts arbitrary strings, but validate against common values for consistency) |
 
 Do not hardcode any of these allowed-value lists in skill logic. The concrete defaults shown elsewhere in this skill (`meta`, `LEARN_MORE`, etc.) are illustrative — always re-confirm them against the cached `taxonomy` at runtime.
 
@@ -72,19 +74,20 @@ Do not hardcode any of these allowed-value lists in skill logic. The concrete de
 
 Valid options for every enum-shaped input below come from the cached `taxonomy` returned by `get_ad_taxonomy`, not from a hardcoded list in this skill. Always validate user input against `taxonomy` and reject with an error that prints the actual allowed values from the cached payload (see Validation rules above).
 
-**Minimize what you ask for.** Only the first two rows below are required from the user — everything else has a sensible default for the blog-URL flow. Don't ask about optional inputs unless the user volunteers them.
+**Minimize what you ask for.** The first three rows plus `business_line` and `market` are required — everything else has a sensible default for the blog-URL flow. Don't ask about optional inputs unless the user volunteers them.
 
 | Input             | Required | Default                | Notes                                                                                                                                                                                                            |
 | ----------------- | -------- | ---------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
 | List of blog URLs | yes      | —                      | Accept paste, file path, or interactive prompt. **Filter client-side**: `URI.parse(url).scheme == "https" && uri.host.end_with?("shopify.com")`. Print rejected URLs back, ask whether to proceed with the rest. |
 | Folder name       | yes      | —                      | string                                                                                                                                                                                                           |
 | Platform          | yes      | —                      | User picks from `taxonomy.platforms.generation_supported` (currently `["meta", "google"]`). Reject any other value (including `reddit`/`pinterest`/`tiktok`, which appear in `taxonomy.platforms.publishing_supported` but are not supported for generation) with a clear error listing allowed values.                                            |
+| business_line     | yes      | —                      | **Required by MCP tool.** User picks from `taxonomy.business_lines`. Validate against the cached taxonomy; reject anything not in the list with a clear error listing allowed values.                             |
+| market            | yes      | —                      | **Required by MCP tool.** User picks from `taxonomy.markets`. Validate against the cached taxonomy; reject anything not in the list with a clear error listing allowed values.                                    |
 | Languages         | no       | `["en"]`               | Per-language config defaults to `cta_button_text="Learn more"`, `button_url=` scrape's `localized_urls[lang]` if present, else the canonical blog URL. Only ask if the user wants additional languages.        |
 | cta_type          | no       | `LEARN_MORE`           | Validate against `taxonomy.cta_types.supported`; reject anything not in the list with a clear error listing allowed values. (Default `LEARN_MORE` differs from the tool's generic `taxonomy.cta_types.default` of `SIGN_UP` because blog-URL ads almost always read better with "Learn more".)                       |
-| business_line     | no       | omit (nil)             | Optional metadata on the generated `AdContent`. If user provides, validate against `taxonomy.business_lines`; reject anything not in the list with a clear error listing allowed values. Otherwise leave blank. |
-| market            | no       | omit (nil)             | Optional metadata on the generated `AdContent`. If user provides, validate against `taxonomy.markets`; reject anything not in the list with a clear error listing allowed values. Otherwise leave blank.        |
 | concept_title     | n/a      | scraper-provided       | **Always sourced from the scrape** (blog `<h1>` via `get_scrape_status.concept_title`). Don't ask the user.                                                                                                      |
-| creative_message  | n/a      | `"BLOG"`               | **Always send `"BLOG"` for this skill** — source content is blog by definition. Don't ask the user. Gates `AdAssetTemplate.select_for` template selection; passing `"BLOG"` explicitly avoids edge cases in older code paths that call `creative_message.upcase`. |
+| creative_message  | n/a      | `"BLOG"`               | **Always send `"BLOG"` for this skill** — source content is blog by definition. Don't ask the user. This field is **required by the MCP tool**; hardcode it. Gates `AdAssetTemplate.select_for` template selection; passing `"BLOG"` explicitly avoids edge cases in older code paths that call `creative_message.upcase`. |
+| source            | n/a      | `"TOOLS_AI"`           | **Always send `"TOOLS_AI"` for this skill** — content is AI-generated via tooling. This field is **required by the MCP tool**; hardcode it. Don't ask the user.                                                |
 | prompt_context    | optional | scrape's `page_context`| If user provides extra context, prepend to each per-URL `page_context` before submission. Otherwise just send `page_context` from the scrape.                                                                  |
 
 ## Per-URL state machine
@@ -114,10 +117,11 @@ state: SCRAPED
     using:
       concept_title = scrape.concept_title  # always from scraper
       creative_message = "BLOG"              # always — this skill only handles blog URLs
+      source = "TOOLS_AI"                    # always — content is AI-generated via tooling
       prompt_context = (user's prompt_context if any) + "\n" + scrape.page_context
       cta_type = user input or "LEARN_MORE" default
-      business_line = user input or omitted
-      market = user input or omitted
+      business_line = user input (required)   # validated against taxonomy
+      market = user input (required)          # validated against taxonomy
       language_configurations[] defaults:
         - language: "en"
         - cta_button_text: "Learn more"
@@ -185,7 +189,7 @@ Schema:
   "folder_id": 12345,
   "platform": "meta",
   "created_at": "2026-04-29T10:00:00Z",
-  "shared_inputs": { "cta_type": "LEARN_MORE", "business_line": null, "market": null },
+  "shared_inputs": { "cta_type": "LEARN_MORE", "business_line": "Standard", "market": "US", "creative_message": "BLOG", "source": "TOOLS_AI" },
   "urls": [
     {
       "url": "https://www.shopify.com/blog/foo",
