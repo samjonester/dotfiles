@@ -104,11 +104,6 @@
 [maintenance]
 	autoupdate = true
 	repo = /Users/sam/world/git
-[filter "lfs"]
-	clean = git-lfs clean -- %f
-	smudge = git-lfs smudge -- %f
-	process = git-lfs filter-process
-	required = true
 [fetch]
 	writeCommitGraph = true
 [status]
@@ -127,4 +122,9 @@
 [http "https://*.quick.shopify.io/"]
 	extraHeader = X-Requested-With: XMLHttpRequest
 [shop-world "stale-pr-cutoff"]
-	main = 1781099635
+	main = 1781159059
+[filter "lfs"]
+	clean = git-lfs clean -- %f
+	smudge = git-lfs smudge -- %f
+	process = git-lfs filter-process
+	required = true
