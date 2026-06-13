@@ -61,7 +61,8 @@
     pu = push -u origin HEAD
     pun = !git pu --no-verify
     pfn = !git pf --no-verify
-    pf = push --force-with-lease
+    pf = push --force-with-lease --force-if-includes
+    pforce = push --force
     pt = push --tags
     r = rebase
     rs = rebase -i --autosquash
