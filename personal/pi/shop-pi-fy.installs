@@ -19,7 +19,7 @@ ext: fork-back
 ext: output-guard
 ext: profiles
 ext: rtk-rewrite
-ext: tmux-fork
+# ext: tmux-fork — removed (tmux-only; replaced by /lfg + /lfg-pane via cmux)
 ext: usage-tracker
 ext: vim-mode
 
@@ -100,4 +100,4 @@ agent: review-testing
 
 # ── Prompts ───────────────────────────────────────────────────────────────────
 
-prompt: shell.md
+# prompt: shell.md — replaced by dotfiles fork (cmux rewrite)

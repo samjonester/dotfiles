@@ -1320,9 +1320,6 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*pi\s+(tool|session|model|config|extension|install|remove|uninstall|update|list|introspect)\b/,
   /^\s*bk\b/,
 
-  // ── Terminal multiplexer (window management, not arbitrary execution) ──
-  /^\s*tmux\s+(new-window|split-window|select-window|list-windows|list-sessions|send-keys|select-pane|resize-pane|kill-pane|kill-window|display-message|set-option)\b/,
-
   // ── cmux terminal/window manager (UI, panes, notifications, read-only inspection) ──
   // Dangerous subcommands (vm/cloud/rpc/ssh, hooks install, auth login/logout) blocked via hasDangerousFlags.
   // `cmux send` treated like `tmux send-keys` — blast radius limited to user's own panes.
