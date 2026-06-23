@@ -4,6 +4,16 @@
 # This file is symlinked to ~/.zshenv by personal/install.sh so it follows
 # you across machines, just like .zshrc.
 
+# Non-interactive git editor guard.
+# When stdout is not a terminal (pi shell-mode `!cmd`, agent shells, scripts),
+# never let git spawn an interactive editor. A captured vim/nano writes raw
+# alt-screen + scroll-region escapes (ESC[?1049h, ESC[1;24r) to stdout, which pi
+# persists into the session and replays on every resume — permanently clamping
+# the terminal to the top rows. `true` makes git accept the prepared message.
+# The `[ -t 1 ]` gate leaves interactive zsh and pi `!i`/`!f` fullscreen mode
+# (which allocate a PTY) untouched, so `git commit` / `git rebase -i` still work.
+[ -t 1 ] || export GIT_EDITOR=true
+
 # Cargo (Rust) — needed on PATH for non-interactive shells too.
 [ -f "$HOME/.cargo/env" ] && . "$HOME/.cargo/env"
 

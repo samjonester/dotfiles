@@ -10,4 +10,13 @@
 
 shopt -s expand_aliases 2>/dev/null
 
+# Non-interactive git editor guard.
+# When stdout is not a terminal (pi's bash tool, agent shells, scripts), never
+# let git spawn an interactive editor. A captured vim/nano writes raw alt-screen
+# + scroll-region escapes (ESC[?1049h, ESC[1;24r) to stdout, which pi persists
+# into the session and replays on every resume — permanently clamping the
+# terminal to the top rows. `true` makes git accept the prepared message and
+# move on. The `[ -t 1 ]` gate leaves your real interactive editor untouched.
+[ -t 1 ] || export GIT_EDITOR=true
+
 [ -f "$HOME/dotfiles/personal/aliases.zsh" ] && . "$HOME/dotfiles/personal/aliases.zsh"
