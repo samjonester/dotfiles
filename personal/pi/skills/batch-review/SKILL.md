@@ -91,16 +91,27 @@ For each PR in the batch, launch a `bg_run` job that:
 2. Checks out the PR branch
 3. Writes the diff to a temp file
 
+> **⚠️ Two footguns this block MUST guard against — both bit a real session (2026-06-22):**
+>
+> 1. **Empty `TARGET_DIR` → destructive git in the wrong checkout.** When `_wtp` fails to return a path (race, branch already exists locally, no free slot), `TARGET_DIR` comes back empty. `cd ""` then **silently stays in the current directory** (the main checkout), and the following `git reset --hard` / `git checkout` run *there* — clobbering the root checkout's branch. ALWAYS abort the script if `TARGET_DIR` is empty or not a directory, and capture `_wtp`'s status output (it prints to **stderr**, the path to **stdout**).
+> 2. **Parallel-claim race.** Launching multiple `_wtp` claims simultaneously makes two jobs grab the **same** slot (`_wtp` is not atomic — `index.lock` collision). **Claim slots SEQUENTIALLY**, then gather diffs in parallel.
+
+**Step 1 — claim each slot sequentially** (one `bg_run` per PR, `bg_wait` each before launching the next):
+
 ```bash
 bg_run({
   command: "bash -c '\
+    set -euo pipefail; \
     WTP_BIN=$HOME/src/github.com/shopify-playground/wtp/bin/_wtp; \
     BRANCH=<headRefName>; \
-    TARGET_DIR=$($WTP_BIN \"$BRANCH\"); \
+    TARGET_DIR=$(\"$WTP_BIN\" \"$BRANCH\" 2>/tmp/wtp-<number>.err); \
+    cat /tmp/wtp-<number>.err; \
+    if [ -z \"$TARGET_DIR\" ] || [ ! -d \"$TARGET_DIR\" ]; then echo \"ABORT: no valid worktree dir for <number>\"; exit 1; fi; \
     cd \"$TARGET_DIR\"; \
-    git fetch origin \"$BRANCH\"; \
+    echo \"PWD=$(pwd)\"; \
+    git fetch origin \"$BRANCH\" 2>&1 | tail -1; \
     git checkout \"$BRANCH\" 2>/dev/null || git checkout -b \"$BRANCH\" \"origin/$BRANCH\"; \
-    git reset --hard \"origin/$BRANCH\"; \
+    git reset --hard \"origin/$BRANCH\" 2>&1 | tail -1; \
     echo \"WORKTREE=$TARGET_DIR\"; \
     gh pr diff <number> > /tmp/review-<number>.diff; \
     echo \"DIFF_READY=/tmp/review-<number>.diff\"; \
@@ -108,11 +119,13 @@ bg_run({
 })
 ```
 
-Launch all jobs for the batch simultaneously, then `bg_wait` for each.
+`set -euo pipefail` + the explicit `TARGET_DIR` guard mean the script can never run git against the wrong checkout — it exits non-zero instead. `bg_wait` each job and confirm it printed `WORKTREE=<path>` and `DONE` before launching the next claim.
 
-Parse the output to extract `WORKTREE` path and `DIFF_READY` path for each PR.
+Parse the output to extract `WORKTREE` path and `DIFF_READY` path for each PR. Treat a job that exited non-zero, printed `ABORT:`, or has an empty `WORKTREE=` as a **failed claim** (see below) — do NOT proceed to review that PR until it has a real worktree.
 
-**If WTP fails** (no free slots): inform the user and offer to either free slots or fall back to diff-only review for that PR.
+**Step 2 — `gh pr diff` does not need a worktree.** If a claim fails but you still want to review, the diff was likely already written (or can be fetched standalone with `gh pr diff <number> > /tmp/review-<number>.diff`); fall back to diff-only review for that PR (a degraded mode — warn the user).
+
+**If WTP fails** (no free slots, or a claim aborts): inform the user and offer to either free slots (`_wtp status` then `_wtp free <slot>`) or fall back to diff-only review for that PR. If you accidentally clobbered the main checkout, restore it: `git -C <root>/src checkout <original-branch>` (find it via `git -C <root>/src reflog`).
 
 ### 3b. Review each PR
 
@@ -133,10 +146,11 @@ For each PR in the batch, sequentially:
 }
 ```
 
-5. **Evaluate early exit** — per the review skill's Step 4b rules (tiny + 0 findings → skip optional + judge)
-6. **Dispatch optional reviewers** if needed (same pattern, `cwd` set)
-7. **Compress findings** per the review skill's Step 5a
-8. **Dispatch judge** via `subagent`:
+5. **Detect silent batch failures** — per the review skill's Step 4c. After every parallel `subagent` batch returns, check for `Parallel: M/N succeeded` where `M < N`, `(failed)`/`(no output)` agent blocks, or `Agent error:` strings. The reviewer never ran — do NOT pass empty output to the judge. Re-dispatch each failed agent as a **single** `subagent` call (singles surface the real error and almost always succeed when a wide batch silently failed). This bit a real session (2026-06-22): a 5-wide parallel batch returned `0/5 succeeded` with empty bodies; re-dispatching as one batch of 1 + one batch of 4 both worked.
+6. **Evaluate early exit** — per the review skill's Step 4b rules (tiny + 0 findings → skip optional + judge)
+7. **Dispatch optional reviewers** if needed (same pattern, `cwd` set)
+8. **Compress findings** per the review skill's Step 5a
+9. **Dispatch judge** via `subagent`:
 
 ```json
 {
@@ -146,9 +160,11 @@ For each PR in the batch, sequentially:
 }
 ```
 
-9. **Store the review output** — save the full formatted review for presentation
+10. **Store the review output** — save the full formatted review for presentation
 
 **Parallelism note:** Review PRs within a batch sequentially (one at a time), not in parallel. Each PR's reviewer dispatch is already parallel (3-5 subagents). Running multiple PRs' reviewers simultaneously would be 10-15+ concurrent subagents — the same instability that caused crashes in session e38c4798.
+
+**Keep each parallel `subagent` dispatch ≤4 agents.** Batches of 5+ have failed silently (`0/N succeeded`, empty bodies) — see session 2026-06-22 where a 5-wide batch died and a 4-wide retry succeeded. If a change type maps to 5+ core reviewers, split into two dispatches (e.g. 4 + 1) rather than one wide batch. The judge always runs as its own single dispatch.
 
 ### 3c. Present batch findings
 
@@ -249,6 +265,9 @@ In practice, the sequential subagent dispatch in Step 3b makes monitoring unnece
 - NEVER submit reviews without user approval — present drafts first
 - NEVER use cron polling — the sequential `subagent` calls are inherently blocking
 - NEVER do a single-pass ad-hoc review for any PR in the batch — every PR gets the full review pipeline
+- NEVER `cd "$TARGET_DIR"` without first asserting it's non-empty and a real directory — an empty value silently runs destructive git in the main checkout
+- NEVER launch WTP claims in parallel — claim slots sequentially (`_wtp` is not atomic), then gather diffs in parallel
+- NEVER dispatch more than 4 subagents in a single parallel batch — split 5+ into multiple dispatches
 - Handle WTP slot exhaustion gracefully — inform the user, offer alternatives
 - Clean up temp files and WTP slots after each batch, not at the end
 
