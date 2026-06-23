@@ -1057,7 +1057,11 @@ async function showCommitConfirmDialog(
  * amplify the same bias. 3 votes still get majority signal with less cost/latency
  * and fewer false-unanimous-NO results from prompt miscalibration. */
 const VOTES_PER_MODEL = 1;
-const VOTE_TIMEOUT_MS = 5000;
+// 8s (raised from 5s): fast review models occasionally exceed 5s under load,
+// and a fully-timed-out vote (all abstentions) falls through to a blocking
+// dialog — a reliability false-alert, not a safety signal. The Stage-2 path
+// also retries once on full abstention (see runVoteTracking call site).
+const VOTE_TIMEOUT_MS = 8000;
 
 const EXPLAINER_PROVIDER = "anthropic";
 const EXPLAINER_MODEL_ID = "claude-haiku-4-5";
@@ -1328,6 +1332,23 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   // ── Ruby/Gem read operations ──
   /^\s*gem\s+(contents|list|search|info|spec|which|environment)\b/,
 
+  // ── Google Cloud / BigQuery (read-only; mutating verbs blocked in hasDangerousFlags) ──
+  // gcloud/bq are whitelisted broadly here, then hasDangerousFlags rejects
+  // deploy/run/delete/create/update/storage-write/bq-DML/etc. This allows
+  // routine read ops (list, describe, get-value, logging read, storage ls,
+  // test-iam-permissions, bq show/ls/head) while still flagging mutations.
+  /^\s*gcloud\b/,
+  /^\s*bq\b/,
+
+  // ── dbt read-only subcommands (compile/parse/ls/deps/debug — never run/build/seed) ──
+  /^\s*(?:uv\s+run\s+)?dbt\s+(compile|parse|ls|list|deps|debug)\b/,
+
+  // ── awk (read/transform; system()/getline/-f/in-program writes blocked in hasDangerousFlags) ──
+  /^\s*awk\b/,
+
+  // ── rmdir (removes only empty directories — non-destructive) ──
+  /^\s*rmdir\b/,
+
   // ── Git write operations (normal dev workflow) ──
   // Note: git push is handled by the remote mutation gate (Stage 1)
   /^\s*git\s+(add|checkout|switch|restore|stash|cherry-pick|rebase|reset)\b/,
@@ -1341,8 +1362,9 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
 /** Stderr redirects that are always safe to strip before analysis. */
 const STDERR_REDIRECT = /\s*2>(?:&1|\/dev\/null)/g;
 
-/** Splits a full command line into independent segments on &&, ||, ;, or \n. */
-const COMMAND_SEPARATOR = /\s*(?:&&|\|\||;|\n)\s*/;
+// Top-level command separators (&&, ||, ;, \n) are split by the quote-aware
+// splitTopLevel() helper rather than a regex split, so quoted arguments
+// containing those tokens are not shattered into bogus segments.
 
 /**
  * Check if a conditionally-safe command has dangerous flags.
@@ -1376,9 +1398,49 @@ function hasDangerousFlags(cmd: string): boolean {
   }
   // gh api: block data flags that trigger implicit POST (method flags caught by Stage 1)
   if (/^\s*gh\s+api\b/.test(cmd)) {
+    // Explicit DELETE is always dangerous. Stage 1's mutation gate exempts the
+    // review endpoints (comments/reactions/threads/resolve), so without this a
+    // `gh api .../replies -X DELETE` would slip through to the whitelist.
+    if (/(?:--method|-X)\s+DELETE\b/i.test(cmd)) return true;
+    // Carve-out: routine PR-review writes (review comments/replies, reactions,
+    // thread resolves, review posting) are safe and constant in the lead's
+    // workflow. Mirrors the teammate-gate Binks-reply allowlist.
+    if (isAllowedGhApiReviewWrite(cmd)) return false;
     if (/\s(-f\s|-F\s|--raw-field\s|--input\s)/.test(cmd)) {
       return true;
     }
+  }
+  // gcloud: allow read-only subcommands; block deploys, mutations, remote exec.
+  if (/^\s*gcloud\b/.test(cmd)) {
+    if (
+      /\bgcloud\s+(?:[\w-]+\s+)*?(deploy|run|delete|create|update|remove|add|patch|import|export|reset|restart|start|stop|kill|ssh|scp|set-iam-policy|add-iam-policy-binding|remove-iam-policy-binding|abandon|cancel|enable|disable)\b/.test(
+        cmd,
+      )
+    ) {
+      return true;
+    }
+    // gcloud storage: block writes/moves/removes (ls/cat/du are read-only)
+    if (/\bgcloud\s+storage\s+(cp|mv|rm|rsync|delete|create|update)\b/.test(cmd)) {
+      return true;
+    }
+  }
+  // bq: block DML/DDL and data movement; bq query is safe only as --dry_run.
+  if (/^\s*bq\b/.test(cmd)) {
+    if (/\bbq\s+(?:--?\S+\s+)*?query\b/.test(cmd)) {
+      return !/--dry_run\b/.test(cmd);
+    }
+    if (/\bbq\s+(?:--?\S+\s+)*?(rm|mk|cp|load|insert|update|delete|extract)\b/.test(cmd)) {
+      return true;
+    }
+  }
+  // awk: block shell exec (system()), command/file getline, external program
+  // files (-f), in-program file writes, and pipes into a shell.
+  if (/^\s*awk\b/.test(cmd)) {
+    if (/system\s*\(/.test(cmd)) return true;
+    if (/\bgetline\b/.test(cmd)) return true;
+    if (/\s-f\s/.test(cmd)) return true;
+    if (/printf?\b[^|;&]*>\s*["'\w]/.test(cmd)) return true;
+    if (/\|\s*"?\s*(sh|bash|\/bin\/)/.test(cmd)) return true;
   }
   // cmux: block VM control, raw RPC, SSH sessions, hooks install, auth login/logout
   if (/^\s*cmux\b/.test(cmd)) {
@@ -1446,6 +1508,25 @@ function isSingleCommandSafe(cmd: string): boolean {
     .replace(/^\s*for\s+\w+\s+in\b.*$/, "true") // for VAR in ... — iteration source, not a command
     .trim();
   if (!trimmed) return true;
+
+  // Strip a leading `timeout [opts] <duration>` wrapper — it bounds runtime but
+  // doesn't change command semantics (`timeout 120 gcloud ... list` is as safe
+  // as `gcloud ... list`). Re-check the wrapped command against the patterns.
+  trimmed = trimmed
+    .replace(
+      /^\s*timeout\s+(?:(?:-\S+|--\S+(?:=\S+)?)\s+)*\d+(?:\.\d+)?[smhd]?\s+/,
+      "",
+    )
+    .trim();
+  if (!trimmed) return true;
+
+  // Normalize git global flags that sit between `git` and the subcommand
+  // (`git -C <path> rev-parse` / `git -c k=v log` / `git --no-pager diff`) so
+  // the read-only subcommand patterns match. These flags don't change safety.
+  trimmed = trimmed.replace(
+    /^(\s*git)\s+(?:(?:-C\s+\S+|-c\s+\S+|--no-pager|--git-dir=\S+|--work-tree=\S+|--no-replace-objects)\s+)+/,
+    "$1 ",
+  );
 
   // Shell comments are always safe — check before backtick/subshell guards
   // since comments often contain backtick-quoted command names in prose.
@@ -1590,6 +1671,75 @@ function collapseQuotedNewlines(input: string): string {
 }
 
 /**
+ * GitHub PR-review write endpoints that are routine for the lead and safe to
+ * auto-allow despite using -f/-F/--input/--raw-field (which hasDangerousFlags
+ * otherwise trips on). Mirrors the teammate-gate Binks-reply allowlist, plus
+ * pulls/<n>/reviews (posting a review) which the lead does constantly.
+ *
+ * Allowed endpoints:
+ *   - repos/<o>/<r>/pulls/<n>/comments        review comments + threaded replies
+ *   - pulls/comments/<id>/(replies|reactions) reply/react to a review comment
+ *   - .../reactions                           reactions on comments/issues
+ *   - .../threads/<id>/resolve                resolve review thread (REST)
+ *   - GraphQL `resolveReviewThread`           resolve review thread (GraphQL)
+ *   - repos/<o>/<r>/pulls/<n>/reviews         post a PR review
+ *
+ * Explicit DELETE on any of these is never allowed (re-flagged to voters).
+ */
+function isAllowedGhApiReviewWrite(cmd: string): boolean {
+  if (!/^\s*gh\s+api\b/.test(cmd)) return false;
+  const endpointOk =
+    /pulls\/[^\s/]+\/comments/.test(cmd) ||
+    /pulls\/comments\/\d+\/(replies|reactions)/.test(cmd) ||
+    /\/reactions(?:\b|\/)/.test(cmd) ||
+    /\/threads\/[^\s/]+\/resolve/.test(cmd) ||
+    /resolveReviewThread/.test(cmd) ||
+    /pulls\/[^\s/]+\/reviews\b/.test(cmd);
+  if (!endpointOk) return false;
+  // Never allow an explicit DELETE even on these endpoints.
+  if (/(?:--method|-X)\s+DELETE\b/i.test(cmd)) return false;
+  return true;
+}
+
+/**
+ * Split a command line on TOP-LEVEL separators (&&, ||, ;, newline) without
+ * splitting inside single/double quotes. A naive `.split(COMMAND_SEPARATOR)`
+ * shatters quoted arguments like `cmux send '… && …'` or `git commit -m "a; b"`
+ * into bogus segments that then fail the whitelist and reach the voters.
+ */
+function splitTopLevel(input: string): string[] {
+  const out: string[] = [];
+  let buf = "";
+  let inSingle = false;
+  let inDouble = false;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    const prev = i > 0 ? input[i - 1] : "";
+    if (prev !== "\\") {
+      if (ch === "'" && !inDouble) inSingle = !inSingle;
+      else if (ch === '"' && !inSingle) inDouble = !inDouble;
+    }
+    if (!inSingle && !inDouble) {
+      if (ch === "\n" || ch === ";") {
+        out.push(buf);
+        buf = "";
+        continue;
+      }
+      const two = input.slice(i, i + 2);
+      if (two === "&&" || two === "||") {
+        out.push(buf);
+        buf = "";
+        i++; // consume the second separator char
+        continue;
+      }
+    }
+    buf += ch;
+  }
+  if (buf) out.push(buf);
+  return out.map((s) => s.trim()).filter((s) => s.length > 0);
+}
+
+/**
  * Determine if a bash command can skip the security guard.
  *
  * Handles compound commands (&&, ||, ;, newlines), pipe chains,
@@ -1629,13 +1779,15 @@ function isWhitelisted(command: string): boolean {
   const bodies = extractControlFlowBody(normalized);
   if (bodies) {
     return bodies.every((body) => {
-      const innerSegments = body.split(COMMAND_SEPARATOR);
+      const innerSegments = splitTopLevel(body);
       return innerSegments.every((innerSeg) => isSegmentSafe(innerSeg));
     });
   }
 
-  // Split on command separators — each segment is checked independently
-  const segments = normalized.split(COMMAND_SEPARATOR);
+  // Split on top-level command separators (quote-aware) — each segment is
+  // checked independently. Quote-aware so `cmux send '… && …'` and
+  // `git commit -m "a; b"` aren't shattered into bogus segments.
+  const segments = splitTopLevel(normalized);
   return segments.every((seg) => isSegmentSafe(seg));
 }
 
@@ -3155,13 +3307,34 @@ export default function (pi: ExtensionAPI) {
 
     const voters = distributeVoters(voterModels);
     const voterContext = extractVoterContext(ctx.sessionManager.getBranch());
-    const result = await runVoteTracking(
+    let result = await runVoteTracking(
       ctx,
       command,
       voters,
       overrideHistory,
       voterContext,
     );
+
+    // A fully-abstained vote (every voter timed out or errored) is a
+    // reliability failure, not a safety signal — with decidedCount === 0 the
+    // consensus logic treats it as a "split" and shows a blocking dialog.
+    // Retry once before falling through, so transient model slowness doesn't
+    // surface as a false alert. We never auto-allow on abstention.
+    if (!result.cancelled && result.decidedCount === 0) {
+      if (ctx.hasUI) {
+        ctx.ui.notify(
+          "⏳ Security review inconclusive (all voters abstained) — retrying…",
+          "info",
+        );
+      }
+      result = await runVoteTracking(
+        ctx,
+        command,
+        voters,
+        overrideHistory,
+        voterContext,
+      );
+    }
 
     // Surface voter errors inline
     const voterErrors = formatVoterErrors(result.records);
