@@ -111,9 +111,6 @@
 	relativePaths = true
 [feature]
 	manyFiles = true
-[user]
-	email = action@github.com
-	name = GitHub Page Create Action
 [http]
 	lowSpeedLimit = 1000
 	lowSpeedTime = 30
@@ -123,7 +120,7 @@
 [http "https://*.quick.shopify.io/"]
 	extraHeader = X-Requested-With: XMLHttpRequest
 [shop-world "stale-pr-cutoff"]
-	main = 1781278069
+	main = 1781898143
 [filter "lfs"]
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
