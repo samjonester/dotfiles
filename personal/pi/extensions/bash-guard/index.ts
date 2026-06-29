@@ -1071,8 +1071,6 @@ const VOTER_SYSTEM_PROMPT = `You are a security reviewer for a coding assistant 
 
 Context: This is a professional software developer's workstation. The assistant routinely reads project files, session logs, and config files to do its job. Local network requests to dev servers are normal. Python/Node scripts that parse data are normal workflow.
 
-IMPORTANT: Commands may be prefixed with \`rtk\` (Runtime Toolkit). This is a transparent wrapper that does not change command semantics — \`rtk git diff\` is identical to \`git diff\`, \`rtk grep foo bar\` is identical to \`grep foo bar\`. Evaluate the underlying command, not the \`rtk\` prefix. This applies whether \`rtk\` appears at the start or mid-chain (e.g. \`cd /tmp && rtk git log\`).
-
 You will receive a bash command inside <command> tags. The message may also include:
 
 - <previous_decisions> showing commands the user previously reviewed. Each decision shows whether the user allowed or denied the command, and may include user feedback explaining their reasoning.
@@ -1491,12 +1489,6 @@ function hasOnlySafeRedirects(cmd: string): boolean {
  */
 function isSingleCommandSafe(cmd: string): boolean {
   let trimmed = cmd.trim();
-  if (!trimmed) return true;
-
-  // Strip RTK wrapper from each segment — the entry point only strips a
-  // leading `rtk ` on the full command, but chained commands like
-  // `cd ... && rtk git diff` still have rtk on inner segments.
-  trimmed = trimmed.replace(/^\s*rtk\s+/, "").trim();
   if (!trimmed) return true;
 
   // Strip leading shell control-flow keywords that appear as fragments after
@@ -3140,11 +3132,6 @@ export default function (pi: ExtensionAPI) {
   pi.on("tool_call", async (event, ctx) => {
     if (!isToolCallEventType("bash", event)) return;
 
-    // RTK (Runtime Toolkit) is a transparent wrapper that prepends `rtk ` to
-    // commands. It doesn't change semantics — `rtk git diff` = `git diff`.
-    // We do NOT strip rtk here: voters and mutation gates see the original
-    // command with rtk context (via VOTER_SYSTEM_PROMPT). The whitelist in
-    // isSingleCommandSafe() strips rtk per-segment so pattern matching works.
     const command = event.input.command;
 
     // Spawned teammates have a TUI but no human watching — dialogs deadlock.

@@ -18,7 +18,7 @@ ext: fork-back
 # ext: max-token-compaction — removed (annoying auto-compaction behavior)
 ext: output-guard
 ext: profiles
-ext: rtk-rewrite
+# ext: rtk-rewrite — removed (RTK deprecated org-wide, Vault 390651; pi 0.80.2 is rtk-free)
 # ext: tmux-fork — removed (tmux-only; replaced by /lfg + /lfg-pane via cmux)
 ext: usage-tracker
 ext: vim-mode

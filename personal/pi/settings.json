@@ -44,7 +44,7 @@
   ],
   "extensions": [],
   "hideThinkingBlock": false,
-  "lastChangelogVersion": "0.79.8",
+  "lastChangelogVersion": "0.80.3",
   "npmCommand": [
     "pnpm"
   ],
