@@ -206,6 +206,14 @@ Each reviewer's model is declared in its agent frontmatter — that is the sourc
 
 ## Step 4: Dispatch Reviewers
 
+### Kick off `devx pair-review` in the background (PR mode only)
+
+Before composing agent tasks, if `SOURCE_TYPE=pr` and the user did not opt out, start `devx pair-review` as a **background job** so it runs in parallel with the specialist agents (it is slow — minutes). It provides a second independent review source (Claude Opus 4.8) that feeds the judge alongside the agents in Step 5.
+
+Read [references/pair-review.md](references/pair-review.md) for eligibility, invocation gotchas, and the exact `bg_run` command. Kick it off from `$REVIEW_CWD` with the **full PR URL** (bare PR numbers fail git detection in World/Gitstream), capture the job id, then proceed to dispatch the agents.
+
+Skip this entirely for `local_uncommitted` / `local_branch` (no PR to fetch) or if the tool is unavailable — pair-review is an enhancement, not a hard dependency, and the review degrades gracefully to agents-only.
+
 ### 4a. Compose the task
 
 Each reviewer receives two things:
@@ -322,6 +330,16 @@ Capture the error verbatim, add it to the user-facing report (see Step 6 — Rev
 
 After ALL reviewers complete, feed their combined output to `review-judge`.
 
+### Collect pair-review findings (if kicked off in Step 4)
+
+If a `devx pair-review` job was started in Step 4, collect it now — before dispatching the judge:
+
+1. `bg_wait` on the job (short timeout, e.g. 120s). If it is still running, proceed agents-only and note the timeout in the status line.
+2. Parse the JSON envelope per [references/pair-review.md](references/pair-review.md): split `suggestions` into findings (severity high/medium/minor) and positive observations (null severity — fold these into the report's positive highlights, not the judge). A `consolidation: "failed"` outcome is fine — the judge dedupes.
+3. If the job exited non-zero or `ok:false`, capture the `.err` reason, mark `devx pair-review ❌` in the Reviewers status line, and run the judge with agent findings only.
+
+The pair-review findings are merged into the judge task in Step 5b, tagged by source.
+
 ### 5a. Compress reviewer output
 
 **Always** compress reviewer output before passing to the judge. Raw reviewer output contains verbose explanations, full code snippets, and educational context that's valuable for the final report but wastes judge context. The judge needs findings, not essays.
@@ -352,6 +370,8 @@ This typically compresses 14 reviewer outputs from ~60-80KB to ~5-10KB — a 6-8
 
 ### 5b. Compose the judge task
 
+**Agents-only (no pair-review, or it failed/timed out):**
+
 ```
 You are judging code review findings from [N] specialized reviewers.
 
@@ -379,6 +399,20 @@ Source: [PR #N / uncommitted / branch]
 
 </reviewer-findings>
 ```
+
+**Two-source (agents + pair-review):** when pair-review produced findings, add the dual-source preamble and group all findings into CONVERGENT / PAIR-REVIEW ONLY / AGENT ONLY buckets per [references/pair-review.md](references/pair-review.md). Preamble:
+
+```
+You are judging code review findings for [PR #N].
+
+Findings come from TWO independent sources: (A) [N] specialized pi review agents,
+and (B) Shopify's `devx pair-review` tool ([run.model]). Verify EVERY claim
+against the real code, deduplicate, reconcile severity disagreements, reject
+false positives. Note cross-source convergence (agents AND pair-review) vs
+single-source — convergence raises confidence but you must still verify.
+```
+
+Then replace `<reviewer-findings>` with a `<findings>` block organized by convergence bucket. For CONVERGENT items, record each side's severity (e.g. `[security=HIGH; pair-review=MEDIUM]`) so the judge reconciles the disagreement. Keep pair-review findings in the same compact format as the compressed agent findings (title + severity + conf + `file:line` + one-line body).
 
 ### 5c. Dispatch the judge
 
@@ -420,13 +454,13 @@ Read the template at [references/review-template.md](references/review-template.
 
 ### Reviewers status line
 
-Lead the consolidated output with a one-line roster showing each dispatched reviewer's result, including any silent failures recovered in Step 4c:
+Lead the consolidated output with a one-line roster showing each dispatched reviewer's result, including any silent failures recovered in Step 4c and the `devx pair-review` source when it ran:
 
 ```
-Reviewers: review-correctness ✅ · review-architecture ✅ · review-simplify ✅ · review-scope ❌ (Gemini thinking_budget bug — see /tmp/...)
+Reviewers: review-correctness ✅ · review-architecture ✅ · review-simplify ✅ · review-scope ❌ (Gemini thinking_budget bug — see /tmp/...) · devx pair-review ✅ (Opus 4.8, N findings)
 ```
 
-Use ✅ for completed (with or without findings), ❌ for failed/dropped, with the captured error in parentheses. This makes coverage gaps visible without burying them in the specialist sections.
+Use ✅ for completed (with or without findings), ❌ for failed/dropped, with the captured error in parentheses. This makes coverage gaps visible without burying them in the specialist sections. When pair-review ran, note whether any findings were **convergent** with the agents (e.g. "3 convergent, 2 pair-review-only") — convergence is a signal worth surfacing.
 
 ### Verdict indicators for specialist sections
 
@@ -543,6 +577,8 @@ Check yourself against these before taking shortcuts:
 | "I already see the issue, I'll just report it directly" | You see ONE issue. The pipeline runs 5-8 specialists in parallel who see different things. Your single-pass observation becomes the executive summary after the judge validates all findings. |
 | "Dispatching subagents is slow, I'll be faster" | You'll be faster at producing a *worse* review. The 30-60s dispatch time is the cost of coverage. |
 | "The tool/subagent failed, I'll just review it myself as fallback" | Diagnose the failure, retry once, then report INCOMPLETE per Step 5d. A partial multi-agent review beats a complete single-agent review. Never fall back to single-pass. |
+| "pair-review is slow, I'll skip it and just run the agents" | For PR reviews, kick it off in the *background* at the start of Step 4 — it runs in parallel and costs you no wall time. It caught a zone anti-pattern and a constant triplication the agents missed. Only skip it for local reviews or when the user opts out. |
+| "pair-review failed, I'll review the code myself to compensate" | No. The agent pipeline is the source of truth; pair-review only augments it. Note the failure in the status line and run the judge with agent findings only. |
 | "A git command failed, I'll work around it" | Stop. Diagnose. Ask the user. Don't improvise with alternative git commands, temp branches, or manual patches. |
 | "This could be exploited, so it's CRITICAL" | "Could be" ≠ "is reachable in production." Check the actual call path. If the input is already validated upstream, the severity drops. |
 | "No tests were added, so this needs REQUEST_CHANGES" | Missing tests are a valid observation but not always blocking. If the code is well-tested indirectly or the PR is a config change, tests may be unnecessary. Calibrate severity to actual risk. |
