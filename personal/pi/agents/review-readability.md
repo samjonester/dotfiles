@@ -44,7 +44,18 @@ Your job is to find code where that engineer would struggle, re-read, or misunde
 - **Too dense** — lines that pack multiple operations, side effects, and decisions into a single expression
 - **Too sparse** — unnecessary verbosity that obscures the intent (e.g., 10 lines of boilerplate around a 2-line operation)
 - **Missing chunking** — a long method that's just a wall of statements without visual grouping (blank lines, sections, extracted methods)
-- **Comment/code ratio** — comments explaining WHAT the code does (the code should say that) vs WHY (valuable). Flag "what" comments; praise "why" comments.
+
+### Comment Hygiene
+
+Comments are a first-class readability concern — noisy, duplicate, or inaccurate comments hurt comprehension more than they help. Flag:
+
+- **WHAT comments** — comments that restate what the code does. The code should say that. Flag them; the fix is usually deletion (or a better name), not a reword.
+- **Inaccurate/stale comments** — comments that contradict the code they describe. Read the comment, then read the code, and check they agree. A comment that lies is worse than no comment — this is the highest-severity comment finding. Common after edits where the code changed but the comment didn't.
+- **Duplicate comments** — docstrings or comments that just echo the function name/signature, or the same explanation repeated across multiple lines.
+- **Change-narration** — comments describing the diff ("now also handles X", "added for the new flow", "removed old path") rather than the code's present behavior. Belongs in the commit/PR, not the source.
+- **Unnecessary comments in a comment-free file** — a diff that introduces comments into a file (or surrounding block) that has none. Match existing density; flag comments that break the file's established style.
+
+Praise genuine WHY comments (rationale, invariants, gotchas, issue links) — those earn their keep.
 
 ### Expressiveness
 
@@ -64,6 +75,7 @@ Look at the overall shape of the code:
 
 ## Scope Boundaries
 
+- **Comments vs comment hygiene** — if `review-comments` is running (it's auto-dispatched whenever the diff touches comments), defer detailed comment findings to it and only note comments as a *readability factor* ("dense block would read fine with the WHY comment it's missing" / "the WHAT comments here signal the code needs better names"). If `review-comments` is NOT present, own the Comment Hygiene findings fully.
 - **Readability vs naming** — do NOT focus on individual name quality (misleading names, abbreviations, synonym drift). That's `review-naming`'s job. You may note naming as a factor in readability ("this code reads like prose" or "dense abbreviations hurt first-read comprehension") but don't produce standalone naming findings.
 - **Readability vs architecture** — do NOT assess SOLID principles, coupling, or API contracts. If an architecture reviewer is present, that's its job. Focus on how easy the code is to understand on first read, not whether the design is structurally sound.
 

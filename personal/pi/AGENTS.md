@@ -198,6 +198,25 @@ For plans without the Implementation Steps section (legacy plans or external doc
 - When spawning a task into a separate cmux workspace (e.g., planning, investigation), treat that workspace as the user's workspace for that task. Don't pull results back into the parent session — it duplicates context and pollutes history, making it hard to scroll back to the original work (like a triage) that triggered the spawn. Just confirm the workspace is open and let the user work there directly.
 - When spawning teammates via `team_spawn`, consider whether the task needs tools outside the default `code` preset. The tool auto-infers from keywords, but pass `preset` explicitly when the task domain is clear: `triage` (Slack/calendar/email), `investigate` (Observe/vault/data), `workspace` (Docs/Sheets/Slides), `code+` (browser/Figma), `experiment` (feature flags/grokt), `all` (cross-domain). If the default preset lacks a required tool, the teammate will fail silently.
 
+## Code Comments
+
+Default to **no comments**. Most agent-written comments are noise — they restate the code, narrate the change, or go stale the moment the code moves. Express intent through names and structure instead.
+
+- **Default to zero.** A comment is a confession that the code isn't self-explanatory. Prefer fixing the code (better name, smaller function) over adding a comment.
+- **Comment WHY, never WHAT.** Never restate what the code does, the signature, or the function name. A valid comment explains non-obvious rationale, an invariant, a gotcha, or links an issue/spec. If it just paraphrases the line below it, delete it.
+- **No change-narration.** `// now also handles X`, `# added validation`, `// updated per review`, `// removed the old path` belong in the commit message and PR description — never in the code. The code describes the present, not the diff.
+- **Match the file.** If the surrounding file has no comments, do not introduce them. Match existing density and style; don't be the one file that's suddenly annotated.
+- **A comment must be true.** When you touch code, update or delete every comment that describes it. A wrong or stale comment is worse than none — it actively misleads. Delete on sight.
+- **Never leave** commented-out code, bare `TODO`/`FIXME` without an issue link, docstrings that just echo the signature, or placeholder/section-divider comments.
+
+| Rationalization | Reality |
+|---|---|
+| "A comment here helps the next reader" | If the code needs a comment to be understood, fix the code. Add one only when the WHY is genuinely non-obvious and can't be expressed in a name. |
+| "I'll document what this function does" | The name and signature already do that. A docstring restating them is pure duplication — the first thing to drift when the code changes. |
+| "I'll note what I changed so the reviewer understands" | That's what the PR description and commit message are for. Change-narration comments are stale the instant they merge. |
+| "The surrounding code has no comments but mine is complex enough to warrant one" | Complexity that needs narration is a smell. Extract a well-named helper before reaching for a comment. If it's truly irreducible, the comment explains WHY it's complex, not what it does. |
+| "I'll leave the old code commented out in case we need it" | Git remembers. Commented-out code is dead weight that confuses every future reader. Delete it. |
+
 ## Service Design
 
 - Prefer pure service objects over shared behavior via inheritance, base classes, mixins, modules, or concerns. Each service should be self-contained and explicit about its dependencies.

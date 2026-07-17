@@ -40,6 +40,10 @@ Evaluate in order — first match wins:
 | medium | <500 | 2 |
 | large | 500+ | 1 |
 
+### Content triggers (additive — check the diff body, not just filenames)
+
+- `content:comments` — The diff **adds or modifies any code comment or docstring** (`//`, `#`, `/* */`, `"""`, `<!-- -->`, JSDoc/YARD/etc.). When present, always add `comments` and `readability` to core (if not already included). This is the guaranteed safety net for comment noise/accuracy regardless of change type or size.
+
 ### Risk signals (additive — check all)
 
 - `risk:auth` — Touches authentication, authorization, session, or permission files
@@ -64,6 +68,16 @@ Evaluate in order — first match wins:
 | refactor | architecture, scope, simplify | design, consistency, naming |
 | dependency | scope, security, operations | — |
 | general | scope, correctness, architecture, testing | design, readability |
+
+### Content trigger escalation
+
+When a content trigger fires, add these reviewers to core (if not already included):
+
+| Content trigger | Add to core |
+|---|---|
+| content:comments | comments, readability |
+
+Content triggers override size-based skips: if `content:comments` fires on a tiny/small PR, `comments` still runs.
 
 ### Risk signal escalation
 
