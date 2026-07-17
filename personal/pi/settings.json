@@ -34,17 +34,15 @@
   "enableSkillCommands": true,
   "enabledModels": [
     "anthropic/claude-opus-4-8",
-    "anthropic-250k-prefer-using-this-one/claude-opus-4-6",
-    "anthropic-250k-prefer-using-this-one/claude-sonnet-4-6",
-    "anthropic/claude-opus-4-6",
-    "anthropic/claude-sonnet-4-6",
+    "anthropic/claude-sonnet-5",
     "anthropic/claude-haiku-4-5",
-    "gpt-5.5",
+    "anthropic/claude-opus-4-6",
+    "gpt-5.6-sol",
     "gpt-5.5-pro"
   ],
   "extensions": [],
   "hideThinkingBlock": false,
-  "lastChangelogVersion": "0.80.3",
+  "lastChangelogVersion": "0.80.10",
   "npmCommand": [
     "pnpm"
   ],
