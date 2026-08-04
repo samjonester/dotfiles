@@ -2282,7 +2282,10 @@ async function runVoteTracking(
    * there is no UI at all, OR when running as a teammate (TUI exists but
    * nobody can dismiss a progress dialog).
    */
-  if (!ctx.hasUI || isTeammateSession()) {
+  // ui.custom only renders in interactive "tui" mode. In rpc/json/print hosts
+  // (e.g. pair-review's chat agent) ctx.hasUI is still true but ui.custom()
+  // returns undefined — so gate on ctx.mode and run voters headlessly instead.
+  if (ctx.mode !== "tui" || isTeammateSession()) {
     const t0 = performance.now();
     const records = await Promise.all(
       voters.map((voter) =>
@@ -3136,9 +3139,11 @@ export default function (pi: ExtensionAPI) {
 
     // Spawned teammates have a TUI but no human watching — dialogs deadlock.
     // Treat them as non-interactive for any blocking-dialog code path.
-    // Notifications still use ctx.hasUI directly (visible in the pane).
+    // canPrompt gates ui.custom dialogs, which only render in "tui" mode —
+    // rpc/json/print hosts report hasUI=true but cannot render them.
+    // Notifications still use ctx.hasUI directly (harmless no-op off-tui).
     const teammate = isTeammateSession();
-    const canPrompt = ctx.hasUI && !teammate;
+    const canPrompt = ctx.mode === "tui" && !teammate;
 
     // ── Stage 0: Teammate autonomy gate (only when running as a teammate) ──
     if (teammate) {
@@ -3301,6 +3306,16 @@ export default function (pi: ExtensionAPI) {
       overrideHistory,
       voterContext,
     );
+
+    // Fail closed with a clear reason if the review couldn't run (e.g. a host
+    // where ui.custom silently returns undefined) rather than a cryptic crash.
+    if (!result) {
+      return {
+        block: true,
+        reason:
+          "Bash guard: security review could not run (no interactive UI). Re-run interactively to confirm.",
+      };
+    }
 
     // A fully-abstained vote (every voter timed out or errored) is a
     // reliability failure, not a safety signal — with decidedCount === 0 the
