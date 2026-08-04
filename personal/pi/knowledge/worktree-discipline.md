@@ -99,3 +99,16 @@ git worktree repair                          # fix broken paths after moving rep
 - `_wtp status` / `_wtp new` / `_wtp free <slot> [--force]`
 - Never use `dev tree add` / `dev tree remove` directly
 - For other repos: `git worktree` commands with naming convention `<repo>-<purpose>`
+
+### `USER_PWD` leak — `dev` commands silently run against the ROOT tree (session 2026-07-29)
+
+When the pi session's original CWD is the root checkout (`~/world/trees/root/src/...`), the env var `USER_PWD` is pinned to that root path and does **not** update when you `cd` into a pool worktree. Many `dev` subcommands run `cd $USER_PWD && <cmd>` (e.g. `dev test` runs `cd $USER_PWD && bin/rails test`), so they execute against **root**, not the pool — even though `PWD` and `DEV_PROJECT_ROOT` are correctly the pool.
+
+Symptom: `dev test path/to/new_test.rb` → `Rails::TestUnit::InvalidTestError: Could not load test file` with a "Did you mean?" pointing at a nearby file — because the new file exists only in the pool, and the runner is globbing root's tree. Coverage reports writing to `.../trees/root/...` is the tell.
+
+Fix: override it per command from the pool:
+```bash
+export USER_PWD="/Users/sam/world/trees/pool-N/src/areas/platforms/<zone>"
+/opt/dev/bin/dev test test/...
+```
+Git commands (`git add/commit/push`) use real CWD, not `USER_PWD`, so they're unaffected. `dev ps -n .` correctly detects the pool namespace regardless.
