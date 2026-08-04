@@ -101,5 +101,5 @@ When review comments are from a bot (Binks, automated tools) but posted by a hum
 
 - Draft responses as you would to a human reviewer — professional tone
 - The bot findings still need validity assessment (the `binks-review` skill handles this)
-- React with 👍/👎 on each finding based on validity
+- React with 👍/👎 on each finding based on validity — **this is bot-only**; never react to a human reviewer's comments (reply in prose and resolve instead — see `pr-review-posting.md`)
 - Fix valid findings, explain invalid ones politely

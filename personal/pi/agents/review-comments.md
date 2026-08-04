@@ -47,6 +47,14 @@ Finding severity: HIGH. These are the most dangerous. Common when code was edite
 - Docstrings that just echo the function name and signature (`# @param user [User] the user` when the signature already types it)
 - The same explanation repeated on adjacent lines or across the block
 - Section-divider / banner comments (`# ===== helpers =====`) that add no information
+- **Cross-scope duplication:** a per-constant / per-method / per-attribute comment that restates a point the class- or module-level comment already made. Read the file's top-level comment first, then check each member comment against it — if the member comment adds no information beyond the header, it's a duplicate.
+
+```ruby
+# Append-only ledger; both columns exist so finer grains can be added later.  <- class comment
+class AlertAction
+  # Only grain emitted today; the column supports finer grains in the future.  <- DUPLICATE of the class comment
+  GRAIN = ...
+```
 
 Finding severity: LOW–MEDIUM. Fix: delete.
 
@@ -93,6 +101,7 @@ If in doubt whether a comment is a genuine WHY, apply the test: **could a better
 - **You review comments added or changed by the diff.** Don't audit every pre-existing comment in the file unless the diff touched it — but DO flag a pre-existing comment that the diff made stale (the code changed underneath it).
 - **Deletion is the default fix.** Only recommend rewording when the comment is trying to express a real WHY but does it badly.
 - **Respect the domain and language.** A regex or bitmask genuinely benefits from a WHY comment. Idiomatic docstrings required by a project's tooling/linter are not noise — note if a convention seems mandated.
+- **Apply equal scrutiny across languages.** Do not let dense, mostly-WHY comment blocks (common in Ruby service objects) camouflage a WHAT fragment or a WHAT method-header one-liner. A `# Method-purpose: does X` header above a Ruby method is the same WHAT restatement as an inline JS comment restating a `return` — flag both. Ruby/Sorbet files often carry method-header comments that lean WHAT (`# Batch identity + metrics for the grid`, `# Builds an X from a Y`); scrutinize them exactly as hard as you would a TSX comment. When a comment mixes WHY and WHAT, trim the WHAT clause and keep the WHY (reword, don't blanket-delete).
 - **Don't fabricate.** If the diff adds no comments, say so and report clean. Don't invent findings to justify your existence.
 
 ## Output Format

@@ -1,145 +1,132 @@
-## [PR Title/Number or Branch Name]
+# Review Output Template
 
-[Source URL if PR]
+Fill this for the **in-chat / findings-file** report (Step 6). This is *not* the GitHub comment — that's Step 7a, and it is deliberately much shorter.
 
-### Executive Summary
-
-[One paragraph: overall assessment, key concerns, recommendation]
-
-### Validation Summary
-
-[From review-judge: how many findings survived validation, how many were filtered, confidence level]
-
-### Critical Issues (MUST FIX)
-
-[Merged from all reviewers, validated by judge, ordered by impact]
-
-1. **[Issue Title]** (from: [reviewer(s)])
-   - **Severity:** CRITICAL
-   - **Location:** `file:lines`
-   - **Problem:** [validated description]
-   - **Current Code:** [snippet]
-   - **Fix:** [snippet — confirmed working by judge]
-   - **Impact:** [what goes wrong if unfixed]
-   - **Confidence:** High/Medium
-
-### Major Issues (SHOULD FIX)
-
-[HIGH severity findings, validated]
-
-### Improvements (CONSIDER)
-
-[MEDIUM findings, grouped by theme]
-
-### Minor
-
-[LOW findings — fix now unless truly outside the PR's scope]
-
-### Filtered Findings
-
-[Findings the judge rejected as false positives, with brief reasons. Collapsed by default.]
+**Before you start:** the reader has seen none of the subagent output. Every entry must stand alone. See the zero-context rule in Step 6.
 
 ---
 
-### Specialist Reports
+## [PR #N — Title] or [Branch Name]
 
-#### PR Scope & Size
+[Source URL if PR] · head `[sha]` · [N files, +X/−Y]
 
-[✅/⚠️/🚨 verdict line first]
-[From review-scope]
-
-#### Architecture & Design
-
-[✅/⚠️/🚨 verdict line first]
-[From review-architecture]
-
-#### Security
-
-[✅/⚠️/🚨 verdict line first]
-[From review-security]
-
-#### Performance & Scalability
-
-[✅/⚠️/🚨 verdict line first]
-[From review-performance]
-
-#### Correctness & Logic
-
-[✅/⚠️/🚨 verdict line first]
-[From review-correctness]
-
-#### Null Safety
-
-[✅/⚠️/🚨 verdict line first]
-[From review-nullsafety]
-
-#### Testing & Quality
-
-[✅/⚠️/🚨 verdict line first]
-[From review-testing]
-
-#### Operational Readiness
-
-[✅/⚠️/🚨 verdict line first]
-[From review-operations]
-
-#### Shopify Conventions
-
-[✅/⚠️/🚨 verdict line first]
-[From review-shopify]
-
-#### Design Context
-
-[✅/⚠️/🚨 verdict line first]
-[From review-design]
-
-#### Simplification
-
-[✅/⚠️/🚨 verdict line first]
-[From review-simplify]
-
-#### Consistency
-
-[✅/⚠️/🚨 verdict line first]
-[From review-consistency]
-
-#### Naming
-
-[✅/⚠️/🚨 verdict line first]
-[From review-naming]
-
-#### Readability
-
-[✅/⚠️/🚨 verdict line first]
-[From review-readability]
-
-#### Intent Alignment
-
-[✅/⚠️/🚨 verdict line first]
-[From review-intent — only when SOURCE_TYPE=pr. Omit for local reviews.]
-
-<!-- For any user-defined review-* agent not listed above (e.g., review-accessibility, review-i18n), add a section here using the agent's short name as the heading. -->
+**Pipeline:** [N] agents ([list]) + [`devx pair-review` (model, N findings) | agents only] → `review-judge`
+**Reviewers:** [roster status line — ✅/❌ per reviewer, with captured errors]
+**Funnel:** [N] raw findings → [N] distinct after merge → **[N] rejected**, [N] actionable
 
 ---
 
-### Positive Highlights
+## 1. Rejected findings
 
-[Aggregated from all reviewers — good patterns, clever solutions]
+> Render these **first**, in full, before anything actionable. They are the part the reader cannot reconstruct, and they are often the highest-value output of the pipeline. Never collapse, never summarize as a count.
 
-### Learning Opportunities
+### R[n]. [What was proposed] — [one-line reason it was rejected]
 
-[One paragraph of constructive mentoring for the author]
+- **Filed by:** [source] as [severity]
+- **Location:** `file:lines`
+- **What they proposed:**
+  ```[lang]
+  [the actual suggested change]
+  ```
+- **Why it's rejected:** [the specific evidence that settles it — code read, test that already covers it, git history, call path traced]
+- **Underlying concern:** [Still valid → promoted to finding #N] | [Not valid] | [N/A]
 
-### Risk Assessment
+Lead with any rejection in these two classes and label it as such:
 
-- **Production Risk:** [LOW/MEDIUM/HIGH]
-- **Rollback Plan:** [Adequate/Needs improvement]
-- **Monitoring:** [Sufficient/Gaps identified]
-- **Feature Flags:** [Properly gated/Missing guards]
+- **⚠️ Would have introduced a bug** — a "simplification" that breaks a boundary, a "fix" that inverts its own intent
+- **⚠️ Would have deleted something load-bearing** — a comment carrying a non-obvious invariant, a duplication that preserves a11y or type semantics
 
-### Decision
+For these, state plainly that the author should keep what they have.
 
-<!-- Do NOT include a Verdict section in the top-level PR comment — the GitHub review action (approve/request changes) already communicates it. This section is for the internal review output only. -->
-**Verdict:** [APPROVE / REQUEST CHANGES / DISCUSS / BLOCK]
-**Confidence Level:** [High/Medium/Low — informed by judge validation rate]
-**Follow-up Required:** [Yes/No — only for work genuinely outside this PR's scope]
+---
+
+## 2. Reclassification
+
+> Show the arithmetic so the reader can audit the funnel. A silent drop is indistinguishable from an oversight.
+
+```
+[N] distinct findings → [N] surfaced
+  [n] HIGH   → MEDIUM   [title] — [why downgraded]
+  [n] MEDIUM → merged   into #[N] — [same root cause, N locations]
+  [n] LOW    → dropped  [rule from review-calibration.md] — [which findings]
+```
+
+Name the calibration rule for every drop (`premature optimization`, `test coverage nits on non-critical paths`, `pre-existing N+1`, etc.).
+
+---
+
+## 3. Findings
+
+> Grouped by **adjudicated** severity. Every entry self-contained.
+
+### [SEVERITY] #[N]. [Title]
+
+- **Severity:** [filed] → **[adjudicated]** [omit the arrow if unchanged]
+- **Source:** `[agent]` | `[agent + agent + pair-review NNNN]` — **[N]-source convergence** | `pair-review NNNN, conf 0.NN`
+- **Location:** `file:lines` [verified present at HEAD]
+- **Problem:** [what is actually wrong — plain terms, no "reviewer X says"]
+- **Impact:** [what breaks, degrades, or confuses; who notices]
+- **Fix:**
+  ```[lang]
+  [concrete change]
+  ```
+- **Evidence:** [what was checked to validate — files read, tests found, call paths traced]
+- **Confidence:** High / Medium / Low
+
+Sections, in order — omit any that are empty rather than writing "none":
+
+- **Blocking** (CRITICAL / HIGH)
+- **Needs a decision** (findings that are correct but where the call is the user's — intended-behavior questions, product tradeoffs)
+- **Should fix** (MEDIUM)
+- **Nits** (LOW — fix now unless genuinely out of scope)
+
+---
+
+## 4. Disagreements
+
+> Only when sources conflicted. Reviewers contradicting each other is signal — it usually means the call is genuinely a judgment call, and it belongs to the user.
+
+### [Topic]
+
+- **[Source A]** argued: [position]
+- **[Source B]** argued: [position]
+- **Judge checked:** [what was verified]
+- **Resolution:** [outcome, and whether it's settled or still open for the user]
+
+Include the case where pair-review's overall summary conflicts with a filed agent finding.
+
+---
+
+## 5. Verified strengths
+
+> Not filler — only things confirmed against the code, and only where saying so has value: it tells the author what not to change, and it's what makes a review land as considered rather than adversarial.
+
+- **[Strength]** — [what was verified and how]
+
+---
+
+## 6. Deferrals — need confirmation
+
+> Render the argument *for* the deferred work fully enough that the reader can overrule you. Never bury a deferral in prose.
+
+### D[n]. [Proposed work]
+
+- **Argued by:** [source] as [severity/opportunity]
+- **The case for it:** [the strongest version of the argument, including any evidence cited]
+- **The case against doing it here:** [scope, risk, PR size, whether the evidence holds]
+- **Recommendation:** [follow-up | fold in] — **your call**
+
+---
+
+## 7. Verdict
+
+> **Last.** Never lead with this.
+
+**[APPROVE | APPROVE WITH COMMENTS | REQUEST CHANGES | DISCUSS]**
+
+Justify against the bar in `review-calibration.md` by naming the categories:
+
+> REQUEST_CHANGES requires a correctness bug, security issue, contract violation, or missing error handling on a critical path. [Which apply / none remain, therefore …]
+
+- **Confidence:** [High/Medium/Low — informed by judge validation rate and any reviewer failures]
+- **Coverage gaps:** [any reviewer that failed, anything not verified]

@@ -69,6 +69,8 @@ Order the validated findings:
 
 **Deferral policy:** Do NOT recommend deferring findings to follow-up issues unless the fix is genuinely outside the PR's scope (e.g., pre-existing problem in an unrelated module). "Low priority" and "minor" are not reasons to defer — creating follow-up issues wastes more time than just fixing the code now. **If you still deem a deferral necessary, mark it with `[DEFERRAL — NEEDS CONFIRMATION]` so the human can approve or reject it before it's posted.**
 
+**Comment hygiene is first-class.** Never defer or bury comment-hygiene findings (unnecessary/WHAT, stale/inaccurate, duplicate, change-narration, style-breaking, or commented-out-code comments). The house policy is default-to-zero comments, so these are never "too minor to mention." Surface every substantiated comment-hygiene finding in the dedicated Comment Hygiene section below, regardless of severity — do not fold them into Low Priority where they get lost among higher-severity items, and never recommend deferring them to a follow-up.
+
 Within each severity, order by:
 
 - Impact (how many users/requests/developers affected)
@@ -127,6 +129,12 @@ Your output must follow this exact structure:
 #### Low Priority
 
 [Minor improvements — fix now unless truly outside the PR's scope. Do NOT defer to follow-up issues for things that can be fixed in this PR.]
+
+### Comment Hygiene
+
+[Every substantiated comment-hygiene finding, regardless of severity. Never omit or defer this section when the diff added or modified comments. If the diff introduced no problematic comments, state "No comment issues."]
+
+- **[category — WHAT / stale / duplicate / narration / style-break / commented-out code]:** `file:lines` — [the offending comment text] — **Fix:** [almost always "Delete." — reword only for a genuine mis-expressed WHY]
 
 ### Strengths
 

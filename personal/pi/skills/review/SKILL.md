@@ -368,6 +368,23 @@ Rules:
 
 This typically compresses 14 reviewer outputs from ~60-80KB to ~5-10KB — a 6-8x reduction that keeps the judge well within effective context even for large PRs.
 
+#### Preserve the uncompressed originals — you will need them in Step 6
+
+Compression is for the **judge only**. Step 6 renders the full finding detail for the user, so the originals must survive.
+
+When a `subagent` batch result is truncated, the harness writes the full text to a file and prints the path (`Full: /Users/…/pi-output-guard/subagent-*.txt`). **Record every one of those paths immediately** — that file is the only remaining copy of the uncompressed reviewer output. Same for the pair-review JSON (`/tmp/pair-review-<N>.json`).
+
+Keep a running manifest as you go:
+
+```
+batch 1 (scope, correctness, architecture, testing, comments, readability) → /Users/…/subagent-msf18780ii4e.txt
+batch 2 (design, performance, intent)                                      → /Users/…/subagent-msf1j6qnzeq8.txt
+judge                                                                      → /Users/…/subagent-msf296foqhmd.txt
+pair-review                                                                → /tmp/pair-review-966288.json
+```
+
+In Step 6, read these back with `read_output_chunk` to recover any detail the compression dropped. Do **not** reconstruct a finding from memory or from the judge's one-line summary of it — go back to the source.
+
 ### 5b. Compose the judge task
 
 **Agents-only (no pair-review, or it failed/timed out):**
@@ -443,14 +460,65 @@ The judge validates, deduplicates, rates, and produces the consolidated findings
 
 ## Step 6: Format and Present Output
 
-Read the template at [references/review-template.md](references/review-template.md). Fill every section using:
+### The zero-context rule
 
-- **Executive Summary** — your synthesis based on the judge's verdict
-- **Validation Summary** — from the judge
-- **Critical/Major/Improvements/Minor** — from the judge's prioritized findings
-- **Filtered Findings** — from the judge's invalid/rejected list
-- **Specialist Reports** — original output from each reviewer, with verdict indicators
-- **Decision** — from the judge, with your confidence assessment
+**The user has not seen a single line of subagent output.** Not the reviewers', not pair-review's, not the judge's. Everything they know about this review is what you put in this message.
+
+That makes one phrasing pattern forbidden. Never write a finding as a reference to a conversation the user wasn't in:
+
+| ❌ Assumes context | ✅ Self-contained |
+|---|---|
+| "The correctness reviewer flagged a HIGH on the save path" | "**Expired content reaches the save payload.** `handleSubmit` passes `Array.from(selectedIds)` with no expiration re-filter (`AdContentSelection.tsx:467`) → `handleSave` spreads it into `adContentIds` (`:104`). No server guard in `sync_ad_contents`. Filed HIGH by review-correctness." |
+| "The judge rejected finding 2 as invalid" | "**Rejected — `diff()` rewrite would introduce a boundary bug.** review-readability proposed replacing `isBefore(now.add(31,'day'),'day')` with `diff(now,'day') <= 30`. `diff` floors a millisecond delta, so a day-31 date scores 30 for any `now` past midnight." |
+| "3-source convergence on the empty state" | "**Empty state hard-codes one caller's default** (`AdContentSelection.tsx:310`) — independently flagged by review-architecture, review-testing, and pair-review 1674." |
+
+A finding the user can't evaluate without asking you a follow-up question is a finding you rendered wrong.
+
+### Build the findings inventory
+
+Before any verdict, produce a complete inventory covering **every finding any source produced** — including the ones you and the judge threw out. Write it to a file (`/tmp/review-<N>-findings.md`) so it survives compaction and can be grepped later, then present it in chat.
+
+Each entry carries:
+
+| Field | Notes |
+|---|---|
+| **ID + title** | Stable, referenceable — the user will reply "drop 4, keep 7" |
+| **Filed → adjudicated severity** | `HIGH → MEDIUM` if the judge downgraded it. Never show only the final value — the *movement* is the signal |
+| **Source(s)** | Which agent(s), and/or pair-review with its finding id + confidence. Mark convergence explicitly |
+| **Location** | `file:line`, verified to exist at HEAD |
+| **Problem** | What is actually wrong, in plain terms. Not "reviewer X says…" |
+| **Proposed fix** | Concrete, with the code where it helps |
+| **Verdict + evidence** | Valid / rejected / downgraded / merged — and *what was checked* to decide that |
+
+Group by adjudicated severity, with rejections in their own section.
+
+### Rejected findings are first-class output — never collapse them
+
+The rejections are frequently the most valuable part of the review, and they are the part the user cannot reconstruct on their own. Give each one **full treatment, ahead of the verdict**:
+
+- What the reviewer proposed, quoted or shown as code
+- Why it's wrong, with the specific evidence that settles it
+- Whether the *underlying concern* is still valid even though the proposed fix isn't (this happens often — split them)
+
+Two rejection classes deserve to be called out loudly, because they are the pipeline earning its cost:
+
+- **Suggestions that would introduce a bug** — a "simplification" that breaks a boundary condition, a "fix" that does the opposite of its stated intent. Lead with these.
+- **Suggestions that would delete something load-bearing** — a comment documenting a non-obvious invariant, a deliberate duplication that preserves a11y semantics. Say plainly that the author should keep what they have.
+
+Never write "the judge filtered 5 false positives" and move on. Show all five.
+
+### Show the reclassification
+
+When the judge changed a severity, merged duplicates, or dropped findings under the calibration rules, render the arithmetic so the user can audit it:
+
+```
+17 distinct findings → 10 posted
+  1 HIGH   → MEDIUM   save-payload gap (not a regression; intended and tested)
+  3 MEDIUM → dropped  merged into #2 (same root cause, 3 locations)
+  5 LOW    → dropped  "don't raise" per review-calibration (premature optimization ×1, test nits ×3, speculative API ×1)
+```
+
+If you dropped findings under the *don't raise* rules in `review-calibration.md`, name them and name the rule. A silent drop is indistinguishable from an oversight.
 
 ### Reviewers status line
 
@@ -462,34 +530,80 @@ Reviewers: review-correctness ✅ · review-architecture ✅ · review-simplify 
 
 Use ✅ for completed (with or without findings), ❌ for failed/dropped, with the captured error in parentheses. This makes coverage gaps visible without burying them in the specialist sections. When pair-review ran, note whether any findings were **convergent** with the agents (e.g. "3 convergent, 2 pair-review-only") — convergence is a signal worth surfacing.
 
-### Verdict indicators for specialist sections
+### Do not dump raw specialist reports
 
-Every specialist section starts with:
+The roster line above replaces the old per-reviewer transcript sections. Nine verbatim reviewer outputs is 40KB of overlapping prose the user will not read, and it buries the findings that matter.
 
-- `✅ No issues found`
-- `⚠️ N issue(s)` — has findings but nothing blocking
-- `🚨 N issue(s), M blocking` — has CRITICAL or HIGH findings
+Every finding is already in the inventory, attributed to its source. A reviewer that found nothing needs no section at all — `✅` on the roster line says it. Reach back into the preserved raw output (Step 5a manifest) only to recover **detail for a specific finding**, never to paste a whole report.
 
-### Dynamic sections for custom reviewers
+### Attribution and disagreement
 
-For any `review-*` agent not in the default set, add a new section using the agent's short name as the heading (e.g., `review-accessibility` → `#### Accessibility`). Place it after the default sections and before Positive Highlights.
+Attribute each finding to its source *inside* the entry, so convergence and single-sourcing are visible per finding rather than per section:
 
-### Omit empty sections
+- `[review-architecture + review-testing + pair-review 1674]` — 3-source convergence, higher confidence
+- `[pair-review 1671, conf 0.90]` — single-source, judge verified more carefully
+- `[review-comments]` — single agent
 
-If a reviewer was not included (user subset), write "Not included in this review." If a reviewer ran but had no findings, write "No concerns identified."
+**When two sources disagreed, surface the disagreement and how it was settled.** Reviewers contradicting each other is signal, not noise to be smoothed over — it usually means the call is genuinely a judgment call, and it's the user's to make. Render it as: what each side argued → what the judge checked → how it resolved.
+
+The same applies when pair-review's overall summary conflicts with an agent finding (e.g. "no correctness defects surfaced" against a filed HIGH). Say so explicitly and explain the reconciliation.
+
+### Verdict comes last
+
+State the verdict **after** the inventory, never before it. Leading with a verdict invites the user to accept it without reading the evidence — which is the exact failure this step exists to prevent.
+
+Justify the verdict against the bar in `review-calibration.md` by naming the categories: "REQUEST_CHANGES requires a correctness bug, security issue, contract violation, or missing error handling on a critical path — none remain, so APPROVE with nits." A verdict that doesn't reference the bar is an opinion.
+
+### Deferrals
+
+Flag every deferral as an explicit question, with the argument *for* the deferred work rendered fully enough that the user can overrule you. Never bury a deferral in prose. See the deferral gate in Step 7a.
 
 ## Step 7: Actionable Output
 
+### Step 6 and Step 7 are different artifacts — do not substitute one for the other
+
+This is the single easiest way to get this skill wrong, and it produces a review that looks fine and is useless.
+
+| | **Step 6** — in-chat + findings file | **Step 7a** — the GitHub comment |
+|---|---|---|
+| Audience | You (the user), deciding what to post | The PR author |
+| Contains | **Every** finding, every rejection, reclassification arithmetic, disagreements, deferrals | Only what survived your curation |
+| Length | As long as the evidence requires | Tight — the author has to act on it |
+| Purpose | Let you disagree with the pipeline | Tell the author what to change |
+
+The Step 7a format is deliberately terse. **Never render that terse shape in chat.** If the first thing you show the user is an executive summary plus a bulleted list of HIGH+ findings, you have skipped Step 6 and silently discarded every MEDIUM, every LOW, and every rejection — the exact material they need to make a call.
+
+Step 6 always runs, always in full, and always before Step 7.
+
+| Rationalization | Reality |
+|---|---|
+| "The judge already summarized it, I'll pass that along" | The judge's summary is input to Step 6, not a substitute for it. It compresses away the reviewer detail and de-emphasizes rejections. |
+| "17 findings is a lot to put in chat" | The user asked for a review. Volume is the finding count, not your formatting choice. Put the inventory in a file and the decision-relevant view in chat — both, not neither. |
+| "They only need the blockers to decide" | They need the rejections to decide whether to trust the blockers. A pipeline that rejected two bug-introducing suggestions earned more trust than one that found three nits. |
+| "I'll show the rest if they ask" | They can't ask about findings they don't know exist. |
+| "The verdict is the useful part" | The verdict is your opinion. The evidence is what lets them overrule it. |
+
 ### 7a. PR mode (SOURCE_TYPE=pr)
 
-After presenting the review, offer to draft PR comments:
+After presenting the full Step 6 report, offer to draft PR comments:
 
 > **I can draft comments for this PR:**
 >
-> 1. **Top-level review comment** — the executive summary + verdict as a PR review comment
-> 2. **Line-level comments** — each validated finding as an inline comment on the specific file:line
+> 1. **Top-level review comment** — executive summary + validation evidence + a numbered one-line finding list
+> 2. **Line-level comments** — each finding you want posted, inline on its `file:line`
 >
-> Want me to draft these? I'll format them for you to copy-paste (I won't submit them directly).
+> Which findings should go in? I'll draft them for your approval before anything is posted.
+
+**Curate before drafting.** The GitHub comment is a subset of the inventory, not a transcript of it. Confirm which findings make the cut — and note that dropping findings here is normal and good, as long as Step 6 already showed the user everything that existed.
+
+**Verify line anchors before building the payload.** Every `comments[].line` must be a line the diff actually adds or modifies, or the API rejects the whole review. Check each target against the added-line set:
+
+```bash
+git diff -U0 origin/main...HEAD -- "$FILE" \
+  | awk '/^@@/{split($3,a,","); s=substr(a[1],2); n=(a[2]==""?1:a[2]); for(i=0;i<n;i++) print s+i}'
+```
+
+**Build the payload programmatically.** Hand-escaping markdown into JSON breaks on backticks, code fences, and quotes. Write a small script that `json.dump`s a dict, then post with `gh api ... --input`. See `pr-review-posting.md` for the API shape.
 
 If the user says yes, format:
 

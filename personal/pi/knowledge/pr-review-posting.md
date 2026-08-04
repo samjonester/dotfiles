@@ -80,6 +80,14 @@ EOF
 3. **No duplication**: Don't repeat the full finding in both top-level and inline. Top-level has the one-liner, inline has the detail.
 4. **Validation evidence**: Screenshots, curl output, or test results go in the top-level body, not inline (inline comments can't easily embed images).
 
+## Reactions & Thread Resolution
+
+**👍/👎 emoji reactions are for bot reviews only (Binks, automated tools) — never on a human reviewer's comments.** Reactions are a validity signal calibrated for the `binks-review` flow. On a human's review:
+
+- **Reply** in-thread with professional prose — one reply per point (done / declined-with-rationale).
+- **Resolve** threads you addressed with a code/doc change; leave judgment-call or open-question threads for the reviewer to close.
+- **Never** add an emoji reaction to a human's comment — it reads as flippant on considered feedback.
+
 ## Multi-line Diff Comments
 
 For comments spanning multiple lines, add `start_line`:
@@ -102,3 +110,4 @@ For comments spanning multiple lines, add `start_line`:
 | Missing `"side": "RIGHT"`                   | API error                   | Always include side                |
 | Using absolute line numbers                 | Comment on wrong line       | Use diff-relative line numbers     |
 | `"event": "APPROVE"` with blocking findings | Contradictory signal        | Use `REQUEST_CHANGES` or `COMMENT` |
+| 👍/👎 reaction on a human reviewer's comment | Reads as flippant; reactions are Binks-only | Reply in prose; resolve the thread if addressed |
