@@ -28,11 +28,12 @@
       ]
     ]
   },
-  "defaultModel": "claude-opus-4-8",
+  "defaultModel": "claude-opus-5",
   "defaultProvider": "anthropic",
-  "defaultThinkingLevel": "high",
+  "defaultThinkingLevel": "max",
   "enableSkillCommands": true,
   "enabledModels": [
+    "anthropic/claude-opus-5",
     "anthropic/claude-opus-4-8",
     "anthropic/claude-sonnet-5",
     "anthropic/claude-haiku-4-5",
@@ -42,7 +43,7 @@
   ],
   "extensions": [],
   "hideThinkingBlock": false,
-  "lastChangelogVersion": "0.80.10",
+  "lastChangelogVersion": "0.83.0",
   "npmCommand": [
     "pnpm"
   ],
