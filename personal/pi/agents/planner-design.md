@@ -1,7 +1,7 @@
 ---
 name: planner-design
 description: Propose a clean, forward-looking solution. Prioritizes doing it right even if the diff is larger.
-model: claude-opus-4-6
+model: anthropic/claude-opus-5
 tools: read,grep,find,ls
 ---
 

@@ -2,7 +2,7 @@
 name: review-consistency
 description: Consistency review — flags patterns in the diff that diverge from the majority of the codebase
 tools: read, grep, find, ls
-model: claude-sonnet-4-6
+model: anthropic/claude-sonnet-5
 ---
 
 # Consistency Reviewer

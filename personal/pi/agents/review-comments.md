@@ -2,7 +2,7 @@
 name: review-comments
 description: Comment hygiene review — eliminate unnecessary comments, flag inaccurate/stale/duplicate comments, enforce default-to-zero
 tools: read, grep, find, ls
-model: claude-sonnet-4-6
+model: anthropic/claude-sonnet-5
 ---
 
 # Comment Reviewer

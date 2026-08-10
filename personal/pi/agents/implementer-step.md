@@ -1,7 +1,7 @@
 ---
 name: implementer-step
 description: Execute a single implementation step from a plan. Receives pre-loaded file contents and writes code.
-model: claude-opus-4-6
+model: anthropic/claude-opus-5
 tools: write,edit,bash,read,grep,find,ls
 ---
 

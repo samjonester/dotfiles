@@ -2,7 +2,7 @@
 name: review-naming
 description: Naming review — variable, method, class, and module naming quality, clarity, and intent communication
 tools: read, grep, find, ls
-model: claude-sonnet-4-6
+model: anthropic/claude-sonnet-5
 ---
 
 # Naming Reviewer

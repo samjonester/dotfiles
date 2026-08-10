@@ -2,7 +2,7 @@
 name: review-simplify
 description: Simplification review — reduce complexity, remove unnecessary abstractions, find more direct solutions
 tools: read, grep, find, ls
-model: claude-opus-4-6
+model: anthropic/claude-opus-5
 ---
 
 # Simplification Reviewer

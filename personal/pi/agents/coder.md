@@ -1,7 +1,7 @@
 ---
 name: coder
 description: Implement code changes per a brief. Edits files, runs tests, commits via gt, opens draft PRs. The default specialist for implementation work.
-model: claude-opus-4-7
+model: anthropic/claude-opus-5
 tools: read,write,edit,bash,grep,find,ls,bg_run,bg_list,bg_log,bg_stop,bg_wait,read_output_chunk,search_output,memory_read,memory_append,github_pull_request_read,github_issue_read,bk_build_info,bk_failed_jobs,bk_job_failure,grokt_search_code,grokt_get_file,grokt_bulk_search,vault_list_tools,vault_call_tool,team_message,team_status,team_request_shutdown,team_force_shutdown
 ---
 

@@ -2,7 +2,7 @@
 name: review-readability
 description: Readability review — cognitive complexity, control flow clarity, information density, and expressiveness
 tools: read, grep, find, ls
-model: claude-sonnet-4-6
+model: anthropic/claude-sonnet-5
 ---
 
 # Readability Reviewer

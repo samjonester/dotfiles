@@ -2,7 +2,7 @@
 name: review-design
 description: Design context review — reads surrounding code beyond the diff to find design optimization opportunities
 tools: read, grep, find, ls
-model: claude-opus-4-7
+model: anthropic/claude-opus-5
 ---
 
 # Design Context Reviewer

@@ -1,7 +1,7 @@
 ---
 name: implementer-plan
 description: Decompose a plan document into ordered, file-scoped implementation steps suitable for isolated subagent execution.
-model: claude-sonnet-4-6
+model: anthropic/claude-sonnet-5
 tools: read,grep,find,ls
 ---
 

@@ -1,7 +1,7 @@
 ---
 name: plan-questioner
 description: Sharpen a problem statement by probing for ambiguities, edge cases, and missing constraints before planning begins.
-model: claude-sonnet-4-6
+model: anthropic/claude-sonnet-5
 tools: read,bash,grep,find,ls
 ---
 

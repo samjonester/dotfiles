@@ -1,7 +1,7 @@
 ---
 name: code_explainer
 description: Read-only code archaeologist. Finds and explains symbols, traces usage across repos, summarizes behavior. Cheap and fast — use for "what is X / where is X used / why does Y do Z" questions.
-model: claude-sonnet-4-6
+model: anthropic/claude-sonnet-5
 tools: read,bash,grep,find,ls,read_output_chunk,search_output,grokt_search_code,grokt_get_file,grokt_bulk_search,grokt_stats,team_message,team_status,team_request_shutdown,team_force_shutdown
 ---
 

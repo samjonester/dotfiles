@@ -1,7 +1,7 @@
 ---
 name: researcher
 description: Web/vault/code research with a written report. Use for surveys ("compare A vs B vs C"), background ("how does library X work"), and technology landscape questions. Produces a markdown writeup.
-model: claude-opus-4-7
+model: anthropic/claude-opus-5
 tools: read,write,bash,grep,find,ls,read_output_chunk,search_output,web_search,fetch_content,get_search_content,vault_list_tools,vault_call_tool,grokt_search_code,grokt_get_file,grokt_bulk_search,grokt_stats,github_search_issues,github_search_pull_requests,github_issue_read,github_pull_request_read,github_list_issues,github_list_pull_requests,memory_read,memory_append,team_message,team_status,team_request_shutdown,team_force_shutdown
 ---
 

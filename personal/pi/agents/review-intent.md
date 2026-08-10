@@ -2,7 +2,7 @@
 name: review-intent
 description: Intent alignment review — assesses whether the code changes actually deliver what the PR description claims, and whether the description accurately represents the changes
 tools: read, grep, find, ls
-model: claude-sonnet-4-6
+model: anthropic/claude-sonnet-5
 ---
 
 # Intent Alignment Reviewer

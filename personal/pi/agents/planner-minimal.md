@@ -1,7 +1,7 @@
 ---
 name: planner-minimal
 description: Propose a minimal, low-risk solution. Prioritizes shipping fast with the smallest correct change.
-model: claude-opus-4-6
+model: anthropic/claude-opus-5
 tools: read,grep,find,ls
 ---
 

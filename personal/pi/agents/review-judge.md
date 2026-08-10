@@ -1,7 +1,7 @@
 ---
 name: review-judge
 description: Validate review findings against the actual codebase, assess quality, filter false positives, and produce the final consolidated review.
-model: claude-opus-4-7
+model: anthropic/claude-opus-5
 tools: read, grep, find, ls, bash
 ---
 

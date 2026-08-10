@@ -15,14 +15,26 @@
 - Contract violations (API breaking changes without migration, schema mismatches)
 - Missing error handling on critical paths (user-facing failures, data corruption)
 
-### Non-blocking nit — fix now, don't block merge
+### Nit — approve, but ask for it before merge
 
 - Style preferences that don't affect correctness
 - Minor naming improvements
 - Small code organization suggestions
 - Missing docs that aren't on critical paths
 
-These are still worth fixing in this PR — they're just not worth blocking merge over. Do NOT suggest deferring to follow-up issues for things that can be fixed now.
+These are worth fixing in this PR. Do NOT suggest deferring to follow-up issues for things that can be fixed now.
+
+**Never write "non-blocking" (or "optional", "take it or leave it", "nice to have") in a posted review.** Approving already signals you aren't holding the PR — restating it in prose just tells the author it's safe to skip. Say **"please consider the nits below before merging"** in the top-level, and give each inline nit one sentence on why it matters:
+
+| ❌ Pre-excused | ✅ Reason to act |
+|---|---|
+| "Non-blocking — dev-only seeds." | "A comment that states the opposite of the code will mislead the next person to touch this seeder." |
+| "Optional / take it or leave it." | "The `titleAccess` difference is the easy one to lose in a future edit." |
+| "Nice to have, no need to change." | "The drift is invisible until someone extends the test." |
+
+For a genuine judgment call, invite pushback instead of pre-conceding: *"This one's more of a judgment call — if you read the current version as clear enough, say so and I won't push."* That keeps the author's agency without telling them to ignore you.
+
+Blocking vs. not is still a real internal distinction — it decides `APPROVE` vs `REQUEST_CHANGES`. It just doesn't belong in the comment text.
 
 ### Drop / don't raise — these are noise
 
@@ -95,6 +107,14 @@ When the review skill produces findings, expect to calibrate:
 4. **Merge** findings that describe the same root issue in different locations
 5. **Verify claims** — the review skill sometimes flags things that are actually correct. Check the code before posting.
 
+### Present findings as a list, not a pipeline narrative
+
+When reporting back to Sam, lead with the findings themselves — `file:line`, what's wrong, the fix, and a post/drop recommendation per item. He does not want a summary of what the judge decided, how many reviewers ran, or how severities moved unless he asks. The adjudication detail belongs in the findings file on disk; the chat message is the list he acts on.
+
+### Verify the linchpin claim yourself
+
+If one finding would change the verdict (a CRITICAL, a claimed build break), spend the 30 seconds to check it directly before routing the whole review around it. On #977400 a CRITICAL "generated file not regenerated" collapsed to a false positive with two commands — the file was gitignored and `typecheck` runs `codegen` first.
+
 ## Responding to Bot-generated Reviews
 
 When review comments are from a bot (Binks, automated tools) but posted by a human:
@@ -103,3 +123,7 @@ When review comments are from a bot (Binks, automated tools) but posted by a hum
 - The bot findings still need validity assessment (the `binks-review` skill handles this)
 - React with 👍/👎 on each finding based on validity — **this is bot-only**; never react to a human reviewer's comments (reply in prose and resolve instead — see `pr-review-posting.md`)
 - Fix valid findings, explain invalid ones politely
+
+## Source
+
+- "Non-blocking" language ban, and the findings-list-not-narrative reporting shape: Sam, 2026-08-06, during the PR #977400 review (shop/world). He rejected a draft that pre-excused every nit, including one documenting a comment that stated the opposite of its code.
