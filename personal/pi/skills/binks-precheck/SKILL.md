@@ -29,15 +29,26 @@ Run the Binks code review engine locally against the current diff, then systemat
 
 ### Step 1: Gather context
 
-Before running binks, collect the PR title and description to reduce false positives:
+Before running binks, collect the PR title and description to reduce false positives. The current branch's PR may live in either PR system — see [../\_shared/pr-system.md](../_shared/pr-system.md); `gh` cannot see a Meteorite PR and `gs` cannot see a GitHub one. Try both, since neither lookup identifies the branch by number:
 
 ```bash
-# Get title/description from GitHub PR if one exists
+BRANCH=$(git branch --show-current)
+
+# GitHub PR for the current branch
 TITLE=$(gh pr view --json title -q '.title' 2>/dev/null)
 DESCRIPTION=$(gh pr view --json body -q '.body' 2>/dev/null)
+
+# Meteorite PR for the current branch (`gs` has no `--jq`; pipe through jq)
+if [ -z "$TITLE" ]; then
+  gs pr list --head "$BRANCH" --json > /tmp/gs-head-pr.json 2>/dev/null
+  TITLE=$(jq -r '[.. | objects | select(has("title")) | .title] | first // empty' /tmp/gs-head-pr.json 2>/dev/null)
+  DESCRIPTION=$(jq -r '[.. | objects | select(has("body")) | .body] | first // empty' /tmp/gs-head-pr.json 2>/dev/null)
+fi
 ```
 
-If neither source has a title, ask the user for a one-line summary of the changes. The `--title` and `--description` flags are critical for reducing false positives — Binks uses them to understand intent.
+The recursive `jq` extraction is deliberate — `gs` JSON field names and envelope shape differ from `gh`, so it fails soft to empty instead of erroring. Inspect `/tmp/gs-head-pr.json` if both come back empty on a branch that does have a Meteorite PR.
+
+This is context-only — the review itself runs `devx binks-pr-review` against the local diff, so a branch with no PR in either system is fine. If neither source has a title, ask the user for a one-line summary of the changes. The `--title` and `--description` flags are critical for reducing false positives — Binks uses them to understand intent.
 
 ### Step 2: Run local Binks review
 

@@ -4,6 +4,19 @@
 
 `gh pr review --comment --body "..."` posts a **top-level comment**, NOT inline/line-level comments. This is the single most common mistake. Line-level comments require the Reviews API.
 
+`gs pr review` has the same problem and no inline flag at all — its only options are `--approve`, `--request-changes`, `--comment`, and a body.
+
+## Which CLI
+
+Every payload below works unchanged on a Meteorite PR by swapping `gh api` → `gs api`. `gs api` is a mechanical replacement: same endpoint paths, same REST shape, `{owner}`/`{repo}` filled in from the resolved World repo. Resolve which system the PR is in first — see `skills/_shared/pr-system.md`.
+
+```bash
+# GitHub PR
+gh api repos/{owner}/{repo}/pulls/{number}/reviews --input - <<'EOF'
+# Meteorite PR — identical body
+gs api repos/{owner}/{repo}/pulls/{number}/reviews --input - <<'EOF'
+```
+
 ## API Patterns
 
 ### Approval with inline nits
@@ -82,6 +95,15 @@ EOF
 
 ## Reactions & Thread Resolution
 
+On a Meteorite PR these are first-class `gs` verbs rather than raw API calls:
+
+```bash
+gs pr view <N> --comments                       # thread UUIDs + comment ids
+gs pr comment <N> --reply-to <id> --body-file f  # in-thread reply
+gs pr react <N> <comment-id> --thumbs-up        # or --thumbs-down
+gs pr resolve <N> <thread-uuid>                  # UUID, not a PRRT_ node id
+```
+
 **👍/👎 emoji reactions are for bot reviews only (Binks, automated tools) — never on a human reviewer's comments.** Reactions are a validity signal calibrated for the `binks-review` flow. On a human's review:
 
 - **Reply** in-thread with professional prose — one reply per point (done / declined-with-rationale).
@@ -107,6 +129,8 @@ For comments spanning multiple lines, add `start_line`:
 | Mistake                                     | Result                      | Fix                                |
 | ------------------------------------------- | --------------------------- | ---------------------------------- |
 | `gh pr review --comment --body "..."`       | Posts top-level, not inline | Use `gh api` with Reviews API      |
+| `gs pr review <N> --comment`                | Posts top-level; no inline flag exists | Use `gs api` with the same Reviews payload |
+| `gh api` on a Meteorite PR (or `gs api` on a GitHub PR) | 404 Not Found | Resolve the system first — separate number namespaces |
 | Missing `"side": "RIGHT"`                   | API error                   | Always include side                |
 | Using absolute line numbers                 | Comment on wrong line       | Use diff-relative line numbers     |
 | `"event": "APPROVE"` with blocking findings | Contradictory signal        | Use `REQUEST_CHANGES` or `COMMENT` |

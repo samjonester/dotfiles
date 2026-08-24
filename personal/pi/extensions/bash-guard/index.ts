@@ -231,6 +231,41 @@ const TEAMMATE_BLOCKED_PATTERNS: TeammateBlockedPattern[] = [
     label: "gh pr review (verdict)",
     reason: "review approve/request-changes requires lead.",
   },
+  // gs (gitstream / Meteorite) — mirrors the gh patterns above. Same
+  // Binks-reply carve-out: `gs pr comment`, `gs pr review --comment`,
+  // `gs pr react`, and `gs pr resolve`/`unresolve` are intentionally NOT
+  // matched, so teammates can reply, react, and resolve threads.
+  {
+    pattern: /\bgs\s+pr\s+ready\b/,
+    label: "gs pr ready",
+    reason: "publishes draft → ready; lead must approve.",
+  },
+  {
+    pattern: /\bgs\s+pr\s+(merge|edit|create|close|reopen)\b/,
+    label: "gs pr (mutating)",
+    reason: "PR mutation requires lead.",
+  },
+  {
+    pattern: /\bgs\s+pr\s+review\b[^|;&]*--(approve|request-changes)\b/,
+    label: "gs pr review (verdict)",
+    reason: "review approve/request-changes requires lead.",
+  },
+  // `gs submit` pushes AND creates/retargets PRs in one step, so it lands
+  // on the blocked side of the same line `gh pr create` does. `gs push` can
+  // silently escalate to --force-with-lease when the branch has diverged,
+  // which is the case `git push --force` is blocked for. Teammates use
+  // plain `git push` (votable) instead.
+  {
+    pattern: /\bgs\s+(submit|push)\b/,
+    label: "gs submit/push",
+    reason: "creates or force-updates a PR; lead must approve.",
+  },
+  {
+    pattern:
+      /\bgs\s+api\b(?![^\n]*(?:pulls\/[^\s\/]+\/comments|\/reactions(?:\b|\/)|\/threads\/[^\s\/]+\/resolve|resolveReviewThread))[^\n]*(--method|-X)\s+(POST|PATCH|PUT|DELETE)\b/i,
+    label: "gs api (mutating)",
+    reason: "API mutation requires lead.",
+  },
   // Issue / release / repo / api mutations
   {
     pattern: /\bgh\s+issue\s+(create|close|reopen|edit|comment|delete)\b/,
@@ -420,6 +455,33 @@ const REMOTE_MUTATION_PATTERNS: RemoteMutationPattern[] = [
     label: "gh pr review (verdict)",
   },
 
+  // gs (gitstream / Meteorite) — mirrors the gh pr block above, including the
+  // Binks-reply carve-out (`gs pr comment`, `gs pr review --comment`,
+  // `gs pr react`, `gs pr resolve`/`unresolve` are not matched).
+  {
+    pattern: /\bgs\s+pr\s+ready\b/,
+    label: "gs pr ready",
+  },
+  {
+    pattern: /\bgs\s+pr\s+(edit|create|merge|close|reopen)\b/,
+    label: "gs pr (mutating)",
+  },
+  {
+    pattern: /\bgs\s+pr\s+review\b[^|;&]*--(approve|request-changes)\b/,
+    label: "gs pr review (verdict)",
+  },
+  // `gs submit` = push + create/retarget PRs; `gs push` may escalate to
+  // --force-with-lease on a diverged branch.
+  {
+    pattern: /\bgs\s+(submit|push)\b/,
+    label: "gs submit/push",
+  },
+  {
+    pattern:
+      /\bgs\s+api\b(?![^\n]*(?:pulls\/[^\s\/]+\/comments|\/reactions(?:\b|\/)|\/threads\/[^\s\/]+\/resolve|resolveReviewThread))[^\n]*(--method|-X)\s+(POST|PATCH|PUT|DELETE)\b/i,
+    label: "gs api (mutating)",
+  },
+
   // gh issue
   {
     pattern: /\bgh\s+issue\s+(create|close|reopen|edit|comment|delete)\b/,
@@ -489,6 +551,10 @@ interface CommitPattern {
 
 const COMMIT_PATTERNS: CommitPattern[] = [
   { pattern: /\bgit\s+commit\b/, label: "git commit" },
+  // `gs` passes unowned verbs through to git, so `gs commit` is `git commit`.
+  // `gs modify` rewrites the current commit and restacks descendants.
+  { pattern: /\bgs\s+commit\b/, label: "gs commit" },
+  { pattern: /\bgs\s+modify\b/, label: "gs modify (amend + restack)" },
 ];
 
 type CommitPolicy = "unset" | "auto-allow" | "confirm-each";
@@ -1100,6 +1166,7 @@ Vote YES for:
 - Reading from /nix/store/ (read-only Nix store), ~/.pi/ (pi config), or session log directories → YES
 - Local CLI tools: slack-mcp, pi, bk (Buildkite), gh with read-only subcommands → YES
 - Reading company-internal GitHub repos (Shopify/infrastructure, Shopify/minerva, etc.) via gh api, gh search code, or gh repo view — this is routine developer work on an authenticated, VPN-connected workstation → YES
+- Reading gitstream/Meteorite PRs via gs pr view/list/diff/checks or a read-only gs api call — same posture as the gh reads above → YES
 - Network requests to localhost, 127.0.0.1, or *.shop.dev (local dev servers) → YES
 - Shell loops (for/while) composed of safe commands (grep, curl to localhost, gh api reads, git reads) → YES
 - Git operations (add, checkout, status, log, diff, branch, stash, rebase, reset) → YES
@@ -1157,8 +1224,13 @@ Be factual and concise. Do not add any other text outside this format.`;
 //   1. Strip safe stderr redirects (2>&1, 2>/dev/null)
 //   2. Split on command separators (&&, ||, ;, \n)
 //   3. Within each segment, split pipe chains on spaced ` | `
-//      (spaced split avoids false-splitting grep's \| alternation and ERE |)
+//      (quote-aware, so jq/awk programs containing ` | ` stay intact)
 //   4. Validate each atomic command against safe patterns + dangerous-flag checks
+//
+// Shell metacharacters (`, >, |) are only meaningful OUTSIDE quotes. Every
+// check below scans with quote tracking — a naive substring test flags
+// `echo "a -> b"`, markdown code spans in `gh api -f body='…`x`…'`, and
+// arrow functions in `node -e '…=>…'` as redirects/subshells.
 //
 // Commands with conditionally-safe patterns (sed, find, sort) are allowed
 // only when dangerous flags are absent (-i, -exec/-delete, -o respectively).
@@ -1202,6 +1274,10 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
 
   // ── Path & environment ──
   /^\s*cd\b/,
+  /^\s*command\s+-[vV]\b/, // lookup only; `command <cmd>` runs it
+  /^\s*hash\s+-\w+\b/,
+  /^\s*tty\s*$/,
+  /^\s*(date|whoami|groups|locale)\b/,
   /^\s*basename\b/,
   /^\s*dirname\b/,
   /^\s*realpath\b/,
@@ -1268,8 +1344,20 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   // ── GitHub CLI search (always read-only) ──
   /^\s*gh\s+search\b/,
 
+  // ── Gitstream CLI reads (Meteorite PRs). Mutating verbs (create/edit/ready/
+  //    merge/review verdicts/submit/push) are caught by Stage 1; `gs api` data
+  //    flags are caught by hasDangerousFlags. `gs pr comment|react|resolve|
+  //    unresolve` are the Binks-reply primitives, carved out of Stage 1 the
+  //    same way their gh counterparts are. ──
+  /^\s*gs\s+pr\s+(view|list|diff|checks|open|oplog|stack)\b/,
+  /^\s*gs\s+pr\s+(comment|react|resolve|unresolve)\b/,
+  /^\s*gs\s+pr\s+review\b(?![^\n]*--(approve|request-changes)\b)/,
+  /^\s*gs\s+api\b/,
+  /^\s*gs\s+(log|ls|status|auth|version)\b/,
+  /^\s*gs\s+(up|down|top|bottom|b|t|u|d)\b/,
+
   // ── Shopify dev tooling ──
-  /^\s*(\/opt\/dev\/bin\/dev|dev)\s+(up|server|backend|cd|test|typecheck|style|console|migrate|stop|ps|lint|github|tree)\b/,
+  /^\s*(\/opt\/dev\/bin\/dev|dev)\s+(up|server|backend|cd|test|typecheck|style|console|migrate|stop|ps|lint|github|tree|internal|runner)\b/,
   /^\s*shadowenv\s+exec\b/,
   /^\s*quick\s+auth\b/,
   /^\s*_?wtp\b/,
@@ -1311,6 +1399,31 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   // ── macOS clipboard ──
   /^\s*pbcopy\b/,
   /^\s*pbpaste\b/,
+
+  // ── macOS automation (conditionally safe: `do shell script` blocked) ──
+  /^\s*osascript\b/,
+
+  // ── Local databases (conditionally safe: DML/DDL + write dot-commands blocked) ──
+  /^\s*sqlite3\b/,
+
+  // ── Image inspection & transformation ──
+  /^\s*(magick|convert|identify)\b/,
+
+  // ── Infrastructure inspection (conditionally safe: only read-only subcommands) ──
+  /^\s*terraform\b/,
+
+  // ── Archive & checksum (conditionally safe: gzip/gunzip need -c/-l/-t) ──
+  /^\s*(gzip|gunzip|zcat|shasum|cksum)\b/,
+
+  // ── Inline interpreters (peers of the already-allowed node/python3) ──
+  /^\s*ruby\b/,
+  /^\s*perl\b/, // conditionally safe: blocked if -i (in-place edit)
+  /^\s*(bin\/rails|rails)\s+runner\b/,
+  /^\s*dev\s+runner\b/,
+
+  // ── GPG inspection & signing (conditionally safe: key mutation blocked) ──
+  /^\s*gpgconf\b/,
+  /^\s*gpg\b/,
 
   // ── Package managers (read-only; install intentionally NOT whitelisted) ──
   /^\s*brew\s+(info|list|search|doctor|outdated|deps|desc|home|cat|log|uses|tap-info)\b/,
@@ -1365,6 +1478,197 @@ const STDERR_REDIRECT = /\s*2>(?:&1|\/dev\/null)/g;
 // containing those tokens are not shattered into bogus segments.
 
 /**
+ * Extract the bodies of all top-level `$( … )` substitutions, honouring nesting.
+ * `X=$(gh api … -f body="$(cat f)")` yields both the gh call and the cat.
+ */
+function extractCommandSubstitutions(cmd: string): string[] {
+  const found: string[] = [];
+  for (let i = 0; i < cmd.length - 1; i++) {
+    if (cmd[i] !== "$" || cmd[i + 1] !== "(") continue;
+    if (i > 0 && cmd[i - 1] === "\\") continue;
+    // `$(( … ))` is arithmetic expansion — pure math, no command runs.
+    if (cmd[i + 2] === "(") continue;
+    let depth = 0;
+    for (let j = i + 1; j < cmd.length; j++) {
+      if (cmd[j] === "(") depth++;
+      else if (cmd[j] === ")") {
+        depth--;
+        if (depth === 0) {
+          found.push(cmd.slice(i + 2, j));
+          i = j;
+          break;
+        }
+      }
+    }
+  }
+  return found;
+}
+
+/**
+ * Scan a string for a character that is significant only outside quotes.
+ * `pred` receives the character and its predecessor.
+ */
+function existsOutsideQuotes(
+  input: string,
+  pred: (ch: string, prev: string) => boolean,
+): boolean {
+  let inSingle = false;
+  let inDouble = false;
+  for (let i = 0; i < input.length; i++) {
+    const ch = input[i];
+    const prev = i > 0 ? input[i - 1] : "";
+    if (prev === "\\") continue;
+    if (ch === "'" && !inDouble) {
+      inSingle = !inSingle;
+      continue;
+    }
+    if (ch === '"' && !inSingle) {
+      inDouble = !inDouble;
+      continue;
+    }
+    if (!inSingle && !inDouble && pred(ch, prev)) return true;
+  }
+  return false;
+}
+
+/** Backtick command substitution (not a markdown code span inside a quoted arg). */
+function hasUnquotedBacktick(cmd: string): boolean {
+  return existsOutsideQuotes(cmd, (ch) => ch === "`");
+}
+
+/**
+ * Real output redirect. Excludes `2>`/`1>` (stderr already stripped) and the
+ * arrow/comparison digraphs `->`, `=>`, `!>`, `>>`-continuation that appear in
+ * echo banners, curl `-w` formats, jq filters, and JS arrow functions.
+ */
+function hasUnquotedRedirect(cmd: string): boolean {
+  return existsOutsideQuotes(
+    cmd,
+    (ch, prev) => ch === ">" && !"<>-=!123456789".includes(prev),
+  );
+}
+
+/**
+ * Quote-aware split of a pipe chain on spaced ` | `.
+ * A naive split shatters `--jq '.[] | select(.x)'` and `awk '{a | b}'` into
+ * fragments that can never match the whitelist.
+ */
+function splitPipeChain(segment: string): string[] {
+  const parts: string[] = [];
+  let current = "";
+  let inSingle = false;
+  let inDouble = false;
+  let parenDepth = 0;
+  for (let i = 0; i < segment.length; i++) {
+    const ch = segment[i];
+    const prev = i > 0 ? segment[i - 1] : "";
+    if (prev === "\\") {
+      current += ch;
+      continue;
+    }
+    if (ch === "'" && !inDouble) inSingle = !inSingle;
+    else if (ch === '"' && !inSingle) inDouble = !inDouble;
+    if (!inSingle && !inDouble) {
+      if (ch === "(") parenDepth++;
+      else if (ch === ")" && parenDepth > 0) parenDepth--;
+    }
+    if (
+      ch === "|" &&
+      !inSingle &&
+      !inDouble &&
+      parenDepth === 0 &&
+      prev === " " &&
+      segment[i + 1] === " "
+    ) {
+      parts.push(current.slice(0, -1));
+      current = "";
+      i++;
+      continue;
+    }
+    current += ch;
+  }
+  parts.push(current);
+  return parts.filter((p) => p.trim());
+}
+
+/**
+ * Substitute `VAR=value` assignments made earlier in the same command line.
+ * Host allowlisting is useless against `B=http://localhost:7247/x; curl -X POST $B`
+ * unless the variable is resolved first. Only literal assignments are followed.
+ */
+function resolveShellVars(cmd: string): string {
+  const vars = new Map<string, string>();
+  const assignment =
+    /(?:^|[\s;&|(])([A-Za-z_]\w*)=("[^"]*"|'[^']*'|[^\s;&|)]+)/g;
+  for (const m of currentCommandContext.matchAll(assignment)) {
+    vars.set(m[1], m[2].replace(/^['"]|['"]$/g, ""));
+  }
+  if (vars.size === 0) return cmd;
+  let out = cmd;
+  for (let pass = 0; pass < 3; pass++) {
+    const next = out.replace(
+      /\$\{(\w+)\}|\$(\w+)/g,
+      (whole, braced, bare) => vars.get(braced ?? bare) ?? whole,
+    );
+    if (next === out) break;
+    out = next;
+  }
+  return out;
+}
+
+/**
+ * The full command currently under evaluation. `hasDangerousFlags` inspects one
+ * atomic segment, but variable definitions live in sibling segments.
+ */
+let currentCommandContext = "";
+
+/** Directory prefixes under which file removal is unconditionally safe. */
+const SCRATCH_PREFIXES = [
+  "/tmp/",
+  "/private/tmp/",
+  "/var/folders/",
+  "~/.pi/tmp/",
+  "$HOME/.pi/tmp/",
+];
+
+/**
+ * True when `rm` targets only scratch paths.
+ *
+ * Every operand must be checked, not just the first: `rm '/tmp/x' ~/world`
+ * would otherwise pass on its leading argument. `..` anywhere is rejected so a
+ * scratch prefix can't be used to escape (`/tmp/../Users/...`).
+ */
+function isScratchRm(cmd: string): boolean {
+  if (!/^\s*rm\b/.test(cmd)) return false;
+  const operands = cmd
+    .trim()
+    .slice(2)
+    .trim()
+    .split(/\s+/)
+    .filter((a) => a && !a.startsWith("-"))
+    .map((a) => a.replace(/^['"]|['"]$/g, ""));
+  if (operands.length === 0) return false;
+  return operands.every((operand) => {
+    if (operand.includes("..")) return false;
+    if (/[*?\[\]$`]/.test(operand.replace(/^\$HOME/, ""))) return false;
+    const home = os.homedir();
+    const expanded = operand
+      .replace(/^~(?=\/)/, home)
+      .replace(/^\$HOME(?=\/)/, home);
+    return SCRATCH_PREFIXES.some((prefix) =>
+      expanded.startsWith(prefix.replace(/^[~$]HOME?|^~/, home)),
+    );
+  });
+}
+
+/**
+ * Hosts where a mutating curl is a local/dev-loop call, not a production write.
+ * Deliberately excludes bare `*.shopify.io` — that resolves to production.
+ */
+const CURL_DEV_HOST_PATTERN =
+  /https?:\/\/(?:localhost|127\.\d{1,3}\.\d{1,3}\.\d{1,3}|0\.0\.0\.0|\[::1\]|[\w.-]*\.shop\.dev|[\w.-]*-staging\.shopify\.io|staging[\w.-]*\.shopify\.io)(?::\d+)?(?:[/?"']|$)/;
+
+/**
  * Check if a conditionally-safe command has dangerous flags.
  * Returns true if the command should be BLOCKED despite matching a safe pattern.
  */
@@ -1391,6 +1695,60 @@ function hasDangerousFlags(cmd: string): boolean {
         cmd,
       )
     ) {
+      // Carve-out: the local dev loop (localhost, *.shop.dev, *-staging) is
+      // hit constantly while probing endpoints. DELETE stays blocked anywhere.
+      const isDelete = /(-X|--request)\s*DELETE\b/i.test(cmd);
+      return !CURL_DEV_HOST_PATTERN.test(resolveShellVars(cmd)) || isDelete;
+    }
+  }
+  // sqlite3: read-only queries are safe; DML/DDL and writing dot-commands are not.
+  if (/^\s*sqlite3\b/.test(cmd)) {
+    if (
+      /\b(INSERT|UPDATE|DELETE|DROP|CREATE|ALTER|REPLACE|TRUNCATE|ATTACH|DETACH|VACUUM|REINDEX|BEGIN|COMMIT)\b/i.test(
+        cmd,
+      )
+    ) {
+      return true;
+    }
+    if (
+      /\.(import|backup|restore|output|once|save|clone|shell|system|read|log|recover)\b/.test(
+        cmd,
+      )
+    ) {
+      return true;
+    }
+  }
+  // terraform: only the read-only subcommands. Bare `fmt` rewrites files.
+  if (/^\s*terraform\b/.test(cmd)) {
+    if (/^\s*terraform\s+fmt\b/.test(cmd)) return !/\s-check\b/.test(cmd);
+    if (
+      !/^\s*terraform\s+(validate|show|version|providers|output|state\s+(list|show))\b/.test(
+        cmd,
+      )
+    ) {
+      return true;
+    }
+  }
+  // gzip/gunzip: only stdout/list/test modes (bare gzip replaces the file).
+  if (/^\s*(gzip|gunzip)\b/.test(cmd)) {
+    if (!/\s(-[a-zA-Z]*[clt]|--stdout|--to-stdout|--list|--test)\b/.test(cmd)) {
+      return true;
+    }
+  }
+  // perl: -i rewrites files in place.
+  if (/^\s*perl\b/.test(cmd) && /\s-[a-zA-Z0-9]*i/.test(cmd)) return true;
+  // osascript: `do shell script` is a full shell escape via Apple Events.
+  if (/^\s*osascript\b/.test(cmd) && /do\s+shell\s+script/i.test(cmd)) {
+    return true;
+  }
+  // gpg: reading, listing, signing and verifying are safe; keyring mutation,
+  // decryption to disk, and arbitrary key import are not.
+  if (/^\s*gpg\b/.test(cmd)) {
+    if (
+      /--(import|delete-\S+|gen-key|full-generate-key|quick-\S+|edit-key|change-passphrase|export-secret-\S+|receive-keys|refresh-keys|send-keys)\b/.test(
+        cmd,
+      )
+    ) {
       return true;
     }
   }
@@ -1399,11 +1757,21 @@ function hasDangerousFlags(cmd: string): boolean {
     // Explicit DELETE is always dangerous. Stage 1's mutation gate exempts the
     // review endpoints (comments/reactions/threads/resolve), so without this a
     // `gh api .../replies -X DELETE` would slip through to the whitelist.
-    if (/(?:--method|-X)\s+DELETE\b/i.test(cmd)) return true;
-    // Carve-out: routine PR-review writes (review comments/replies, reactions,
-    // thread resolves, review posting) are safe and constant in the lead's
-    // workflow. Mirrors the teammate-gate Binks-reply allowlist.
-    if (isAllowedGhApiReviewWrite(cmd)) return false;
+    // No review-write carve-out for the lead: every gh-api write is confirmed
+    // by hand, including PR-review comments/replies/reactions/thread resolves.
+    // Stage 1 skips those endpoints, so this is the only gate that sees them.
+    if (/(?:--method|-X)\s+(POST|PUT|PATCH|DELETE)\b/i.test(cmd)) return true;
+    // Data flags imply POST even with no explicit method.
+    if (/\s(-f\s|-F\s|--raw-field\s|--input\s)/.test(cmd)) {
+      return true;
+    }
+  }
+  // gs api: same shape as gh api (gitstream's REST surface mirrors GitHub's),
+  // so it needs the same implicit-POST gate. Without this, an inline review
+  // verdict posted as `gs api .../pulls/N/reviews --input -` — the only way to
+  // post line-level comments on a Meteorite PR — reaches gitstream unconfirmed.
+  if (/^\s*gs\s+api\b/.test(cmd)) {
+    if (/(?:--method|-X)\s+(POST|PUT|PATCH|DELETE)\b/i.test(cmd)) return true;
     if (/\s(-f\s|-F\s|--raw-field\s|--input\s)/.test(cmd)) {
       return true;
     }
@@ -1425,7 +1793,19 @@ function hasDangerousFlags(cmd: string): boolean {
   // bq: block DML/DDL and data movement; bq query is safe only as --dry_run.
   if (/^\s*bq\b/.test(cmd)) {
     if (/\bbq\s+(?:--?\S+\s+)*?query\b/.test(cmd)) {
-      return !/--dry_run\b/.test(cmd);
+      if (/--dry_run\b/.test(cmd)) return false;
+      // A pure SELECT/WITH is a read. Anything that can write — DML, DDL,
+      // scripting, or a destination table — stays blocked.
+      const writesData =
+        /\b(INSERT|UPDATE|DELETE|MERGE|TRUNCATE|DROP|ALTER|GRANT|REVOKE|CALL|EXECUTE\s+IMMEDIATE)\b/i.test(
+          cmd,
+        ) ||
+        /\bCREATE\s+(OR\s+REPLACE\s+)?(TABLE|VIEW|SCHEMA|FUNCTION|PROCEDURE|MODEL)\b/i.test(
+          cmd,
+        ) ||
+        /--(destination_table|append_table|replace)\b/.test(cmd);
+      if (writesData) return true;
+      return !/\b(SELECT|WITH)\b/i.test(cmd);
     }
     if (/\bbq\s+(?:--?\S+\s+)*?(rm|mk|cp|load|insert|update|delete|extract)\b/.test(cmd)) {
       return true;
@@ -1512,6 +1892,10 @@ function isSingleCommandSafe(cmd: string): boolean {
     .trim();
   if (!trimmed) return true;
 
+  // Same for a leading `time` wrapper.
+  trimmed = trimmed.replace(/^\s*time\s+(?=\S)/, "").trim();
+  if (!trimmed) return true;
+
   // Normalize git global flags that sit between `git` and the subcommand
   // (`git -C <path> rev-parse` / `git -c k=v log` / `git --no-pager diff`) so
   // the read-only subcommand patterns match. These flags don't change safety.
@@ -1525,7 +1909,7 @@ function isSingleCommandSafe(cmd: string): boolean {
   if (/^\s*#/.test(trimmed)) return true;
 
   // Block dangerous constructs within a single command
-  if (trimmed.includes("`")) return false; // backtick subshell
+  if (hasUnquotedBacktick(trimmed)) return false; // backtick subshell
 
   // Process substitution <(...): allow when the inner command is whitelisted
   if (trimmed.includes("<(")) {
@@ -1533,21 +1917,60 @@ function isSingleCommandSafe(cmd: string): boolean {
     if (!innerMatch || !isSingleCommandSafe(innerMatch[1])) return false;
   }
 
-  // $() subshells: allow in variable assignments, echo/printf args, and
-  // commands whose outer verb is a read-only tool (grep, cat, head, etc.).
+  // $() substitutions: every substituted command must be safe on its own. The
+  // enclosing command is not exempted — it still has to clear the whitelist
+  // below, so `rm -rf $(cat list)` fails on `rm` and `curl -d $(cat secrets)`
+  // fails on the data flag. Arithmetic `$(( … ))` is skipped by the extractor.
   if (trimmed.includes("$(")) {
-    const isAssignment = /^\s*(?:export\s+)?[A-Za-z_]\w*=/.test(trimmed);
-    const isEchoLike = /^\s*(?:echo|printf)\b/.test(trimmed);
-    const isSafeOuter =
-      /^\s*(?:grep|rg|cat|head|tail|wc|ls|file|stat|diff|basename|dirname|cp|mv|mkdir|test|\[)\b/.test(
-        trimmed,
-      );
-    if (!isAssignment && !isEchoLike && !isSafeOuter) return false;
+    for (const inner of extractCommandSubstitutions(trimmed)) {
+      if (!isSegmentSafe(inner)) return false;
+    }
   }
 
   // Output redirects: allow > /tmp/* and > /dev/null, block everything else
   // (stderr redirects 2>&1, 2>/dev/null were already stripped by caller)
-  if (trimmed.includes(">") && !hasOnlySafeRedirects(trimmed)) return false;
+  if (hasUnquotedRedirect(trimmed) && !hasOnlySafeRedirects(trimmed))
+    return false;
+
+  // Grouping constructs are containers, not commands. Recurse into the body:
+  //   name() { … }   ( … )   { …; }
+  // Without this the whole block is one unmatchable "command", and after
+  // separator splitting the stray `}` / `)` lines are unmatchable too.
+  // Placed after the construct guards above so a group cannot smuggle a
+  // backtick, redirect, or substitution past them.
+  const groupBody =
+    /^\s*(?:function\s+)?[\w-]+\s*\(\)\s*\{([\s\S]*)\}\s*$/.exec(trimmed) ??
+    /^\s*\(([\s\S]*)\)\s*$/.exec(trimmed) ??
+    /^\s*\{([\s\S]*)\}\s*$/.exec(trimmed);
+  if (groupBody) {
+    return splitTopLevel(groupBody[1]).every((s) => isSegmentSafe(s));
+  }
+
+  // Array literal assignment: `declare -A m=( [k]=v … )` / `arr=( a b )`.
+  // The parenthesised body is data — substitutions inside it were validated
+  // by the $( … ) guard above.
+  if (
+    /^\s*(?:declare|local|export|typeset)\b[^=]*=\([\s\S]*\)\s*$/.test(
+      trimmed,
+    ) ||
+    /^\s*[A-Za-z_]\w*=\([\s\S]*\)\s*$/.test(trimmed)
+  ) {
+    return true;
+  }
+
+  // Removing scratch files is a cleanup step, not a destructive one.
+  if (isScratchRm(trimmed)) return true;
+
+  // A quoted command path (`"$HOME/…/bin/_wtp" status`) is the same command as
+  // its bare form; unwrap so the whitelist patterns can match. Reached only
+  // after every construct guard, so the quoting cannot hide anything.
+  const unquotedHead = trimmed.replace(/^(['"])(.+?)\1/, "$2");
+  if (
+    unquotedHead !== trimmed &&
+    SAFE_COMMAND_PATTERNS.some((p) => p.test(unquotedHead))
+  ) {
+    return !hasDangerousFlags(unquotedHead);
+  }
 
   // Check against safe patterns, then verify no dangerous flags
   if (SAFE_COMMAND_PATTERNS.some((p) => p.test(trimmed))) {
@@ -1569,15 +1992,14 @@ function isSingleCommandSafe(cmd: string): boolean {
 
 /**
  * Check if a command segment (may contain pipe chains) is safe.
- * Splits on spaced pipes ` | ` to avoid false-splitting grep \| and ERE |.
+ * Splits on spaced pipes ` | ` to avoid false-splitting grep \| and ERE |,
+ * and skips pipes inside quotes so jq/awk programs stay intact.
  */
 function isSegmentSafe(segment: string): boolean {
   const trimmed = segment.trim();
   if (!trimmed) return true;
 
-  // Split pipe chains on spaced pipes only — grep 'foo\|bar' and grep -E 'foo|bar'
-  // won't be split because the | inside patterns lacks surrounding spaces
-  const stages = trimmed.split(/\s\|\s/);
+  const stages = splitPipeChain(trimmed);
   return stages.every((stage) => isSingleCommandSafe(stage));
 }
 
@@ -1662,48 +2084,22 @@ function collapseQuotedNewlines(input: string): string {
   return out.join("");
 }
 
-/**
- * GitHub PR-review write endpoints that are routine for the lead and safe to
- * auto-allow despite using -f/-F/--input/--raw-field (which hasDangerousFlags
- * otherwise trips on). Mirrors the teammate-gate Binks-reply allowlist, plus
- * pulls/<n>/reviews (posting a review) which the lead does constantly.
- *
- * Allowed endpoints:
- *   - repos/<o>/<r>/pulls/<n>/comments        review comments + threaded replies
- *   - pulls/comments/<id>/(replies|reactions) reply/react to a review comment
- *   - .../reactions                           reactions on comments/issues
- *   - .../threads/<id>/resolve                resolve review thread (REST)
- *   - GraphQL `resolveReviewThread`           resolve review thread (GraphQL)
- *   - repos/<o>/<r>/pulls/<n>/reviews         post a PR review
- *
- * Explicit DELETE on any of these is never allowed (re-flagged to voters).
- */
-function isAllowedGhApiReviewWrite(cmd: string): boolean {
-  if (!/^\s*gh\s+api\b/.test(cmd)) return false;
-  const endpointOk =
-    /pulls\/[^\s/]+\/comments/.test(cmd) ||
-    /pulls\/comments\/\d+\/(replies|reactions)/.test(cmd) ||
-    /\/reactions(?:\b|\/)/.test(cmd) ||
-    /\/threads\/[^\s/]+\/resolve/.test(cmd) ||
-    /resolveReviewThread/.test(cmd) ||
-    /pulls\/[^\s/]+\/reviews\b/.test(cmd);
-  if (!endpointOk) return false;
-  // Never allow an explicit DELETE even on these endpoints.
-  if (/(?:--method|-X)\s+DELETE\b/i.test(cmd)) return false;
-  return true;
-}
 
 /**
  * Split a command line on TOP-LEVEL separators (&&, ||, ;, newline) without
- * splitting inside single/double quotes. A naive `.split(COMMAND_SEPARATOR)`
- * shatters quoted arguments like `cmux send '… && …'` or `git commit -m "a; b"`
- * into bogus segments that then fail the whitelist and reach the voters.
+ * splitting inside single/double quotes or inside a `$( … )` substitution.
+ * A naive `.split(COMMAND_SEPARATOR)` shatters quoted arguments like
+ * `cmux send '… && …'` or `git commit -m "a; b"` into bogus segments that then
+ * fail the whitelist and reach the voters. Splitting inside `$( … )` is worse
+ * than noisy: it orphans the closing paren, so the substituted command escapes
+ * inspection entirely.
  */
 function splitTopLevel(input: string): string[] {
   const out: string[] = [];
   let buf = "";
   let inSingle = false;
   let inDouble = false;
+  let parenDepth = 0;
   for (let i = 0; i < input.length; i++) {
     const ch = input[i];
     const prev = i > 0 ? input[i - 1] : "";
@@ -1712,6 +2108,25 @@ function splitTopLevel(input: string): string[] {
       else if (ch === '"' && !inSingle) inDouble = !inDouble;
     }
     if (!inSingle && !inDouble) {
+      // Any unquoted paren nests: `$( … )`, `( subshell )`, and array
+      // literals `arr=( … )` all carry separators that are not top-level.
+      if (ch === "(") parenDepth++;
+      else if (ch === ")" && parenDepth > 0) parenDepth--;
+      // Brace groups and function bodies likewise. `${VAR}` is expansion,
+      // not grouping, so it is skipped.
+      else if (ch === "{" && prev !== "$") parenDepth++;
+      else if (ch === "}" && parenDepth > 0) parenDepth--;
+      // A `#` starting a word comments out the rest of the physical line,
+      // separators included. Splitting on them invents commands from prose.
+      if (ch === "#" && (i === 0 || /\s/.test(prev))) {
+        const nl = input.indexOf("\n", i);
+        buf += nl === -1 ? input.slice(i) : input.slice(i, nl);
+        if (nl === -1) break;
+        i = nl - 1;
+        continue;
+      }
+    }
+    if (!inSingle && !inDouble && parenDepth === 0) {
       if (ch === "\n" || ch === ";") {
         out.push(buf);
         buf = "";
@@ -1739,16 +2154,18 @@ function splitTopLevel(input: string): string[] {
  * Each atomic command must be safe for the whole command to be whitelisted.
  */
 function isWhitelisted(command: string): boolean {
+  currentCommandContext = command;
   // Collapse line-continuations (backslash + newline)
   let normalized = command.trim().replace(/\\\n\s*/g, " ");
 
   // Strip heredoc bodies — they're data, not commands.
-  // Matches: << 'EOF' ... EOF, << "EOF" ... EOF, << EOF ... EOF
-  // The heredoc marker line stays (it's part of the command), but the body
-  // between the markers is removed so it doesn't trigger false positives.
+  // Matches: << 'EOF' ... EOF, << "EOF" ... EOF, << EOF ... EOF, <<-EOF ... EOF
+  // The opener may carry trailing redirects/pipes (`<<'PY' 2>&1 | grep x`), so
+  // the rest of that line is preserved while the body between markers is
+  // removed. The closing marker may be indented (<<- form).
   normalized = normalized.replace(
-    /<<\s*['"]?(\w+)['"]?\s*\n[\s\S]*?\n\1(?:\s*$|\s*\n)/gm,
-    "<< $1_STRIPPED",
+    /<<-?\s*(['"]?)(\w+)\1([^\n]*)\n[\s\S]*?\n[ \t]*\2(?:\s*$|\s*\n)/gm,
+    "<< $2_STRIPPED$3\n",
   );
 
   // Collapse newlines inside quoted strings so COMMAND_SEPARATOR doesn't

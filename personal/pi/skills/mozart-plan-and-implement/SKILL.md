@@ -144,8 +144,13 @@ If the options stack on a base PR that doesn't exist yet, create it first:
 
 ```bash
 git checkout -b <base-branch-name> && git add -A && git commit -m "<base commit message>"
-git push -u origin HEAD && gh pr create --draft --fill
+git push -u origin HEAD
+gs pr create --base main
 ```
+
+`gs pr create` opens the PR in Meteorite, the default for new `shop/world` PRs. It does **not** push, so `git push` stays. There is no `--fill`: title defaults to the head commit subject and body to the head commit body, so the bare form is the equivalent. `--draft` is already the default — pass `--publish` only for ready-for-review.
+
+Report the created PR with `gs pr view <N> --json | jq -r .htmlUrl`, never the `url` field.
 
 Record the base branch name for use in step 3.2.
 

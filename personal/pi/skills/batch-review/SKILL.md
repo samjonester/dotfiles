@@ -23,21 +23,29 @@ You orchestrate multi-PR review sessions. You classify PRs, gather diffs in para
 
 Accept PRs in any format:
 - PR numbers: `#595413 #597454 #596728`
-- GitHub URLs
+- GitHub or Meteorite URLs
 - From memory bank (if user says "review the PRs from my queue")
+
+Resolve the PR system first per [../\_shared/pr-system.md](../_shared/pr-system.md) — GitHub and Meteorite PRs have separate number namespaces and different CLIs. **Resolve per PR, not once for the batch**: a batch can mix systems. Record each PR's `PR_SYS` next to its metadata and carry it through diff gathering, review presentation, and comment posting.
 
 For each PR, fetch metadata:
 
 ```bash
+# PR_SYS=gh
 gh pr view <number> --repo shop/world --json number,title,url,baseRefName,headRefName,body,additions,deletions,changedFiles
+
+# PR_SYS=gs — `--json` takes no field list and there is no `--jq`; pipe through jq
+gs pr view <number> --json | jq
 ```
+
+For a Meteorite PR the browsable link is `htmlUrl` — never report the `url` field, which is the unopenable `api.gitstream.shopify.io` host.
 
 ### 1b. Classify each PR
 
 Read [../review/references/reviewer-matrix.md](../review/references/reviewer-matrix.md) for classification rules.
 
 For each PR, determine:
-- **Language** — from the changed file extensions (use `gh pr diff <number> --name-only` for the file list)
+- **Language** — from the changed file extensions (use `gh pr diff <number> --name-only`, or `gs pr diff <number> --name-only` when `PR_SYS=gs`, for the file list)
 - **Change type** — from file patterns and PR metadata
 - **Size** — from additions + deletions (reviewable lines)
 - **Risk signals** — from file paths
@@ -113,17 +121,19 @@ bg_run({
     git checkout \"$BRANCH\" 2>/dev/null || git checkout -b \"$BRANCH\" \"origin/$BRANCH\"; \
     git reset --hard \"origin/$BRANCH\" 2>&1 | tail -1; \
     echo \"WORKTREE=$TARGET_DIR\"; \
-    gh pr diff <number> > /tmp/review-<number>.diff; \
+    <PR_SYS> pr diff <number> > /tmp/review-<number>.diff; \
     echo \"DIFF_READY=/tmp/review-<number>.diff\"; \
     echo \"DONE\"'"
 })
 ```
 
+Substitute `<PR_SYS>` with that PR's resolved CLI (`gh` or `gs`) — the diff verb is the only system-dependent command in the script, and it differs per PR within a batch.
+
 `set -euo pipefail` + the explicit `TARGET_DIR` guard mean the script can never run git against the wrong checkout — it exits non-zero instead. `bg_wait` each job and confirm it printed `WORKTREE=<path>` and `DONE` before launching the next claim.
 
 Parse the output to extract `WORKTREE` path and `DIFF_READY` path for each PR. Treat a job that exited non-zero, printed `ABORT:`, or has an empty `WORKTREE=` as a **failed claim** (see below) — do NOT proceed to review that PR until it has a real worktree.
 
-**Step 2 — `gh pr diff` does not need a worktree.** If a claim fails but you still want to review, the diff was likely already written (or can be fetched standalone with `gh pr diff <number> > /tmp/review-<number>.diff`); fall back to diff-only review for that PR (a degraded mode — warn the user).
+**Step 2 — the diff fetch does not need a worktree.** If a claim fails but you still want to review, the diff was likely already written (or can be fetched standalone with `gh pr diff <number> > /tmp/review-<number>.diff`, or `gs pr diff <number> > /tmp/review-<number>.diff` when `PR_SYS=gs`); fall back to diff-only review for that PR (a degraded mode — warn the user).
 
 **If WTP fails** (no free slots, or a claim aborts): inform the user and offer to either free slots (`_wtp status` then `_wtp free <slot>`) or fall back to diff-only review for that PR. If you accidentally clobbered the main checkout, restore it: `git -C <root>/src checkout <original-branch>` (find it via `git -C <root>/src reflog`).
 

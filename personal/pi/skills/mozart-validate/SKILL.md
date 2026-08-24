@@ -11,8 +11,14 @@ You validate a PR by executing its claimed behavior — not by reading the code,
 
 ### 1a. Get PR metadata
 
+Resolve the PR system first per [../\_shared/pr-system.md](../_shared/pr-system.md) — GitHub and Meteorite PRs have separate number namespaces and different CLIs. Save the result as `PR_SYS` (`gh` or `gs`); every PR command below branches on it.
+
 ```bash
+# GitHub PR
 gh pr view <number_or_url> --json title,url,body,baseRefName,headRefName,number
+
+# Meteorite PR — no --jq; field names differ
+gs pr view <number> --json | jq '{title, htmlUrl, body, baseRef, headRef, number}'
 ```
 
 Extract and save:
@@ -20,6 +26,8 @@ Extract and save:
 - `PR_NUMBER`, `PR_TITLE`, `PR_URL`
 - `HEAD_BRANCH`, `BASE_BRANCH`
 - `PR_BODY` — the full PR description
+
+On `gs`, `PR_URL` comes from `htmlUrl` (never `url`, which is the unopenable `api.gitstream.shopify.io` host), `HEAD_BRANCH` from `headRef`, and `BASE_BRANCH` from `baseRef`.
 
 If the user provided a URL, parse the number from it. If neither a number nor URL was provided, stop and ask.
 
@@ -52,7 +60,11 @@ If no validation steps exist, note this — you'll derive validation from the co
 ### 2b. Extract the diff
 
 ```bash
+# GitHub PR
 gh pr diff <PR_NUMBER> --repo "$REPO"
+
+# Meteorite PR
+gs pr diff <PR_NUMBER>
 ```
 
 Save the diff for classification and script generation.
@@ -393,14 +405,18 @@ Show the full draft comment and ask:
 
 > Here's the validation comment draft. Want me to:
 >
-> 1. **Post it** — I'll submit it as a PR comment via `gh`
+> 1. **Post it** — I'll submit it as a PR comment via `$PR_SYS`
 > 2. **Edit first** — tell me what to change
 > 3. **Just save it** — I'll write it to `tmp/pr-<NUMBER>-validation-comment.md`
 
 **If the user says post it:**
 
 ```bash
+# GitHub PR
 gh pr comment <PR_NUMBER> --body-file tmp/pr-<NUMBER>-validation-comment.md
+
+# Meteorite PR
+gs pr comment <PR_NUMBER> --body-file tmp/pr-<NUMBER>-validation-comment.md
 ```
 
 ## Constraints

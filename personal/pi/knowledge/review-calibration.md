@@ -56,7 +56,7 @@ Blocking vs. not is still a real internal distinction — it decides `APPROVE` v
 
 ### Line-level comment API
 
-Line-level comments require the Reviews API, not `gh pr review --comment`:
+Line-level comments require the Reviews API, not `gh pr review --comment` (or `gs pr review`, which has no inline flag). On a Meteorite PR, swap `gh api` → `gs api` — identical payload. Resolve the system first per `skills/_shared/pr-system.md`.
 
 ```bash
 # CORRECT — posts inline comments
@@ -77,6 +77,7 @@ EOF
 
 # WRONG — posts top-level only, NOT inline
 gh pr review --comment --body "..."
+gs pr review <N> --comment --body "..."
 ```
 
 For approval with inline comments, use `"event": "APPROVE"`. For request changes, use `"event": "REQUEST_CHANGES"`.

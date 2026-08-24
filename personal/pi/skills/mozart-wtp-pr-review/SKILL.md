@@ -15,11 +15,19 @@ Use this skill to open a PR in a WTP slot for isolated review.
 
 ## 1) Resolve branch (if PR number given)
 
-When given a PR number, resolve head branch from world repo:
+Resolve the PR system first per [../\_shared/pr-system.md](../_shared/pr-system.md) — GitHub and Meteorite PRs have separate number namespaces and different CLIs.
+
+When given a PR number, resolve head branch from world repo. `gs` has no `--jq` flag and names the field `headRef`, not `headRefName`:
 
 ```bash
 PR_NUMBER=<pr-number>
+
+# GitHub PR
 BRANCH=$(gh pr view "$PR_NUMBER" --repo shop/world --json headRefName --jq .headRefName)
+
+# Meteorite PR
+BRANCH=$(gs pr view "$PR_NUMBER" --json | jq -r .headRef)
+
 [ -n "$BRANCH" ] || { echo "Could not resolve PR branch"; exit 1; }
 echo "$BRANCH"
 ```
@@ -40,10 +48,11 @@ Start app if requested:
 
 ## 5) Optional: resolve PR details from branch
 
-If input was branch and you want PR metadata:
+If input was branch and you want PR metadata — check both systems, since a branch's PR may live in either:
 
 ```bash
 gh pr list --repo shop/world --head "$BRANCH" --json number,title,url --limit 1
+gs pr list --head "$BRANCH" --json
 ```
 
 ## 6) Report back

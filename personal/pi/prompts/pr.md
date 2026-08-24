@@ -3,15 +3,28 @@ description: Open a PR in an isolated worktree for review — new cmux workspace
 ---
 Set up an isolated environment for reviewing a PR. This is the full "open a PR" workflow in one command.
 
-**Input**: `$1` — a PR number (e.g. `524035`), a PR URL (e.g. `https://github.com/shop/world/pull/524035`), or a branch name (e.g. `author/feature`).
+**Input**: `$1` — a PR number (e.g. `524035`), a PR URL (`https://github.com/shop/world/pull/524035` or `https://meteorite.shopify.io/repos/shop/world/pulls/2013456`), or a branch name (e.g. `author/feature`).
 
 **Steps** (execute all sequentially):
 
 ### 1. Resolve the branch
 - If input is a URL, extract the PR number from it
-- If input is a PR number: `gh pr view <number> --repo shop/world --json headRefName --jq .headRefName`
+- Resolve which system the PR lives in — GitHub and Meteorite `shop/world` PRs have separate number namespaces (knowledge file `gitstream-meteorite.md`):
+```bash
+case "$1" in
+  *github.com*) PR_SYS=gh ;;
+  *meteorite.shopify.io*|*gitstream.shopify.io*) PR_SYS=gs ;;
+  *) if gs pr view "$1" --json >/dev/null 2>&1; then PR_SYS=gs
+     elif gh pr view "$1" --repo shop/world --json number >/dev/null 2>&1; then PR_SYS=gh
+     else echo "PR $1 not found in either system"; exit 1
+     fi ;;
+esac
+```
+- If input is a PR number, resolve the head branch with the matching CLI — `gs` has no `--jq` flag and names the field `headRef`:
+  - `gh pr view <number> --repo shop/world --json headRefName --jq .headRefName`
+  - `gs pr view <number> --json | jq -r .headRef`
 - If input is already a branch name, use it directly
-- Also grab PR title: `gh pr view <number> --repo shop/world --json title --jq .title`
+- Also grab PR title: `gh pr view <number> --repo shop/world --json title --jq .title`, or `gs pr view <number> --json | jq -r .title`
 
 ### 2. Claim a WTP worktree slot
 ```bash

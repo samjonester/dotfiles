@@ -103,7 +103,7 @@ Two sets of GWS tools are active — prefer based on operation type:
 
 - When investigating CI/build failures, **always use the `bk_*` tools** (`bk_build_info`, `bk_failed_jobs`, `bk_job_failure`, `bk_job_logs`, `bk_failed_builds`, `bk_pipelines`). Never try to scrape Buildkite via `fetch_content`, `gh` CLI, or Chrome DevTools.
 - When the user posts a Buildkite URL, pass it directly to the appropriate `bk_*` tool via the `build_url` parameter — it handles URL parsing.
-- When the user asks about PR build failures, get the Buildkite build URL from `gh pr checks` output, then use `bk_failed_jobs` → `bk_job_failure` to triage.
+- When the user asks about PR build failures, get the Buildkite build URL from `gh pr checks` output (or `gs pr checks <N> --json` for a Meteorite PR), then use `bk_failed_jobs` → `bk_job_failure` to triage. `bk_builds_for_pr` expects a GitHub PR URL and is unverified against Meteorite URLs.
 - Start triage with `bk_failed_jobs` to see the prioritized failure list, then `bk_job_failure` for specific job logs. Don't download all job logs (`bk_job_logs`) unless specifically needed.
 
 ## Observe
@@ -294,11 +294,20 @@ When asked to review **multiple PRs** ("review these PRs", "batch review #1 #2 #
 Full calibration guide and API templates in knowledge files `review-calibration.md` and `pr-review-posting.md` (auto-loaded when relevant).
 
 - Don't duplicate between top-level and inline — they're visible together.
-- **Line-level comments require the Reviews API** — never use `gh pr review --comment` for inline. See `pr-review-posting.md` for exact payloads.
+- **Line-level comments require the Reviews API** — never use `gh pr review --comment` (or `gs pr review`) for inline. See `pr-review-posting.md` for exact payloads.
+
+## PR Systems (shop/world: GitHub vs Meteorite)
+
+Meteorite is the default for **opening new PRs** in `shop/world` (`gs pr create`). Existing PRs live in one of two systems with **separate number namespaces** — a GitHub PR is invisible to `gs` and vice versa.
+
+- **Before any action on a user-supplied PR** (read, diff, comment, review, checks, resolve), resolve which system it's in via `skills/_shared/pr-system.md`. It carries the resolver snippet and the full `gh` → `gs` verb map. Never infer the system from the number's magnitude.
+- **New PR creation**: `shop/world` → `gs pr create` (draft by default). All other repos → `gh pr create --draft`.
+- Details, stack mechanics (`gs` replaces `gt`), and setup in knowledge file `gitstream-meteorite.md` (auto-loaded when relevant).
 
 ## PR Links
 
-- Use standard GitHub links for all PRs: `https://github.com/<org>/<repo>/pull/<N>`.
+- GitHub PRs: `https://github.com/<org>/<repo>/pull/<N>`.
+- Meteorite PRs: `https://meteorite.shopify.io/repos/shop/world/pulls/<N>` — get it from `gs pr view <N> --json | jq -r .htmlUrl`. Never report the `url` field; it's the unopenable `api.gitstream.shopify.io` host.
 
 ## PR Descriptions
 
@@ -344,8 +353,8 @@ When responding to Binks or assessing PR feedback, load the `binks-review` skill
 
 Binks reveals findings serially — PR #878 had 3 rounds over ~2 hours, 30-50 min idle between rounds. Prefer **one long-lived `binks_pr_<N>_watcher` teammate** per PR rather than respawning per round (which re-pays teammate-gate friction every time). Loop:
 
-1. Wait for Binks to settle on current HEAD (`gh pr checks <N> --watch` or poll — gate lands 5-30 min after push; follow-ups take up to 30-50 min more).
-2. Fetch findings, assess via the `binks-review` skill, fix valid ones, `git add -A && git commit --amend --no-edit`, then `git push --force-with-lease`. Post replies / 👍👎 reactions / thread resolves; until R2 ships, hand back to lead for the `gh` API mutations.
+1. Wait for Binks to settle on current HEAD (`gh pr checks <N> --watch`, or poll `gs pr checks <N>` for a Meteorite PR — it has no `--watch`, exit 8 = pending; gate lands 5-30 min after push, follow-ups take up to 30-50 min more).
+2. Fetch findings, assess via the `binks-review` skill, fix valid ones, `git add -A && git commit --amend --no-edit`, then `git push --force-with-lease`. Post replies / 👍👎 reactions / thread resolves; until R2 ships, hand back to lead for the `gh`/`gs` API mutations.
 3. Resume. Don't declare done after round 1 even if the gate is green — wait 1-2 hr after each push (complex PRs surface findings serially, e.g. #878's alt-screen extractor had 3 separate bugs). One watcher per PR — no multiplexing, no parallel watchers. Treat `shop-pi-fy` Binks the same as `shop/world` — it fires, just slower.
 
 ## Loop Scheduler
@@ -366,11 +375,11 @@ Suggest autoresearch (`/skill:autoresearch-create`) for iterative optimization l
 - **When working in a worktree, NEVER touch the main checkout.** All commands — file edits, builds, tests, `gh` API calls, git commands — must run from the worktree directory. The main checkout may have unstaged work from other sessions. `git commit --amend` and `git push` work directly from a worktree — there is no need to copy files back to the main checkout. If the task says "work in worktree X", `cd` to X and stay there for the entire task. Full worktree discipline guide in knowledge file `worktree-discipline.md` (auto-loaded when relevant).
 - **Never revert, checkout, or discard unstaged changes without explicit user approval.** Unstaged changes may be intentional work from other active sessions. Always assume they are. If there are conflicts or ambiguity with your task, ask before touching them. This includes `git checkout -- <file>`, `git restore`, `git stash`, and any command that would discard working tree changes.
 - Always highlight local git commands after executing them.
-- Use `git commit` for new commits, `git commit --amend` for amendments, `git push -u origin <branch>` for initial push, and `gh pr create --draft` for PR creation.
+- Use `git commit` for new commits, `git commit --amend` for amendments, and `git push -u origin <branch>` for initial push. For PR creation: `gs pr create` in `shop/world` (draft by default), `gh pr create --draft` everywhere else.
 - Never `git init` inside an existing git repository (creates nested repos). If a new standalone repo is needed, create it outside the current project tree first (e.g., `~/src/github.com/...`), then work there.
 - Commit commands (`git commit`, `git commit --amend`) are gated by the bash-guard commit gate (Stage 1.5). On first commit in a session, you'll be prompted for a session-scoped policy: auto-allow all, confirm each, or deny. Change mid-session with `/guard commits auto|confirm|reset`.
 - The commit gate listens for natural-language policy signals in user messages. Saying "allow commits", "auto-allow commits", or "commits are fine" at any point sets the policy to auto-allow. Saying "confirm commits" or "I want to approve each commit" sets it to confirm-each. You can also use `/guard commits auto|confirm|reset` directly.
-- **Publishing PRs for review**: Use `gh pr ready <N>` to move a draft PR to ready for review.
+- **Publishing PRs for review**: `gh pr ready <N>`, or `gs pr ready <N>` for a Meteorite PR. Resolve the system first.
 - **New branch work requires explicit approval before commit and submit.** When implementing new features or changes on a new branch, always pause and present the completed work for review **while changes are still unstaged**. Do not run `git add`, `git commit`, or `git push` until the user approves. Present a summary of changes (files modified, key decisions, anything noteworthy) and wait for explicit greenlight. This does not apply to amendments on existing branches where the user has already reviewed the direction (e.g., CI fixes, review feedback).
 
 | Rationalization | Reality |

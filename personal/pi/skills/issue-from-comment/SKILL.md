@@ -10,24 +10,43 @@ Turn a PR review comment into a well-researched, AI-implementable GitHub issue o
 ## Input
 
 The user provides one of:
-- A PR comment URL (e.g., `https://github.com/shop/world/pull/123456#discussion_r12345`)
+- A GitHub PR comment URL (e.g., `https://github.com/shop/world/pull/123456#discussion_r12345`)
+- A Meteorite PR comment URL — `https://meteorite.shopify.io/repos/shop/world/pulls/2013456` with its own anchor, not `#discussion_r<id>`
 - A PR number + description of the comment
 - A pasted comment body with context
 
 ## Step 1: Gather Context
 
+### Resolve the PR system
+
+Resolve the PR system first per [../\_shared/pr-system.md](../_shared/pr-system.md) — GitHub and Meteorite PRs have separate number namespaces and different CLIs. A comment URL settles it by host: `github.com` → `gh`, `meteorite.shopify.io` → `gs`.
+
 ### Fetch the comment and PR
 
+`gs api` is a mechanical swap for `gh api` — same endpoint paths, same REST shape (`id`, `path`, `line`, `side`, `diff_hunk`, `in_reply_to_id`, `user`, `body`). `gs` has no `--jq`, so pipe `--json` through `jq`.
+
 ```bash
-# If given a PR URL with comment anchor, fetch the PR and its review comments
+# GitHub PR
 gh pr view <pr_number> --repo shop/world --json title,body,files,labels,headRefName
 gh api repos/shop/world/pulls/<pr_number>/comments --jq '.[] | {id, body: .body[0:200], path, line, created_at, user: .user.login}'
+
+# Meteorite PR
+gs pr view <pr_number> --json | jq '{title, body, headRef}'
+gs api repos/shop/world/pulls/<pr_number>/comments | jq '.[] | {id, body: .body[0:200], path, line, created_at, user: .user.login}'
 ```
+
+`gs pr view --json` has no `files` or `labels` field — get the touched paths from `gs pr diff <pr_number> --name-only`.
 
 If given a specific comment URL, extract the comment ID and fetch it directly:
 ```bash
+# GitHub PR
 gh api repos/shop/world/pulls/comments/<comment_id> --jq '{body, path, line, diff_hunk, user: .user.login}'
+
+# Meteorite PR
+gs api repos/shop/world/pulls/comments/<comment_id> | jq '{body, path, line, diff_hunk, user: .user.login}'
 ```
+
+If the Meteorite URL carries no usable comment id, list the threads with `gs pr view <pr_number> --comments` and match on file:line.
 
 ### Read the relevant code
 
@@ -37,7 +56,11 @@ Use the `path` and `line` from the comment to read the actual code being discuss
 
 Read the PR description and the diff for the file(s) the comment touches:
 ```bash
+# GitHub PR
 gh pr diff <pr_number> --repo shop/world -- <file_path>
+
+# Meteorite PR — `--name-only` for the file list; narrow the full diff locally
+gs pr diff <pr_number>
 ```
 
 ## Step 2: Research Related Issues

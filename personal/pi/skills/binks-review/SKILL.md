@@ -9,14 +9,18 @@ Handles the full lifecycle of responding to binks-code-reviewer automated review
 
 ## Inputs
 
-- PR number (required) — e.g. `586245`
+- PR number or URL (required) — e.g. `586245`, `https://meteorite.shopify.io/repos/shop/world/pulls/2013456`
 - Repo (optional, defaults to `shop/world`)
 
 ## Workflow
 
 ### 1. Identify unresolved Binks threads
 
-**Always start by checking thread resolution status.** Fetch review threads via GraphQL to get resolution state and the root comment ID for each thread, then cross-reference with the REST comments to filter down to only unresolved Binks findings.
+Resolve the PR system first per [../\_shared/pr-system.md](../_shared/pr-system.md) — GitHub and Meteorite PRs have separate number namespaces and different CLIs. Binks runs on both, and its threads carry the same `<!-- binks-thread:<hash> -->` marker either way, so the assessment logic in steps 2–3 is identical — only the fetch/reply/react/resolve mechanics differ.
+
+**Always start by checking thread resolution status.**
+
+**`PR_SYS=gh`** — fetch review threads via GraphQL to get resolution state and the root comment ID for each thread, then cross-reference with the REST comments to filter down to only unresolved Binks findings.
 
 ```bash
 # Step 1a: Get thread resolution status and root comment IDs
@@ -51,6 +55,16 @@ gh api repos/{owner}/{repo}/pulls/{pr}/comments \
 
 **Filter**: Only process comments whose ID appears in the unresolved set from step 1a. Skip all resolved threads entirely — they've already been addressed (either in this session or a previous one).
 
+**`PR_SYS=gs`** — there is no GraphQL endpoint. `gs pr view <number> --comments` prints every thread inline: each `file:line`, a `thread: <uuid>` line, and the comment body. One call replaces steps 1a and 1b.
+
+```bash
+gs pr view <number> --comments
+```
+
+Record the `thread: <uuid>` for each Binks finding alongside its comment id — `gs pr resolve` takes that UUID, not a GraphQL `PRRT_…` node id, and there is no second call that recovers it. Identify Binks threads by the `<!-- binks-thread:<hash> -->` marker and the comment author.
+
+**Filter**: if `--comments` output does not mark resolution state, skip any thread that already carries a reply from you — that is the only resolved-vs-unresolved signal available on this path.
+
 If all Binks threads are already resolved, report that and stop.
 
 ### 2. Assess each unresolved finding
@@ -79,12 +93,24 @@ For findings assessed as valid and worth fixing:
 
 React with 👍 or 👎 on each Binks comment based on your assessment:
 
+**`PR_SYS=gh`**
+
 ```bash
 # thumbs up (valid finding)
 gh api repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions -f content='+1'
 
 # thumbs down (invalid or not worth fixing)
 gh api repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions -f content='-1'
+```
+
+**`PR_SYS=gs`**
+
+```bash
+# thumbs up (valid finding)
+gs pr react <number> <comment_id> --thumbs-up
+
+# thumbs down (invalid or not worth fixing)
+gs pr react <number> <comment_id> --thumbs-down
 ```
 
 ### 5. Reply with feedback
@@ -94,21 +120,35 @@ Reply in-thread to each Binks comment. Structure the reply as:
 1. **What you did**: describe the fix, or explain why no change is needed
 2. **Feedback on the finding**: assess the quality of Binks' analysis — was the conclusion correct? Was the explanation precise or did it miss the real issue? Call out red herrings, imprecise reasoning, overstated severity, or cases where the finding was spot-on.
 
+**`PR_SYS=gh`**
+
 ```bash
 gh api repos/{owner}/{repo}/pulls/{pr}/comments \
   -f body="<reply text>" \
   -F in_reply_to={comment_id}
 ```
 
+**`PR_SYS=gs`** — the body comes from a file, so write the reply to a temp file first (this also avoids escaping backticks and code fences).
+
+```bash
+gs pr comment <number> --reply-to <comment_id> --body-file /tmp/binks-reply-<comment_id>.md
+```
+
 ### 6. Resolve threads
 
 After replying, resolve each thread you addressed:
+
+**`PR_SYS=gh`** — use the thread IDs captured in step 1a; no need to re-fetch.
 
 ```bash
 gh api graphql -f query='mutation { resolveReviewThread(input: {threadId: "{thread_id}"}) { thread { isResolved } } }'
 ```
 
-Use the thread IDs captured in step 1a — no need to re-fetch.
+**`PR_SYS=gs`** — use the `thread: <uuid>` values captured in step 1.
+
+```bash
+gs pr resolve <number> <thread_uuid>
+```
 
 ## Reply tone
 

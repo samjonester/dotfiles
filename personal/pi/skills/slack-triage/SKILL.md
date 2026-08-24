@@ -180,11 +180,17 @@ Find PRs from:
 
 1. PRs mentioned in channel messages during triage
 
-For each PR, check status:
+For each PR, branch on the link's host — `shop/world` PRs live in GitHub or Meteorite with separate number namespaces (see [../\_shared/pr-system.md](../_shared/pr-system.md)). Slack messages carry both:
 
 ```bash
+# github.com/shop/world/pull/<N>
 gh pr view <number> --repo shop/world --json state,reviews,title,additions,deletions,url,mergedAt,reviewDecision
+
+# meteorite.shopify.io/repos/shop/world/pulls/<N> — no --jq
+gs pr view <number> --json | jq '{state, title, draft, htmlUrl, author, updatedAt, mergeable, mergeableState}'
 ```
+
+Meteorite enrichment is thinner: `gs pr view --json` has no `reviews`, `reviewDecision`, `additions`, `deletions`, or `mergedAt`. Available fields are number, title, state, draft, headRef, baseRef, headSha, baseSha, url, htmlUrl, body, author, assignees, createdAt, updatedAt, mergeable, mergeableState. Report `htmlUrl`, never `url`. The review-based buckets below are not computable from the CLI for a Meteorite PR — classify it on `state` and `draft`, and say approval status is unknown rather than inferring it.
 
 Classify:
 

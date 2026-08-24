@@ -10,30 +10,34 @@ Use this skill when the user wants PR CI monitored continuously and wants automa
 ## Inputs
 
 - PR number (for current repo), e.g. `492439`
-- or PR URL, e.g. `https://github.com/org/repo/pull/12345`
+- or PR URL, e.g. `https://github.com/org/repo/pull/12345`, `https://meteorite.shopify.io/repos/shop/world/pulls/2013456`
 
 ## Workflow
 
 1. Resolve PR metadata from the provided number/link.
-   - Preferred: `gh pr view <pr> --json number,url,headRefName,statusCheckRollup`
-   - If PR resolution fails, ask the user for a Buildkite build URL.
+   - Resolve the PR system first per [../\_shared/pr-system.md](../_shared/pr-system.md) — GitHub and Meteorite PRs have separate number namespaces and different CLIs.
+   - `PR_SYS=gh`: `gh pr view <pr> --json number,url,headRefName,statusCheckRollup`
+   - `PR_SYS=gs`: `gs pr view <pr> --json | jq` for number/branch (no `--jq` flag; the browsable link is `htmlUrl`, never `url`). **There is no `statusCheckRollup` field** — get check state from `gs pr checks <pr> --json | jq` instead.
+   - If PR resolution fails in both systems, ask the user for a Buildkite build URL.
 
 2. Start CI monitoring loop (default every 2 minutes).
    - Preferred interactive form: `/loop 2m check PR <pr> CI status`
    - Tool form: `CronCreate` with recurring check prompt
 
 3. On each check tick:
-   - Re-check PR status via `gh pr view` and/or Buildkite tools
+   - `PR_SYS=gh`: re-check PR status via `gh pr view` / `gh pr checks <pr>` and/or Buildkite tools
+   - `PR_SYS=gs`: re-check via `gs pr checks <pr>`. **`gs pr checks` has no `--watch`** — the loop must poll on the interval and read the exit code (8 = pending). Never block on a watch flag that does not exist.
    - If CI is still pending/running: post short status and continue
 
 4. Terminal outcomes:
    - **Success**: notify user CI passed and stop loop.
    - **Failure**:
-     1. Identify root failing job(s): `bk_failed_jobs`
-     2. Pull top failure log: `bk_job_failure`
-     3. Implement a targeted fix in code
-     4. Run relevant tests/lint locally
-     5. Notify user with root cause + fix summary
+     1. Get the Buildkite build URL. `bk_builds_for_pr` expects a **GitHub** PR URL and is untested against Meteorite URLs — for `PR_SYS=gs`, take the build URL from `gs pr checks <pr> --json | jq` and pass it to the `bk_*` tools as `build_url`.
+     2. Identify root failing job(s): `bk_failed_jobs`
+     3. Pull top failure log: `bk_job_failure`
+     4. Implement a targeted fix in code
+     5. Run relevant tests/lint locally
+     6. Notify user with root cause + fix summary
 
 5. Before retrying CI, explicitly ask for confirmation:
    - "Would you like me to run `git commit --amend` and `git push` to retrigger CI?"
@@ -49,7 +53,8 @@ Use this skill when the user wants PR CI monitored continuously and wants automa
 ## Commands / Tools
 
 - Monitoring loop: `/loop`, `CronCreate`, `CronList`, `CronDelete`
-- PR resolution: `gh pr view` (via `bash`)
+- PR resolution: `gh pr view` / `gs pr view` (via `bash`) — pick per resolved `PR_SYS`
+- Check state: `gh pr checks <pr> --watch`, or polled `gs pr checks <pr>` (no `--watch`; exit 8 = pending)
 - Buildkite triage: `bk_build_info`, `bk_failed_jobs`, `bk_job_failure`
 - Git actions: `git commit --amend`, `git push`
 - CI trigger: `devx ci run` (required after submit — CI no longer auto-runs on push in shop/world)

@@ -15,23 +15,26 @@ Parse the user's input to determine the review source. Try each in order:
 
 ### 1a. PR number or URL
 
-If the user provided a PR number (e.g., `#1234`, `PR 1234`) or URL (GitHub):
+If the user provided a PR number (e.g., `#1234`, `PR 1234`) or URL:
+
+Resolve the PR system first per [../\_shared/pr-system.md](../_shared/pr-system.md) — GitHub and Meteorite PRs have separate number namespaces and different CLIs. Every command in the rest of this skill branches on the resulting `PR_SYS`.
 
 ```bash
-# For PR number — detect the repo from the current directory
-gh pr view <number> --json title,url,baseRefName,headRefName,body
+# PR_SYS=gh — for a PR number, detect the repo from the current directory; a URL carries org/repo/number
+gh pr view <number_or_url> --json title,url,baseRefName,headRefName,body
 
-# For PR URL — extract org/repo/number from the URL
-gh pr view <url> --json title,url,baseRefName,headRefName,body
+# PR_SYS=gs — `--json` takes no field list and there is no `--jq`; pipe through jq
+gs pr view <number> --json | jq
 ```
 
 Extract the base and head branches, then get the diff:
 
 ```bash
-gh pr diff <number_or_url>
+gh pr diff <number_or_url>   # PR_SYS=gh
+gs pr diff <number>          # PR_SYS=gs
 ```
 
-Set `SOURCE_TYPE=pr` and save the PR metadata (title, URL, number, headRefName) for output formatting.
+Set `SOURCE_TYPE=pr` and save the PR metadata (title, URL, number, headRefName) for output formatting. For a Meteorite PR the browsable link is `htmlUrl` — never report the `url` field, which is the unopenable `api.gitstream.shopify.io` host. `gs pr view --json` field names differ from `gh`; run `gs pr view <number> --json | jq keys` once before scripting against them.
 
 #### Checkout into a WTP worktree
 
@@ -603,7 +606,7 @@ git diff -U0 origin/main...HEAD -- "$FILE" \
   | awk '/^@@/{split($3,a,","); s=substr(a[1],2); n=(a[2]==""?1:a[2]); for(i=0;i<n;i++) print s+i}'
 ```
 
-**Build the payload programmatically.** Hand-escaping markdown into JSON breaks on backticks, code fences, and quotes. Write a small script that `json.dump`s a dict, then post with `gh api ... --input`. See `pr-review-posting.md` for the API shape.
+**Build the payload programmatically.** Hand-escaping markdown into JSON breaks on backticks, code fences, and quotes. Write a small script that `json.dump`s a dict, then post with `gh api ... --input`. For a Meteorite PR (`PR_SYS=gs`) the payload is identical — post it with `gs api repos/{owner}/{repo}/pulls/<number>/reviews --input -`. See `pr-review-posting.md` for the API shape.
 
 If the user says yes, format:
 
