@@ -27,21 +27,22 @@ ext: vim-mode
 # 🛑 bash-guard / guard — fork in dotfiles (~/dotfiles/personal/pi/extensions/bash-guard/)
 
 # PR / CI / review
-ext: buildkite
+# buildkite migrated to pi-tool-gateway (2026-08-25) — buildkite_* tools.
+# Lost with the direct ext: bk_wait (poll-until-finish), bk_builds_for_pr,
+# bk_pipeline_info, bk_job_logs (all-jobs download). Waits now poll
+# `gh pr checks --watch` / `gs pr checks`.
 ext: pr-status
 ext: restack-workflow
 ext: tree
 
 # Shopify integrations
-ext: grokt
-ext: vault
-ext: slack
-ext: gworkspace
-ext: observe
+# Migrated to pi-tool-gateway (2026-08-25): grokt, vault, slack, gworkspace,
+# observe, experiments, incidents, data-portal. All were deprecated upstream
+# (or, for observe, superseded by a larger gateway surface). Backends are
+# enabled per-user at tool-gateway.shopify.io; gateway tool names differ —
+# see AGENTS.md "Tool Gateway".
 ext: mozart-mcp
 ext: world
-ext: experiments
-ext: incidents
 ext: dev-open
 ext: perplexity-research
 ext: fetch-markdown
@@ -54,7 +55,6 @@ ext: link-picker
 # Skills / wiki / data infrastructure
 ext: llm-wiki
 ext: lsp
-ext: data-portal
 
 # Output / publishing
 ext: publish-session

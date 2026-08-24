@@ -75,7 +75,7 @@ This does **not** apply to malformed calls (wrong param name, missing required f
 
 Before writing to anything externally visible — wiki (`wiki_write`), Slack, GitHub PRs/comments/issues, or any other external service — propose first and wait for go-ahead. Don't infer permission from rule documents (e.g. "capture findings to wiki"). One-line proposal: what + where, then wait.
 
-**Slack is hard-gated.** `slack_post` and `slack_send_message_draft` are intercepted by the `slack-guard` extension with a y/n confirmation dialog. Even if you think the user wants you to post, the dialog will fire. Draft the message content, show it to the user in-conversation, and only call the tool after explicit approval. Never bundle a Slack post into a multi-step workflow without a pause for confirmation.
+**Slack has no post tool.** The Tool Gateway Slack backend is read/search plus `slack_send_message_draft`, which only creates a native Slack draft that the user reviews and sends themselves. Direct channel posting is not available. Still propose before creating a draft: show the message content in-conversation and wait for approval. Never bundle draft creation into a multi-step workflow without a pause.
 
 Does NOT apply to: in-conversation tool calls, file reads, scratch files in `/tmp`, dotfiles/config edits the user explicitly asked for, memory bank auto-persist.
 
@@ -86,34 +86,47 @@ Does NOT apply to: in-conversation tool calls, file reads, scratch files in `/tm
 | "It's just a draft PR / thumbs-up reaction" | Drafts and reactions are still externally visible. Propose. |
 | "I'll save time by posting while I have the data" | The user reviews the content, not the efficiency. Propose. |
 
+## Tool Gateway
+
+Every Shopify integration except Mozart, Figma, Buildkite, and Quick now comes from Tool Gateway (`pi-tool-gateway-extension`). Backends are enabled per-user at tool-gateway.shopify.io; `tool_gateway_list_backends` shows connection + enabled state.
+
+**Registered directly** (call by name): `grokt_search_code`, `grokt_bulk_search`, `grokt_get_file`, `grokt_stats`, `data_portal_search`, `data_portal_get_metadata`, `data_portal_query`, `data_portal_analyze_results`.
+
+**Progressive context** (not registered — reach via helpers): `slack_*` (11), `github_*` (15), `incident_*` (12), `vault_*` (27), `experiments_*` (33), `observe_*` (35), `gws_*` (78). Workflow: `tool_gateway_search_tools({ backend, query })` → `tool_gateway_describe` → `tool_gateway_run_tool`. Never claim a Shopify system is unreachable without searching there first.
+
+When a gateway call fails, `gateway_debug_recent_tool_calls` shows your own last calls with the decision and error — use it before reporting a tool as broken.
+
 ## Google Workspace Tools
 
-Two sets of GWS tools are active — prefer based on operation type:
+All GWS tools are `gws_*` on the gateway, under progressive context (78 tools). Discover with `tool_gateway_search_tools({ backend: "gws", query: "..." })`, then call via `tool_gateway_run_tool`.
 
-- **Calendar reads**: use `gws_calendar_list` / `gws_calendar_get` / `gws_calendar_today`
-- **Calendar writes** (create/update/delete events, add/remove attendees): use `gcal_manage`
-- **Calendar availability** (free/busy check): use `gcal_availability`
-- **Gmail reads**: use `gws_gmail_list` / `gws_gmail_read` / `gws_gmail_search`
-- **Gmail writes** (mark read, star, archive, trash): use `gmail_manage`
-- **Drive search and metadata**: use `gws_drive_search` / `gws_drive_get`
-- **Drive file content** (reading a Google Doc as text/markdown): use `gworkspace_read_file`
-- **Docs, Sheets, Slides**: use `gws_docs_*` / `gws_sheets_*` / `gws_slides_*` exclusively
+- **Calendar reads**: `gws_calendar_list` / `gws_calendar_get` / `gws_calendar_today` / `gws_calendar_get_instances`
+- **Calendar writes**: `gws_calendar_create` / `gws_calendar_update` / `gws_calendar_delete` / `gws_calendar_quick_add`
+- **Calendar availability**: `gws_calendar_find_free_time`
+- **Gmail reads**: `gws_gmail_list` / `gws_gmail_read` / `gws_gmail_search`
+- **Gmail writes**: `gws_gmail_mark_read` / `gws_gmail_apply_label` / `gws_gmail_create_draft`
+- **Drive**: `gws_drive_search` / `gws_drive_get` / `gws_drive_list` / `gws_drive_export`
+- **Doc contents**: `gws_docs_read` (all tabs); use `gws_docs_get_structure` before positional `gws_docs_batch_update` edits
+- **Docs, Sheets, Slides**: `gws_docs_*` / `gws_sheets_*` / `gws_slides_*` exclusively
 
 ## Buildkite
 
-- When investigating CI/build failures, **always use the `bk_*` tools** (`bk_build_info`, `bk_failed_jobs`, `bk_job_failure`, `bk_job_logs`, `bk_failed_builds`, `bk_pipelines`). Never try to scrape Buildkite via `fetch_content`, `gh` CLI, or Chrome DevTools.
-- When the user posts a Buildkite URL, pass it directly to the appropriate `bk_*` tool via the `build_url` parameter — it handles URL parsing.
-- When the user asks about PR build failures, get the Buildkite build URL from `gh pr checks` output (or `gs pr checks <N> --json` for a Meteorite PR), then use `bk_failed_jobs` → `bk_job_failure` to triage. `bk_builds_for_pr` expects a GitHub PR URL and is unverified against Meteorite URLs.
-- Start triage with `bk_failed_jobs` to see the prioritized failure list, then `bk_job_failure` for specific job logs. Don't download all job logs (`bk_job_logs`) unless specifically needed.
+- Buildkite comes from Tool Gateway (6 tools, registered directly): `buildkite_build_info`, `buildkite_failed_jobs`, `buildkite_job_failure`, `buildkite_failed_builds`, `buildkite_pipelines`, `buildkite_artifacts`. **Always use these.** Never try to scrape Buildkite via `fetch_content`, `gh` CLI, or Chrome DevTools.
+- When the user posts a Buildkite URL, pass it directly via the `build_url` parameter — it handles URL parsing. Append `#<job_id>` to scope to one job.
+- When the user asks about PR build failures, get the Buildkite build URL from `gh pr checks` output (or `gs pr checks <N> --json` for a Meteorite PR), then use `buildkite_failed_jobs` → `buildkite_job_failure` to triage. There is no PR-URL-to-builds tool.
+- Start triage with `buildkite_failed_jobs` for the prioritized failure list, then `buildkite_job_failure` for one job.
+- `buildkite_job_failure` returns a **capped log tail** (`log_lines` default 200, max 500), not a downloaded file. For anything longer, grep the tail first; if the failure is above the window, fetch the job's log artifact via `buildkite_artifacts`.
+- **No waiting tool.** To wait on a build, poll with `gh pr checks <N> --watch`, or `gs pr checks <N>` in a loop for a Meteorite PR (no `--watch`; exit 8 = pending).
 
 ## Observe
 
-- When investigating metrics, errors, or production behavior, **always use the `observe_*` tools**. Never try to scrape Observe dashboards via `fetch_content` or Chrome DevTools.
-- When the user posts an Observe URL or asks about a dashboard, use the appropriate tool: `observe_metrics` to discover metric names, `observe_instant_query` / `observe_range_query` for PromQL, `observe_error_groups` for error investigation.
-- **Never query a metric you didn't discover via `observe_metrics` first.** Always verify the metric exists before writing PromQL.
-- Use `observe_metric_labels` and `observe_metric_label_values` to discover available dimensions before filtering.
-- For error investigation: `observe_error_groups` → `observe_error_group` (by hash) → trace correlation if trace_id is present.
-- Read `observe_ai_docs`, `observe_investigate_docs`, or `observe_metrics_docs` before writing complex queries you haven't done before.
+- When investigating metrics, errors, or production behavior, **always use the `observe_*` gateway tools**. Never try to scrape Observe dashboards via `fetch_content` or Chrome DevTools.
+- Observe is progressive (35 tools). Start with `tool_gateway_search_tools({ backend: "observe", query: "..." })` to find the right one; the names below are the entry points.
+- **Metrics**: `observe_metrics_api` handles all three phases — fetch docs, discover metric metadata, execute PromQL. **Never query a metric you didn't discover through it first.**
+- **Logs, traces, structured events**: `observe_investigate_api` (read-only Investigate API). `observe_get_query_job_results` fetches results from a persisted query job by ID.
+- **Dashboards**: `observe_get_dashboard` (by UID) / `observe_get_dashboard_property` (JSONPath) / `observe_semantic_search` to find one.
+- **Profiles**: `observe_inspect_service` → `observe_list_profile_types` → `observe_explain_profile`; `observe_compare_functions` / `observe_diff_functions` for regressions.
+- Read `observe_get_skill_docs` (getting-started + drilldown playbooks) before writing complex queries you haven't done before.
 
 ## Slack Message Formatting
 
@@ -248,7 +261,7 @@ Default to **no comments**. Most agent-written comments are noise — they resta
 
 | Rationalization | Reality |
 |---|---|
-| "This code looks unused, I'll remove it" | You're seeing a subset of the codebase. `lsp_references` or `grokt_search` first. |
+| "This code looks unused, I'll remove it" | You're seeing a subset of the codebase. `lsp_references` or `grokt_search_code` first. |
 | "This pattern is outdated, I'll modernize it" | If it works and no one asked you to modernize it, leave it. Scope creep disguised as improvement is still scope creep. |
 | "This inheritance hierarchy is wrong, I should refactor to composition" | Maybe, but that's a planning task, not a drive-by refactor. Propose it — don't just do it. |
 | "I'm confident about this API" | Confidence is not evidence. Training data contains outdated patterns. One `code_search` or `web_search` prevents hours of rework. The `textAutoResize` drift bug cost 4 debugging passes. |

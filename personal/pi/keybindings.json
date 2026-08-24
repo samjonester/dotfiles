@@ -1,4 +1,5 @@
 {
+  "tui.altScreen.searchPrevious": ["shift+enter"],
   "app.session.new": ["ctrl+shift+n"],
   "app.session.tree": ["ctrl+shift+e"],
   "app.session.fork": ["ctrl+shift+f"],

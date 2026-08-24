@@ -32,9 +32,9 @@ Use this skill when the user wants PR CI monitored continuously and wants automa
 4. Terminal outcomes:
    - **Success**: notify user CI passed and stop loop.
    - **Failure**:
-     1. Get the Buildkite build URL. `bk_builds_for_pr` expects a **GitHub** PR URL and is untested against Meteorite URLs — for `PR_SYS=gs`, take the build URL from `gs pr checks <pr> --json | jq` and pass it to the `bk_*` tools as `build_url`.
-     2. Identify root failing job(s): `bk_failed_jobs`
-     3. Pull top failure log: `bk_job_failure`
+     1. Get the Buildkite build URL from `gh pr checks <pr>`, or from `gs pr checks <pr> --json | jq` for `PR_SYS=gs`. There is no PR-URL-to-builds tool — pass the build URL to the `buildkite_*` tools as `build_url`.
+     2. Identify root failing job(s): `buildkite_failed_jobs`
+     3. Pull top failure log: `buildkite_job_failure` (capped tail, `log_lines` max 500 — raise it before assuming the error isn't there)
      4. Implement a targeted fix in code
      5. Run relevant tests/lint locally
      6. Notify user with root cause + fix summary
@@ -55,7 +55,7 @@ Use this skill when the user wants PR CI monitored continuously and wants automa
 - Monitoring loop: `/loop`, `CronCreate`, `CronList`, `CronDelete`
 - PR resolution: `gh pr view` / `gs pr view` (via `bash`) — pick per resolved `PR_SYS`
 - Check state: `gh pr checks <pr> --watch`, or polled `gs pr checks <pr>` (no `--watch`; exit 8 = pending)
-- Buildkite triage: `bk_build_info`, `bk_failed_jobs`, `bk_job_failure`
+- Buildkite triage: `buildkite_build_info`, `buildkite_failed_jobs`, `buildkite_job_failure`, `buildkite_artifacts`
 - Git actions: `git commit --amend`, `git push`
 - CI trigger: `devx ci run` (required after submit — CI no longer auto-runs on push in shop/world)
 

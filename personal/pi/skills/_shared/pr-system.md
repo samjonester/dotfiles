@@ -97,8 +97,9 @@ through `jq`.
   GitHub Reviews API (`path`, `line`, `side`, `body`). See `knowledge/pr-review-posting.md`.
 - **No `gs pr checks --watch`.** Poll on an interval and read the exit code (8 = pending).
 - **`gs api` fills in `{owner}`/`{repo}`** from the resolved World repo, so bare paths work.
-- **`bk_builds_for_pr` expects a GitHub PR URL.** Untested against Meteorite URLs — for a
-  Meteorite PR, get the build URL from `gs pr checks <N> --json` instead.
+- **No PR-URL-to-builds tool.** Get the Buildkite build URL from `gh pr checks <N>`, or from
+  `gs pr checks <N> --json` for a Meteorite PR, then pass it to the `buildkite_*` tools as
+  `build_url`.
 - **Binks runs on Meteorite PRs.** Its threads carry the same
   `<!-- binks-thread:<hash> -->` marker.
 - **Merging is unchanged**: the `/merge` comment and the Meteorite Merge button are the same

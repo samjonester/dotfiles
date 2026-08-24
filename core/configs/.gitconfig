@@ -104,8 +104,7 @@
 [maintenance]
 	autoupdate = true
 	repo = /Users/sam/world/git
-	repo = /Users/sam/src/github.com/Shopify/growth-data-products
-	repo = /Users/sam/src/github.com/Shopify/data-acq-db-sources
+	repo = /Users/sam/dotfiles
 [fetch]
 	writeCommitGraph = true
 [status]
@@ -121,7 +120,7 @@
 [http "https://*.quick.shopify.io/"]
 	extraHeader = X-Requested-With: XMLHttpRequest
 [shop-world "stale-pr-cutoff"]
-	main = 1786038893
+	main = 1787517452
 [filter "lfs"]
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f

@@ -30,7 +30,7 @@ When the user asks to triage, scan these sources **in parallel**:
 - `#marketing-efficiency` — search for LPG and paid ads issues
 - Channels in the user's Slack "Monitor" section — check for anomalies, alerts, or unusual activity
 
-Use `slack_search` with queries like:
+Slack is a progressive Tool Gateway backend — call `slack_search_public` through `tool_gateway_run_tool` with queries like:
 ```
 in:#help-mozart after:today LPG OR "landing page" OR "paid ads" OR error OR help
 in:#marketing-efficiency after:today LPG OR "landing page" OR "paid ads" OR error OR help
