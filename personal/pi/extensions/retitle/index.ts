@@ -1,8 +1,10 @@
 /**
  * Retitle — automatically names sessions using a fast LLM.
  *
- * On the first 3 agent turns, sends conversation context to Claude Haiku
- * and sets the session name. The name refines as more context arrives.
+ * On the first 3 prompts, sends conversation context to Claude Haiku and sets
+ * the session name. Two passes per prompt: one at submit time, so a title
+ * appears within ~1s instead of after the agent has worked through the whole
+ * turn, and one when the turn ends, with the assistant's output in context.
  * Respects manual renames — if the user /name's the session, auto-naming stops.
  *
  * Commands:
@@ -19,6 +21,7 @@
  *   - /retitle-all for backfilling existing unnamed sessions
  *   - Proper reset on /new, /resume, /fork
  *   - Configurable model via env vars
+ *   - Repo-qualified identifiers (world#2031382, not #2031382)
  */
 
 import { complete } from "@mariozechner/pi-ai";
@@ -27,6 +30,7 @@ import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
+import { execFileSync } from "node:child_process";
 import path from "node:path";
 
 function sessionTitle(name?: string | null): string {
@@ -36,7 +40,10 @@ function sessionTitle(name?: string | null): string {
 
 const PROVIDER = process.env.PI_RETITLE_PROVIDER || "anthropic";
 const MODEL_ID = process.env.PI_RETITLE_MODEL || "claude-haiku-4-5";
-const MAX_AUTO_TURNS = 3;
+const MAX_AUTO_PROMPTS = 3;
+
+/** Cap on assistant text fed to the refinement pass — a turn can be enormous. */
+const REFINE_ASSISTANT_CHARS = 800;
 
 const SYSTEM_PROMPT = `You are a title generator. You read a conversation between a user and a coding assistant and output a short title.
 
@@ -52,10 +59,11 @@ Rules:
 
 Identifier rules (CRITICAL):
 - When the conversation references a PR, issue, or branch by number, you MUST include it in the title
-- Format PR/issue numbers as #N (e.g. #681449, #38, #878)
-- If multiple PRs are mentioned, include the primary one (or say "PRs" if the session is about reviewing a batch)
-- The number is more important than generic descriptions — "Review PR #681449" beats "Review PR with feedback"
-- Include 2-3 words identifying the PR's topic alongside the number when the conversation provides enough context
+- Format every PR/issue number as repo#N — the repository name, then #, then the number (e.g. world#2031382, shop-pi-fy#878, issues-marketing-efficiency#1764)
+- The <extracted_identifiers> block gives you each identifier already in repo#N form. Copy it verbatim. Never strip the repo prefix, never invent one that is not listed
+- If multiple PRs from the same repo are mentioned, write the repo once and share it (e.g. "world#2032868 #2032869") or say "PRs" if the session is about reviewing a batch
+- The identifier is more important than generic descriptions — "Review world#2031382" beats "Review PR with feedback"
+- Include 2-3 words identifying the PR's topic alongside the identifier when the conversation provides enough context
 
 Emoji guidelines:
 - Pick ONE emoji that captures the primary activity or domain
@@ -69,18 +77,27 @@ Examples of valid outputs:
 🚀 Set up CI pipeline for monorepo
 🎨 Fix button hover states in checkout
 📊 Query ad spend metrics from BigQuery
-🔍 Review PR #681449 throttle tightening
-🛠️ Address binks on #878 altscreen #869 prefer-gt
-💬 Batch review PRs #668312 #44522 #668492
-🚀 Check PR #668170 blog-URL migration deploy`;
+🔍 Review world#681449 throttle tightening
+🛠️ Address binks on shop-pi-fy#878 altscreen #869
+💬 Batch review world PRs #668312 #44522 #668492
+🚀 Check world#2031382 CI after ad-set filter rebase`;
 
 export default function (pi: ExtensionAPI) {
-  let turnCount = 0;
+  let promptCount = 0;
+  let refinedForPrompt = -1;
   let weSetTheName = false;
   let autoNamingActive = true;
 
+  // Both passes are fire-and-forget, so a slow one can resolve after a later
+  // one already set a better name. Tickets keep the newest result on top.
+  let nameSeq = 0;
+  let appliedSeq = 0;
+
   function resetState(hasExistingName: boolean) {
-    turnCount = 0;
+    promptCount = 0;
+    refinedForPrompt = -1;
+    nameSeq = 0;
+    appliedSeq = 0;
     weSetTheName = false;
     autoNamingActive = !hasExistingName;
   }
@@ -114,11 +131,14 @@ export default function (pi: ExtensionAPI) {
     ctx.ui.setTitle(sessionTitle());
   });
 
-  // --- Auto-naming on agent turns ---
+  // --- Auto-naming on prompt submission ---
 
-  pi.on("agent_end", async (_event, ctx) => {
-    turnCount++;
-    if (!autoNamingActive || turnCount > MAX_AUTO_TURNS) return;
+  // Fires after the user submits, before the agent loop runs. The new prompt is
+  // not in the session branch yet, so it is passed in explicitly. Naming here
+  // rather than on agent_end means the title lands within ~1s of submitting
+  // instead of after the turn's tool calls finish.
+  pi.on("before_agent_start", async (event, ctx) => {
+    if (!autoNamingActive || promptCount >= MAX_AUTO_PROMPTS) return;
 
     // Check if user manually named since our last rename
     if (!weSetTheName && pi.getSessionName()) {
@@ -127,10 +147,36 @@ export default function (pi: ExtensionAPI) {
       return;
     }
 
-    const context = buildAutoContext(ctx);
+    promptCount++;
+
+    const context = buildAutoContext(ctx, event.prompt);
     if (!context.trim()) return;
 
     // Fire and forget — don't block the agent loop
+    generateAndSetName(pi, ctx, context).catch(() => {});
+  });
+
+  // Second pass once the turn's work is visible. The submit-time pass only has
+  // the prompt, and a vague one ("yes", "continue", "fix it") names nothing —
+  // the turn that followed usually names the PR, file, or failure.
+  pi.on("agent_end", async (_event, ctx) => {
+    if (!autoNamingActive || promptCount > MAX_AUTO_PROMPTS) return;
+
+    // pi can run the agent more than once per prompt (auto-retry, compact and
+    // retry, queued follow-ups). Refine once per prompt, not once per run.
+    if (refinedForPrompt === promptCount) return;
+
+    // Check if user manually named since our last rename
+    if (!weSetTheName && pi.getSessionName()) {
+      autoNamingActive = false;
+      return;
+    }
+
+    refinedForPrompt = promptCount;
+
+    const context = buildRefineContext(ctx);
+    if (!context.trim()) return;
+
     generateAndSetName(pi, ctx, context).catch(() => {});
   });
 
@@ -224,8 +270,11 @@ export default function (pi: ExtensionAPI) {
     ctx: ExtensionContext,
     context: string,
   ): Promise<void> {
+    const seq = ++nameSeq;
     const name = await generateName(ctx, context);
     if (name) {
+      // A later pass with richer context already landed — don't walk it back
+      if (seq < appliedSeq) return;
       // Final guard: check one more time that user hasn't manually named
       const currentName = pi.getSessionName();
       if (currentName && !weSetTheName) {
@@ -233,6 +282,7 @@ export default function (pi: ExtensionAPI) {
         return;
       }
       pi.setSessionName(name);
+      appliedSeq = seq;
       weSetTheName = true;
       // Also update the terminal tab title immediately — pi only calls
       // updateTerminalTitle() on startup and manual /name, not after
@@ -267,7 +317,7 @@ export default function (pi: ExtensionAPI) {
       const ids = extractIdentifiers(context);
       let userPrompt = `<conversation>\n${context}\n</conversation>\n\n`;
       if (ids.length > 0) {
-        userPrompt += `<extracted_identifiers>\n${ids.join("\n")}\n</extracted_identifiers>\n\nThe identifiers above were extracted from the conversation. You MUST include the most relevant one(s) in the title as #N format.\n\n`;
+        userPrompt += `<extracted_identifiers>\n${ids.join("\n")}\n</extracted_identifiers>\n\nThe identifiers above were extracted from the conversation and are already repo-qualified. You MUST include the most relevant one(s) in the title, copied verbatim — keep the repo prefix, do not shorten to a bare #N.\n\n`;
       }
       userPrompt += `Generate a short title for this conversation.`;
 
@@ -313,10 +363,47 @@ export default function (pi: ExtensionAPI) {
 
 // --- Context building ---
 
-/** For auto-naming (turns 1-3): only user messages, kept lean. */
-function buildAutoContext(ctx: ExtensionContext): string {
+/**
+ * For auto-naming (prompts 1-3): only user messages, kept lean.
+ *
+ * `pendingPrompt` is the just-submitted prompt, which before_agent_start fires
+ * ahead of — it is not in the branch yet.
+ */
+function buildAutoContext(
+  ctx: ExtensionContext,
+  pendingPrompt?: string,
+): string {
   const branch = ctx.sessionManager.getBranch();
-  return buildContextFromBranch(branch, true);
+  const prior = buildContextFromBranch(branch, true);
+  const pending = pendingPrompt?.trim();
+  if (!pending) return prior;
+  return prior ? `${prior}\n\nUser: ${pending}` : `User: ${pending}`;
+}
+
+/**
+ * For the post-turn refinement pass: the same user-only context plus a bounded
+ * head of the latest assistant message, so the pass sees something the
+ * submit-time pass could not. Head rather than tail — the answer leads.
+ */
+function buildRefineContext(ctx: ExtensionContext): string {
+  const branch = ctx.sessionManager.getBranch();
+  const prior = buildContextFromBranch(branch, true);
+
+  let latest = "";
+  for (let i = branch.length - 1; i >= 0; i--) {
+    const entry = branch[i] as any;
+    if (entry.type !== "message" || entry.message?.role !== "assistant")
+      continue;
+    latest = extractText(entry.message.content);
+    if (latest) break;
+  }
+  if (!latest) return prior;
+
+  const head =
+    latest.length > REFINE_ASSISTANT_CHARS
+      ? `${latest.slice(0, REFINE_ASSISTANT_CHARS)}…`
+      : latest;
+  return prior ? `${prior}\n\nAssistant: ${head}` : `Assistant: ${head}`;
 }
 
 /**
@@ -398,44 +485,139 @@ function extractText(content: unknown): string {
     .trim();
 }
 
+/** Repo name of the checkout pi is running in, e.g. "world" or "dotfiles". */
+let cachedCwdRepo: string | null | undefined;
+
+function cwdRepo(): string | null {
+  if (cachedCwdRepo !== undefined) return cachedCwdRepo;
+  cachedCwdRepo = null;
+  try {
+    // Remote, not `--show-toplevel`: every shop/world worktree bottoms out at
+    // `.../trees/pool-N/src`, whose basename is "src" for all of them.
+    const url = execFileSync("git", ["remote", "get-url", "origin"], {
+      encoding: "utf8",
+      stdio: ["ignore", "pipe", "ignore"],
+      timeout: 2000,
+    }).trim();
+    const m = url.match(/[/:]([\w.-]+?)(?:\.git)?\/?$/);
+    if (m) cachedCwdRepo = m[1];
+  } catch {
+    // Not a git checkout, or git is unavailable — no fallback repo.
+  }
+  return cachedCwdRepo;
+}
+
+const REPO = String.raw`[\w.-]+`;
+
 /**
- * Extract PR numbers, issue numbers, and branch refs from conversation text.
- * Handles:
- *   - GitHub URLs: github.com/org/repo/pull/NUMBER
- *   - GitHub issue URLs: github.com/org/repo/issues/NUMBER
- *   - Inline refs: #NUMBER, PR #NUMBER, PR NUMBER, issue #NUMBER
+ * Extract PR and issue numbers from conversation text, each qualified with the
+ * repo it belongs to (`world#2031382`), since a bare number is ambiguous across
+ * shop/world, shop-pi-fy, and the issues repos.
+ *
+ * Number-carrying sources (github.com URLs, meteorite URLs, org/repo#N) bind a
+ * repo directly. Repo-only mentions (`--repo org/repo`, CI control-center URLs)
+ * vote for the repo that bare `#N` references are attributed to. The repo of
+ * pi's own checkout is the last resort, so a stray number in a dotfiles session
+ * does not get mislabeled once the text names a repo.
  */
 function extractIdentifiers(text: string): string[] {
-  const ids = new Map<string, string>(); // number -> formatted label
+  const ids = new Map<string, string>(); // number -> "repo#N"
+  const votes = new Map<string, number>(); // repo -> mentions
 
-  // GitHub PR URLs
+  const vote = (repo: string) => votes.set(repo, (votes.get(repo) ?? 0) + 1);
+  const bind = (num: string, repo: string) => {
+    vote(repo);
+    if (!ids.has(num)) ids.set(num, `${repo}#${num}`);
+  };
+
+  // --- Sources that carry both a repo and a number ---
+
+  // github.com/org/repo/pull/N and .../issues/N
   for (const m of text.matchAll(
-    /github\.com\/([^/]+)\/([^/]+)\/pull\/([0-9]+)/g,
+    new RegExp(
+      String.raw`github\.com/${REPO}/(${REPO})/(?:pull|issues)/(\d+)`,
+      "g",
+    ),
   )) {
-    ids.set(m[3], `PR #${m[3]} (${m[1]}/${m[2]})`);
+    bind(m[2], m[1]);
   }
 
-  // GitHub issue URLs
+  // meteorite.shopify.io/repos/org/repo/pulls/N
   for (const m of text.matchAll(
-    /github\.com\/([^/]+)\/([^/]+)\/issues\/([0-9]+)/g,
+    new RegExp(
+      String.raw`meteorite\.shopify\.io/repos/${REPO}/(${REPO})/pulls/(\d+)`,
+      "g",
+    ),
   )) {
-    if (!ids.has(m[3])) {
-      ids.set(m[3], `Issue #${m[3]} (${m[1]}/${m[2]})`);
+    bind(m[2], m[1]);
+  }
+
+  // org/repo#N shorthand (2+ digits — the repo prefix rules out false positives)
+  for (const m of text.matchAll(
+    new RegExp(String.raw`\b${REPO}/(${REPO})#(\d{2,})\b`, "g"),
+  )) {
+    bind(m[2], m[1]);
+  }
+
+  // repo#N shorthand — the form this extension puts in titles, so it comes back
+  // in follow-up prompts that quote one
+  for (const m of text.matchAll(/\b([a-z][\w.-]*[a-z\d])#(\d{2,})\b/gi)) {
+    bind(m[2], m[1]);
+  }
+
+  // --- Repo-only signals: vote, but bind no number ---
+
+  // gh --repo org/repo
+  for (const m of text.matchAll(
+    new RegExp(String.raw`--repo[= ]${REPO}/(${REPO})\b`, "g"),
+  )) {
+    vote(m[1]);
+  }
+
+  // cicd-control-center.shopifysvc.com/ci/org/repo/...
+  for (const m of text.matchAll(
+    new RegExp(
+      String.raw`cicd-control-center\.shopifysvc\.com/ci/${REPO}/(${REPO})\b`,
+      "g",
+    ),
+  )) {
+    vote(m[1]);
+  }
+
+  // Any other github.com/org/repo mention
+  for (const m of text.matchAll(
+    new RegExp(String.raw`github\.com/${REPO}/(${REPO})\b`, "g"),
+  )) {
+    vote(m[1]);
+  }
+
+  // --- Bare numbers, attributed to the most-mentioned repo ---
+
+  let dominant: string | null = null;
+  let best = 0;
+  for (const [repo, count] of votes) {
+    if (count > best) {
+      best = count;
+      dominant = repo;
     }
   }
+  const fallback = dominant ?? cwdRepo();
+  const qualify = (num: string) =>
+    fallback ? `${fallback}#${num}` : `#${num}`;
 
-  // Inline: PR #NUMBER or PR NUMBER (3+ digits to avoid false positives)
-  for (const m of text.matchAll(/\bPR\s*#?(\d{3,})\b/gi)) {
-    if (!ids.has(m[1])) {
-      ids.set(m[1], `PR #${m[1]}`);
-    }
+  // PR #NUMBER / PR NUMBER / PRs #NUMBER (3+ digits to avoid false positives)
+  for (const m of text.matchAll(/\bPRs?\s*#?(\d{3,})\b/gi)) {
+    if (!ids.has(m[1])) ids.set(m[1], qualify(m[1]));
   }
 
-  // Inline: #NUMBER (3+ digits, not preceded by a word char to avoid hex colors etc)
+  // CLI invocations: `gs pr checks 2031382`, `gh pr view 611529`
+  for (const m of text.matchAll(/\bpr\s+[a-z-]+\s+#?(\d{3,})\b/gi)) {
+    if (!ids.has(m[1])) ids.set(m[1], qualify(m[1]));
+  }
+
+  // #NUMBER (3+ digits, not preceded by a word char to avoid hex colors etc)
   for (const m of text.matchAll(/(?<!\w)#(\d{3,})\b/g)) {
-    if (!ids.has(m[1])) {
-      ids.set(m[1], `#${m[1]}`);
-    }
+    if (!ids.has(m[1])) ids.set(m[1], qualify(m[1]));
   }
 
   return [...ids.values()];
