@@ -67,7 +67,7 @@ Order the validated findings:
 3. **MEDIUM** — fix or acknowledge
 4. **LOW** — minor improvement, fix in this PR
 
-**Deferral policy:** Do NOT recommend deferring findings to follow-up issues unless the fix is genuinely outside the PR's scope (e.g., pre-existing problem in an unrelated module). "Low priority" and "minor" are not reasons to defer — creating follow-up issues wastes more time than just fixing the code now. **If you still deem a deferral necessary, mark it with `[DEFERRAL — NEEDS CONFIRMATION]` so the human can approve or reject it before it's posted.**
+**Every finding has exactly one disposition: FIX NOW or DROPPED.** There is no defer bucket and no `[DEFERRAL — NEEDS CONFIRMATION]` marker — do not emit one. A finding you would have deferred is either small enough to fold into FIX NOW, or it is DROPPED and belongs in the audit appendix. "Pre-existing problem in an unrelated module" is a DROP reason, not a deferral.
 
 **Comment hygiene is first-class.** Never defer or bury comment-hygiene findings (unnecessary/WHAT, stale/inaccurate, duplicate, change-narration, style-breaking, or commented-out-code comments). The house policy is default-to-zero comments, so these are never "too minor to mention." Surface every substantiated comment-hygiene finding in the dedicated Comment Hygiene section below, regardless of severity — do not fold them into Low Priority where they get lost among higher-severity items, and never recommend deferring them to a follow-up.
 
@@ -87,62 +87,86 @@ Your overall assessment considers:
 
 ## Output Format
 
-Your output must follow this exact structure:
+You emit exactly two blocks, in this order, with these literal delimiters. The lead prints the first verbatim and writes the second to a file.
 
-### Validation Summary
+### Block 1 — result set
 
-- **Findings received:** [N total across all reviewers]
-- **Valid & Actionable:** [N]
-- **Valid but Minor:** [N]
-- **Needs Context:** [N]
-- **Invalid / Filtered:** [N] — [brief reasons: "2 false positives from simplify, 1 severity inflation from naming"]
+Everything between the delimiters must be readable by someone who has seen no part of this pipeline and does not know it exists. Six things are therefore **absent** — not softened, absent:
 
-### Filtered Findings
+- Reviewer or tool names (`review-correctness`, `pair-review`, `the judge`, `the agents`)
+- Counts of any kind (findings received, validated, filtered, reviewers dispatched)
+- Severity movement (`HIGH → MEDIUM`, `filed as`, `downgraded`, `reclassified`)
+- Filtered, rejected, or invalid findings, and any reference to their existence
+- Convergence claims (`3-source`, `independently flagged`, `both sources agreed`)
+- The words `defer`, `follow-up issue`, `out of scope for this PR`
 
-[For each finding rated ❌ Invalid, briefly explain why it was filtered. This helps calibrate the reviewers.]
+If a sentence would not survive being read by the PR author, it does not belong here.
 
-- **[Reviewer] — [Finding title]:** [Why it's invalid — one sentence]
+<<<RESULT_SET>>>
 
-### Validated Findings
+**[N] blocking · [N] should fix · [N] nits** — or `No issues found.`
 
-[Deduplicated, merged, ordered by severity then impact]
+#### Blocking
 
-#### Critical Issues
+##### [CRITICAL|HIGH]. [Title — a claim about the code, not a category]
 
-[Only truly production-breaking or security-compromising issues]
+- **Location:** `file:lines`
+- **Problem:** [what is wrong, stated as fact about the code]
+- **Impact:** [what breaks or misleads, and who notices]
+- **Fix:** [concrete change, with a code block where it helps]
+- **Evidence:** [what you read to confirm it — file, test, call path]
 
-1. **[Issue title]** (from: [reviewer(s)])
-   - **Severity:** CRITICAL
-   - **Location:** `file:lines`
-   - **Problem:** [validated description]
-   - **Fix:** [validated fix — confirmed it works]
-   - **Confidence:** High/Medium
+#### Needs a decision
 
-#### High Priority
+[Correct findings where the call is the reader's — intended-behavior questions, product tradeoffs. Same entry shape.]
 
-[Should fix before merge]
+#### Should fix
 
-#### Medium Priority
+[MEDIUM. Same entry shape.]
 
-[Fix or acknowledge]
+#### Nits
 
-#### Low Priority
+[LOW. Same entry shape.]
 
-[Minor improvements — fix now unless truly outside the PR's scope. Do NOT defer to follow-up issues for things that can be fixed in this PR.]
+#### Comment hygiene
 
-### Comment Hygiene
+[Every substantiated comment-hygiene finding, regardless of severity, as `` `file:lines` `` — [the offending comment text] — **Fix:** [almost always "Delete."]. Omit the section entirely if the diff introduced no problematic comments.]
 
-[Every substantiated comment-hygiene finding, regardless of severity. Never omit or defer this section when the diff added or modified comments. If the diff introduced no problematic comments, state "No comment issues."]
+#### Keep as written
 
-- **[category — WHAT / stale / duplicate / narration / style-break / commented-out code]:** `file:lines` — [the offending comment text] — **Fix:** [almost always "Delete." — reword only for a genuine mis-expressed WHY]
+[At most **two** entries, and only where a proposed change would have broken working code. State it as an imperative about the code with **no mention that anyone proposed anything**: "**Keep `isBefore(now.add(31,'day'),'day')`.** `diff()` floors a millisecond delta, so a day-31 date scores 30 for any `now` past midnight." Omit if empty.]
 
-### Strengths
+#### Verified strengths
 
-[Aggregated positive observations from all reviewers. Internal only — this section exists so the lead can weigh how much of the diff was examined and found sound. It is never posted to the PR.]
+[Only things confirmed against the code, and only where saying so tells the reader what not to change. Omit if empty.]
 
-### Verdict
+#### Verdict
 
-Use explicit, evidence-based language. Do **not** use shorthand approvals like `LGTM`, `LGTM ✅`, `looks good to me`, or `ship it`.
+**[APPROVE | APPROVE WITH COMMENTS | REQUEST CHANGES | DISCUSS]**
 
-**Decision:** [APPROVE / REQUEST CHANGES / DISCUSS]
-**Rationale:** [2-3 sentences explaining the decision based on validated findings]
+[2-3 sentences naming which `review-calibration.md` REQUEST_CHANGES categories apply — correctness bug, security issue, contract violation, missing error handling on a critical path — or stating that none do. Never `LGTM`, `looks good to me`, or `ship it`.]
+
+<<<END_RESULT_SET>>>
+
+### Block 2 — audit appendix
+
+Written to disk, not rendered. Everything the result set is forbidden to carry goes here.
+
+<<<AUDIT_APPENDIX>>>
+
+**Funnel:** [N] received → [N] distinct → [N] dropped, [N] surfaced
+
+**Reclassified**
+- `[title]` HIGH → MEDIUM — [why]
+- `[title]` MEDIUM → merged into [title] — [same root cause, N locations]
+
+**Dropped**
+- **[source] — [title]:** [why it is invalid, with the evidence that settles it]
+- **[source] — [title]:** dropped under `review-calibration.md` → [named rule]
+
+**Would have introduced a bug** [the subset promoted into `Keep as written`, with the original proposal quoted so the rejection is auditable]
+- **[source] — [what they proposed]:** [what it would have broken]
+
+**Per-source counts:** [reviewer → findings filed / survived]
+
+<<<END_AUDIT_APPENDIX>>>

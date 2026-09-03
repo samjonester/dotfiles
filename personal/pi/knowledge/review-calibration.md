@@ -22,7 +22,7 @@
 - Small code organization suggestions
 - Missing docs that aren't on critical paths
 
-These are worth fixing in this PR. Do NOT suggest deferring to follow-up issues for things that can be fixed now.
+These are worth fixing in this PR.
 
 **Never write "non-blocking" (or "optional", "take it or leave it", "nice to have") in a posted review.** Approving already signals you aren't holding the PR — restating it in prose just tells the author it's safe to skip. Say **"please consider the nits below before merging"** in the top-level, and give each inline nit one sentence on why it matters:
 
@@ -41,7 +41,7 @@ Blocking vs. not is still a real internal distinction — it decides `APPROVE` v
 - **Premature optimization**: Don't flag performance on secondary views, small datasets (< 1K rows), or low-traffic paths. "The CSVs are short (max 200-300 lines) so processing time is minimal."
 - **Scaling concerns for current scope**: If the data is small and bounded, don't speculate about future scale.
 - **useMemo/useCallback suggestions**: Check platform conventions first — many codebases explicitly avoid these unless profiling shows a bottleneck.
-- **N+1 queries that are pre-existing**: If the PR didn't introduce the N+1, don't block on it. Fix it in this PR if the code is already being touched; only defer if the fix is genuinely in unrelated code.
+- **N+1 queries that are pre-existing**: If the PR didn't introduce the N+1, don't block on it. Fix it in this PR if the code is already being touched.
 - **Style-only changes in refactor PRs**: The PR is restructuring code, not polishing style.
 - **Test coverage nits on non-critical paths**: Trust CI thresholds.
 - **"Consider extracting" on PRs that are already extractions**: The author is mid-refactor. More extraction is follow-up work.
@@ -95,9 +95,9 @@ Top-level + inline in one API call:
 }
 ```
 
-## Deferral Confirmation Gate
+## No Deferrals
 
-Before posting any review comment that suggests deferring work to a follow-up issue or PR, **always confirm with the user first**. Present the proposed deferral with the rationale and ask whether to keep the deferral language or rewrite as "fix in this PR". Never post deferral suggestions without explicit approval.
+A finding is either fixed in this PR or dropped. Do not post "defer to a follow-up issue," and do not ask the author to agree that something was deferred — they never saw the finding. If it is worth the author's attention, it is worth fixing here; if it is not, it never reaches the comment.
 
 ## Calibrating AI-generated Reviews
 
@@ -111,7 +111,7 @@ When the review skill produces findings, expect to calibrate:
 
 ### Present findings as a list, not a pipeline narrative
 
-When reporting back to Sam, lead with the findings themselves — `file:line`, what's wrong, the fix, and a post/drop recommendation per item. He does not want a summary of what the judge decided, how many reviewers ran, or how severities moved unless he asks. The adjudication detail belongs in the findings file on disk; the chat message is the list he acts on.
+Sam sees only the lead's message and no subagent output. The lead therefore does not compose that message — it prints the judge's `RESULT_SET` block verbatim (review skill Step 6). Counts, reviewer names, severity movement, and filtered findings are physically absent from that block; they live in `~/.pi/tmp/review-<N>-audit.md`, which exists for tuning this file and is not read by default.
 
 ### Verify the linchpin claim yourself
 
@@ -129,3 +129,4 @@ When review comments are from a bot (Binks, automated tools) but posted by a hum
 ## Source
 
 - "Non-blocking" language ban, and the findings-list-not-narrative reporting shape: Sam, 2026-08-06, during the PR #977400 review (shop/world). He rejected a draft that pre-excused every nit, including one documenting a comment that stated the opposite of its code.
+- Rejections and reclassification arithmetic dropped from chat output, deferrals removed as a postable concept, and the output shape moved into `review-judge.md` as two delimited blocks: Sam, 2026-09-03. Five prior prose guards at the lead layer — `100235e0e`'s zero-context rule, `8afc645f0`'s author-facing filter, this file's lines 53 and 112, and `reviewer-persona.md`'s deferral flag — all failed to hold.

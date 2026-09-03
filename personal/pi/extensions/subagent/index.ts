@@ -494,7 +494,10 @@ async function runSingleAgent(
 
 const TaskItem = Type.Object({
   agent: Type.String({ description: "Name of the agent to invoke" }),
-  task: Type.String({ description: "Task to delegate to the agent" }),
+  task: Type.String({
+    description:
+      "Task to delegate. Open with what the agent must produce. State what it can see: it has only its role file and this string — no session history, no files you read, no prior agent's context. Name any file it must read by absolute path.",
+  }),
   cwd: Type.Optional(
     Type.String({ description: "Working directory for the agent process" }),
   ),

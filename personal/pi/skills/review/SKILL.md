@@ -318,7 +318,7 @@ The reviewer never ran — the failure is in the subagent infrastructure or the 
 }
 ```
 
-Capture the error verbatim, add it to the user-facing report (see Step 6 — Reviewers status line), and continue with whichever reviewers succeeded — never abandon the whole review on a silent failure.
+Capture the error verbatim, add it to the user-facing report (see Step 6 — the `⚠️ [agent] did not run` coverage-gap line), and continue with whichever reviewers succeeded — never abandon the whole review on a silent failure.
 
 **Mitigate.** If the per-agent error is model-specific (`thinking_budget out of range`, `Overloaded`, rate-limit), retry the original batch **without** that agent and note the omission. If the same agent also fails on single re-dispatch, mark it failed and move on — do not loop. If >50% of a batch fails with infrastructure errors, flag the review as **INCOMPLETE** per Step 5d and ask the user whether to retry.
 
@@ -337,9 +337,9 @@ After ALL reviewers complete, feed their combined output to `review-judge`.
 
 If a `devx pair-review` job was started in Step 4, collect it now — before dispatching the judge:
 
-1. `bg_wait` on the job (short timeout, e.g. 120s). If it is still running, proceed agents-only and note the timeout in the status line.
+1. `bg_wait` on the job (short timeout, e.g. 120s). If it is still running, proceed agents-only and note the timeout as a Step 6 coverage gap.
 2. Parse the JSON envelope per [references/pair-review.md](references/pair-review.md): split `suggestions` into findings (severity high/medium/minor) and positive observations (null severity — fold these into the report's positive highlights, not the judge). A `consolidation: "failed"` outcome is fine — the judge dedupes.
-3. If the job exited non-zero or `ok:false`, capture the `.err` reason, mark `devx pair-review ❌` in the Reviewers status line, and run the judge with agent findings only.
+3. If the job exited non-zero or `ok:false`, capture the `.err` reason, report it as a Step 6 coverage gap, and run the judge with agent findings only.
 
 The pair-review findings are merged into the judge task in Step 5b, tagged by source.
 
@@ -371,9 +371,9 @@ Rules:
 
 This typically compresses 14 reviewer outputs from ~60-80KB to ~5-10KB — a 6-8x reduction that keeps the judge well within effective context even for large PRs.
 
-#### Preserve the uncompressed originals — you will need them in Step 6
+#### Preserve the uncompressed originals — you will need them in Step 7a
 
-Compression is for the **judge only**. Step 6 renders the full finding detail for the user, so the originals must survive.
+Compression is for the **judge only**. Step 7a drafts comments from the full finding detail, so the originals must survive.
 
 When a `subagent` batch result is truncated, the harness writes the full text to a file and prints the path (`Full: /Users/…/pi-output-guard/subagent-*.txt`). **Record every one of those paths immediately** — that file is the only remaining copy of the uncompressed reviewer output. Same for the pair-review JSON (`/tmp/pair-review-<N>.json`).
 
@@ -386,7 +386,7 @@ judge                                                                      → /
 pair-review                                                                → /tmp/pair-review-966288.json
 ```
 
-In Step 6, read these back with `read_output_chunk` to recover any detail the compression dropped. Do **not** reconstruct a finding from memory or from the judge's one-line summary of it — go back to the source.
+In Step 7a, read these back with `read_output_chunk` to recover any detail the compression dropped. Do **not** reconstruct a finding from memory or from the judge's one-line summary of it — go back to the source.
 
 ### 5b. Compose the judge task
 
@@ -461,105 +461,31 @@ The judge validates, deduplicates, rates, and produces the consolidated findings
 - If >50% of reviewers fail, flag the review as **INCOMPLETE** and suggest the user retry.
 - Always continue with whatever reviewers succeeded — a partial review is better than no review.
 
-## Step 6: Format and Present Output
+## Step 6: Forward the Result Set
 
-### The zero-context rule
+The judge returns two delimited blocks. You are a forwarder here, not an author.
 
-**The user has not seen a single line of subagent output.** Not the reviewers', not pair-review's, not the judge's. Everything they know about this review is what you put in this message.
+**First, recover the judge's full text.** `subagent` results are truncated in your context — the harness elides the middle and prints `Full: /Users/…/pi-output-guard/subagent-*.txt`. This is the same truncation you handled for reviewer batches in Step 5a. If the judge's result carries that marker, `read` the guard file and forward from **that** text. Forwarding a truncated block silently drops findings from the middle of the review.
 
-That makes one phrasing pattern forbidden. Never write a finding as a reference to a conversation the user wasn't in:
+1. **Print the `RESULT_SET` block verbatim.** Everything between `<<<RESULT_SET>>>` and `<<<END_RESULT_SET>>>`, unedited. No preamble, no roster line, no funnel line, no classification recap, no closing summary. The first line the user reads is the judge's first line.
+2. **Write the `AUDIT_APPENDIX` block to `~/.pi/tmp/review-<N>-audit.md`.** Do not render it. Do not summarize it. Do not mention it exists unless the user asks how the pipeline performed or asks to tune `review-calibration.md`.
+3. **Write the `RESULT_SET` block to `/tmp/review-<N>-findings.md`** so it survives compaction and can be grepped when drafting comments in Step 7a.
+4. **Prepend exactly one line**, for identification only:
+   `PR #N — Title · head \`sha\` · N files, +X/−Y` (or the branch name for local reviews).
 
-| ❌ Assumes context | ✅ Self-contained |
+**Coverage gaps are the one exception.** If a reviewer failed in Step 4c, or the judge ran degraded per 5d, append **one** line after the result set:
+`⚠️ [agent] did not run ([captured error]) — that area was not covered.`
+That is a statement about what was not reviewed, not a pipeline roster. Never list the reviewers that succeeded.
+
+**If the delimiters are missing** (5d retry failed, or the markers are absent), say so in one line and paste what you got — do not reconstruct the shape yourself.
+
+| Rationalization | Reality |
 |---|---|
-| "The correctness reviewer flagged a HIGH on the save path" | "**Expired content reaches the save payload.** `handleSubmit` passes `Array.from(selectedIds)` with no expiration re-filter (`AdContentSelection.tsx:467`) → `handleSave` spreads it into `adContentIds` (`:104`). No server guard in `sync_ad_contents`. Filed HIGH by review-correctness." |
-| "The judge rejected finding 2 as invalid" | "**Rejected — `diff()` rewrite would introduce a boundary bug.** review-readability proposed replacing `isBefore(now.add(31,'day'),'day')` with `diff(now,'day') <= 30`. `diff` floors a millisecond delta, so a day-31 date scores 30 for any `now` past midnight." |
-| "3-source convergence on the empty state" | "**Empty state hard-codes one caller's default** (`AdContentSelection.tsx:310`) — independently flagged by review-architecture, review-testing, and pair-review 1674." |
-
-A finding the user can't evaluate without asking you a follow-up question is a finding you rendered wrong.
-
-### Build the findings inventory
-
-Before any verdict, produce a complete inventory covering **every finding any source produced** — including the ones you and the judge threw out. Write it to a file (`/tmp/review-<N>-findings.md`) so it survives compaction and can be grepped later, then present it in chat.
-
-Each entry carries:
-
-| Field | Notes |
-|---|---|
-| **ID + title** | Stable, referenceable — the user will reply "drop 4, keep 7" |
-| **Filed → adjudicated severity** | `HIGH → MEDIUM` if the judge downgraded it. Never show only the final value — the *movement* is the signal |
-| **Source(s)** | Which agent(s), and/or pair-review with its finding id + confidence. Mark convergence explicitly |
-| **Location** | `file:line`, verified to exist at HEAD |
-| **Problem** | What is actually wrong, in plain terms. Not "reviewer X says…" |
-| **Proposed fix** | Concrete, with the code where it helps |
-| **Verdict + evidence** | Valid / rejected / downgraded / merged — and *what was checked* to decide that |
-
-Group by adjudicated severity, with rejections in their own section.
-
-### Rejected findings are first-class output — never collapse them
-
-The rejections are frequently the most valuable part of the review, and they are the part the user cannot reconstruct on their own. Give each one **full treatment, ahead of the verdict**:
-
-- What the reviewer proposed, quoted or shown as code
-- Why it's wrong, with the specific evidence that settles it
-- Whether the *underlying concern* is still valid even though the proposed fix isn't (this happens often — split them)
-
-Two rejection classes deserve to be called out loudly, because they are the pipeline earning its cost:
-
-- **Suggestions that would introduce a bug** — a "simplification" that breaks a boundary condition, a "fix" that does the opposite of its stated intent. Lead with these.
-- **Suggestions that would delete something load-bearing** — a comment documenting a non-obvious invariant, a deliberate duplication that preserves a11y semantics. Say plainly that the author should keep what they have.
-
-Never write "the judge filtered 5 false positives" and move on. Show all five.
-
-### Show the reclassification
-
-When the judge changed a severity, merged duplicates, or dropped findings under the calibration rules, render the arithmetic so the user can audit it:
-
-```
-17 distinct findings → 10 posted
-  1 HIGH   → MEDIUM   save-payload gap (not a regression; intended and tested)
-  3 MEDIUM → dropped  merged into #2 (same root cause, 3 locations)
-  5 LOW    → dropped  "don't raise" per review-calibration (premature optimization ×1, test nits ×3, speculative API ×1)
-```
-
-If you dropped findings under the *don't raise* rules in `review-calibration.md`, name them and name the rule. A silent drop is indistinguishable from an oversight.
-
-### Reviewers status line
-
-Lead the consolidated output with a one-line roster showing each dispatched reviewer's result, including any silent failures recovered in Step 4c and the `devx pair-review` source when it ran:
-
-```
-Reviewers: review-correctness ✅ · review-architecture ✅ · review-simplify ✅ · review-scope ❌ (Gemini thinking_budget bug — see /tmp/...) · devx pair-review ✅ (Opus 4.8, N findings)
-```
-
-Use ✅ for completed (with or without findings), ❌ for failed/dropped, with the captured error in parentheses. This makes coverage gaps visible without burying them in the specialist sections. When pair-review ran, note whether any findings were **convergent** with the agents (e.g. "3 convergent, 2 pair-review-only") — convergence is a signal worth surfacing.
-
-### Do not dump raw specialist reports
-
-The roster line above replaces the old per-reviewer transcript sections. Nine verbatim reviewer outputs is 40KB of overlapping prose the user will not read, and it buries the findings that matter.
-
-Every finding is already in the inventory, attributed to its source. A reviewer that found nothing needs no section at all — `✅` on the roster line says it. Reach back into the preserved raw output (Step 5a manifest) only to recover **detail for a specific finding**, never to paste a whole report.
-
-### Attribution and disagreement
-
-Attribute each finding to its source *inside* the entry, so convergence and single-sourcing are visible per finding rather than per section:
-
-- `[review-architecture + review-testing + pair-review 1674]` — 3-source convergence, higher confidence
-- `[pair-review 1671, conf 0.90]` — single-source, judge verified more carefully
-- `[review-comments]` — single agent
-
-**When two sources disagreed, surface the disagreement and how it was settled.** Reviewers contradicting each other is signal, not noise to be smoothed over — it usually means the call is genuinely a judgment call, and it's the user's to make. Render it as: what each side argued → what the judge checked → how it resolved.
-
-The same applies when pair-review's overall summary conflicts with an agent finding (e.g. "no correctness defects surfaced" against a filed HIGH). Say so explicitly and explain the reconciliation.
-
-### Verdict comes last
-
-State the verdict **after** the inventory, never before it. Leading with a verdict invites the user to accept it without reading the evidence — which is the exact failure this step exists to prevent.
-
-Justify the verdict against the bar in `review-calibration.md` by naming the categories: "REQUEST_CHANGES requires a correctness bug, security issue, contract violation, or missing error handling on a critical path — none remain, so APPROVE with nits." A verdict that doesn't reference the bar is an opinion.
-
-### Deferrals
-
-Flag every deferral as an explicit question, with the argument *for* the deferred work rendered fully enough that the user can overrule you. Never bury a deferral in prose. See the deferral gate in Step 7a.
+| "A one-line roster is useful context" | It is the first thing on screen and it is about the pipeline. Five prior guards banned this and it kept appearing. Print the judge's first line first. |
+| "I should tell them how many findings were filtered" | The filtered set is in the audit file. A count of things they cannot see is not information. |
+| "The judge's block reads oddly here, I'll rewrite it" | Rewriting is composing, and composing is where the pipeline framing gets in. If the block is wrong, the judge is wrong — fix `review-judge.md`. |
+| "I'll add a short summary above so they know what they're looking at" | The result set opens with its own counts of blocking/should-fix/nits. A second summary is the same message twice. |
+| "The judge output looked complete, I forwarded what I had" | Check for the `Full: …/pi-output-guard/…` marker every time. A truncated forward is a review with findings missing and no sign that they are. |
 
 ## Step 7: Actionable Output
 
@@ -567,28 +493,28 @@ Flag every deferral as an explicit question, with the argument *for* the deferre
 
 This is the single easiest way to get this skill wrong, and it produces a review that looks fine and is useless.
 
-| | **Step 6** — in-chat + findings file | **Step 7a** — the GitHub comment |
+| | **Step 6** — the result set | **Step 7a** — the GitHub comment |
 |---|---|---|
-| Audience | You (the user), deciding what to post | The PR author |
-| Contains | **Every** finding, every rejection, reclassification arithmetic, disagreements, deferrals | Only what survived your curation |
-| Length | As long as the evidence requires | Tight — the author has to act on it |
+| Audience | You, deciding what to post | The PR author |
+| Contains | Every surviving finding, in full, with evidence | The subset you selected, one sentence each |
+| Produced by | Copied verbatim from the judge | Assembled by copying from the result set |
 | Purpose | Let you disagree with the pipeline | Tell the author what to change |
 
-The Step 7a format is deliberately terse. **Never render that terse shape in chat.** If the first thing you show the user is an executive summary plus a bulleted list of HIGH+ findings, you have skipped Step 6 and silently discarded every MEDIUM, every LOW, and every rejection — the exact material they need to make a call.
+The Step 7a format is deliberately terse. **Never render that terse shape in chat.** If the first thing you show the user is an executive summary plus a bulleted list of HIGH+ findings, you have skipped Step 6 and silently discarded every MEDIUM and every LOW — the exact material they need to make a call.
 
 Step 6 always runs, always in full, and always before Step 7.
 
 | Rationalization | Reality |
 |---|---|
-| "The judge already summarized it, I'll pass that along" | The judge's summary is input to Step 6, not a substitute for it. It compresses away the reviewer detail and de-emphasizes rejections. |
-| "17 findings is a lot to put in chat" | The user asked for a review. Volume is the finding count, not your formatting choice. Put the inventory in a file and the decision-relevant view in chat — both, not neither. |
-| "They only need the blockers to decide" | They need the rejections to decide whether to trust the blockers. A pipeline that rejected two bug-introducing suggestions earned more trust than one that found three nits. |
-| "I'll show the rest if they ask" | They can't ask about findings they don't know exist. |
+| "The judge already summarized it, I'll pass that along" | The judge's summary is input to Step 6, not a substitute for it. It compresses away the per-finding evidence the user needs to overrule the verdict. |
+| "17 findings is a lot to put in chat" | The user asked for a review. Volume is the finding count, not your formatting choice. Forward the whole result set to chat; the audit appendix is the part that goes to a file. |
+| "The result set is long, I'll trim it" | Length is the finding count, not your formatting choice. Forward it. |
+| "I'll reorder it so the blockers come first" | They already do. Reordering is composing. |
 | "The verdict is the useful part" | The verdict is your opinion. The evidence is what lets them overrule it. |
 
 ### 7a. PR mode (SOURCE_TYPE=pr)
 
-After presenting the full Step 6 report, offer to draft PR comments:
+After forwarding the result set, offer to draft PR comments:
 
 > **I can draft comments for this PR:**
 >
@@ -597,22 +523,25 @@ After presenting the full Step 6 report, offer to draft PR comments:
 >
 > Which findings should go in? I'll draft them for your approval before anything is posted.
 
-**Curate before drafting.** The GitHub comment is a subset of the inventory, not a transcript of it. Confirm which findings make the cut — and note that dropping findings here is normal and good, as long as Step 6 already showed the user everything that existed.
+**Curate before drafting.** The GitHub comment is a subset of the result set, not a transcript of it. Confirm which findings make the cut — dropping findings here is normal and good, because the user has already read every finding the review produced.
 
 ### The author-facing filter
 
-Everything in Step 6 was written for the user. The PR author is a different reader with no access to the pipeline. Six things never cross into a posted comment:
+The comment body is **assembled by copying**, not written. For each finding the user selected, copy two things out of its `RESULT_SET` entry: the `Problem` sentence and the `file:lines` value. Those are the only strings that may cross into a posted comment. Nothing else in the entry, and nothing at all from `~/.pi/tmp/review-<N>-audit.md`, is a candidate for copying.
 
-| Never post | Why |
+That makes the leak impossible rather than forbidden: counts, reviewer names, severity movement, and rejected findings live only in the audit file, and the audit file is never opened while drafting. Two things the result set *does* carry still do not get copied, because they are for the reader and not the author:
+
+| Not copied | Why |
 |---|---|
-| Pipeline stats — `"Reviewed with 11 specialist agents plus devx pair-review, then adjudicated — 42 raw findings, 25 distinct, 10 rejected"` | The author asked for a review, not its provenance. Zero of it is actionable. |
-| Skill vocabulary — `anchored`, `the judge`, `review-correctness`, `convergent`, `severity arithmetic`, `V1`/`M3` internal IDs | Internal machinery. `"three more that can't be anchored to this diff"` → `"three findings in files this PR does not change"`. |
-| The Strengths / Positive Observations section | Internal, per `reviewer-persona.md`. Praise in a change-request comment reads as padding. |
-| Assessment of the author's other review threads (Binks, colleagues) | Not your review to give. Reply in those threads or omit. |
-| Any detail already in an inline comment | Top-level and inline render on the same page. A top-level entry is a pointer: the claim in one sentence plus `file:line`. |
-| Rejected findings and reclassification reasoning | Step 6 material. The author sees only what survived. |
+| `Verified strengths` | Praise inside a change request reads as padding. Per `reviewer-persona.md`, strengths are internal. |
+| `Keep as written` | The author already wrote it that way. Telling them to keep it is noise unless another comment threatens it. |
 
-**Voice.** AGENTS.md Response Discipline governs the comment body — the skill sets the shape, not the voice. Apply the delete list to every drafted comment before showing it, the same as a chat message. `reviewer-persona.md`'s Finding Voice section carries the named constructions the reviewers are already held to; hold your own prose to them too.
+Two structural rules on top of the copy:
+
+- **A top-level entry is a pointer, never a duplicate.** Top-level and inline render on the same page. If a finding gets an inline comment, its top-level line is the `Problem` sentence plus `file:line` and nothing more.
+- **Never assess the author's other review threads** (Binks, colleagues). Reply in those threads or omit.
+
+**Voice.** AGENTS.md Response Discipline governs the comment body — the skill sets the shape, not the voice. Run the delete list over every drafted comment before showing it. `reviewer-persona.md`'s Finding Voice section names the banned constructions; hold your own prose to them.
 
 Open the top-level with the count and the claim (`Two blockers.`), not with a summary of the process.
 
@@ -626,18 +555,6 @@ git diff -U0 origin/main...HEAD -- "$FILE" \
 **Build the payload programmatically.** Hand-escaping markdown into JSON breaks on backticks, code fences, and quotes. Write a small script that `json.dump`s a dict, then post with `gh api ... --input`. For a Meteorite PR (`PR_SYS=gs`) the payload is identical — post it with `gs api repos/{owner}/{repo}/pulls/<number>/reviews --input -`. See `pr-review-posting.md` for the API shape.
 
 If the user says yes, format:
-
-**Deferral confirmation gate:**
-
-Before drafting comments, scan the judge output for any findings marked `[DEFERRAL — NEEDS CONFIRMATION]` or any suggestion to defer/follow-up. If any exist, present them to the user explicitly:
-
-> **⚠️ Deferral check:** The review suggests deferring these to follow-up:
->
-> 1. [finding title] — [reason for deferral]
->
-> Should I include these as "defer to follow-up" in the PR comments, or rewrite them as "fix in this PR"?
-
-Do NOT include deferral language in any drafted comment until the user confirms.
 
 **Top-level comment style guard:**
 
@@ -712,7 +629,7 @@ Check yourself against these before taking shortcuts:
 | "Dispatching subagents is slow, I'll be faster" | You'll be faster at producing a *worse* review. The 30-60s dispatch time is the cost of coverage. |
 | "The tool/subagent failed, I'll just review it myself as fallback" | Diagnose the failure, retry once, then report INCOMPLETE per Step 5d. A partial multi-agent review beats a complete single-agent review. Never fall back to single-pass. |
 | "pair-review is slow, I'll skip it and just run the agents" | For PR reviews, kick it off in the *background* at the start of Step 4 — it runs in parallel and costs you no wall time. It caught a zone anti-pattern and a constant triplication the agents missed. Only skip it for local reviews or when the user opts out. |
-| "pair-review failed, I'll review the code myself to compensate" | No. The agent pipeline is the source of truth; pair-review only augments it. Note the failure in the status line and run the judge with agent findings only. |
+| "pair-review failed, I'll review the code myself to compensate" | No. The agent pipeline is the source of truth; pair-review only augments it. Note the failure as a Step 6 coverage gap and run the judge with agent findings only. |
 | "A git command failed, I'll work around it" | Stop. Diagnose. Ask the user. Don't improvise with alternative git commands, temp branches, or manual patches. |
 | "This could be exploited, so it's CRITICAL" | "Could be" ≠ "is reachable in production." Check the actual call path. If the input is already validated upstream, the severity drops. |
 | "No tests were added, so this needs REQUEST_CHANGES" | Missing tests are a valid observation but not always blocking. If the code is well-tested indirectly or the PR is a config change, tests may be unnecessary. Calibrate severity to actual risk. |

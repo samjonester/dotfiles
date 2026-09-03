@@ -178,26 +178,17 @@ For each PR in the batch, sequentially:
 
 ### 3c. Present batch findings
 
-After all PRs in the batch are reviewed, present findings using the review skill's Step 6 template. For each PR, show:
+For each PR in the batch, forward the judge's `RESULT_SET` block verbatim per the review skill's Step 6 — including its guard-file recovery rule — prefixed by exactly one identification line:
 
 ```
 ---
 
 ## PR #595413 — [title] (by [author])
 
-Classification: **config-ci** (yaml, tiny)
-Reviewers: scope, operations, security (core) | intent (optional, skipped — tiny + clean)
-
-### Verdict: ✅ APPROVE
-
-[Executive summary from judge]
-
-### Findings
-
-[Any validated findings, or "No issues found"]
-
----
+[the RESULT_SET block, unedited]
 ```
+
+Write each PR's `AUDIT_APPENDIX` to `~/.pi/tmp/review-<number>-audit.md` and do not render it. No classification line, no reviewer roster, no verdict header above the findings — the verdict is the last section inside the block.
 
 ### 3d. GATE: User action
 
@@ -207,6 +198,9 @@ After presenting the batch, enter an interactive loop. Process user commands:
 - **`request changes #1234`** — Draft and post a request-changes comment
 - **`comment #1234`** — Draft a top-level review comment (present for review before posting)
 - **`comment #1234 file:line "text"`** — Draft a line-level comment
+
+All four drafting commands above go through the review skill's **Step 7a author-facing filter**: the body is assembled by copying the `Problem` sentence and `file:lines` out of `RESULT_SET` entries, and `~/.pi/tmp/review-<number>-audit.md` is never opened while drafting. Nothing is posted before the user sees the draft.
+
 - **`skip #1234`** — Move on without action
 - **`next batch`** or **`next`** — Proceed to the next batch
 - **`stop`** — End the review session, clean up all worktrees
@@ -280,6 +274,8 @@ In practice, the sequential subagent dispatch in Step 3b makes monitoring unnece
 - NEVER dispatch more than 4 subagents in a single parallel batch — split 5+ into multiple dispatches
 - Handle WTP slot exhaustion gracefully — inform the user, offer alternatives
 - Clean up temp files and WTP slots after each batch, not at the end
+- NEVER open a PR's audit appendix while drafting a comment for that PR
+- NEVER present a per-PR block that opens with classification, reviewer roster, or verdict
 
 ## Common Rationalizations
 

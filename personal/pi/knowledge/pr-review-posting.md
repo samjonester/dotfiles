@@ -148,4 +148,5 @@ For comments spanning multiple lines, add `start_line`:
 | Missing `"side": "RIGHT"`                   | API error                   | Always include side                |
 | Using absolute line numbers                 | Comment on wrong line       | Use diff-relative line numbers     |
 | `"event": "APPROVE"` with blocking findings | Contradictory signal        | Use `REQUEST_CHANGES` or `COMMENT` |
+| Asking the author to confirm a deferral | They never saw the finding | Fix it in this PR or drop it — see `review-calibration.md` → No Deferrals |
 | 👍/👎 reaction on a human reviewer's comment | Reads as flippant; reactions are Binks-only | Reply in prose; resolve the thread if addressed |
