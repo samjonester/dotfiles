@@ -1,0 +1,6 @@
+# LLM instruction files are consumed as raw text by a model, not rendered.
+# Prettier's markdown normalization (code-span space stripping, emphasis
+# delimiters, table padding) changes bytes the instructions name literally —
+# e.g. `` ` — ` `` in AGENTS.md rule 6 becomes `` `—` `` — and buries small
+# content edits under a hundred lines of reformatting.
+personal/pi/**/*.md

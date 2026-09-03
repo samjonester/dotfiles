@@ -592,12 +592,29 @@ After presenting the full Step 6 report, offer to draft PR comments:
 
 > **I can draft comments for this PR:**
 >
-> 1. **Top-level review comment** — executive summary + validation evidence + a numbered one-line finding list
+> 1. **Top-level review comment** — the blockers, stated directly, plus a one-line pointer per remaining finding
 > 2. **Line-level comments** — each finding you want posted, inline on its `file:line`
 >
 > Which findings should go in? I'll draft them for your approval before anything is posted.
 
 **Curate before drafting.** The GitHub comment is a subset of the inventory, not a transcript of it. Confirm which findings make the cut — and note that dropping findings here is normal and good, as long as Step 6 already showed the user everything that existed.
+
+### The author-facing filter
+
+Everything in Step 6 was written for the user. The PR author is a different reader with no access to the pipeline. Six things never cross into a posted comment:
+
+| Never post | Why |
+|---|---|
+| Pipeline stats — `"Reviewed with 11 specialist agents plus devx pair-review, then adjudicated — 42 raw findings, 25 distinct, 10 rejected"` | The author asked for a review, not its provenance. Zero of it is actionable. |
+| Skill vocabulary — `anchored`, `the judge`, `review-correctness`, `convergent`, `severity arithmetic`, `V1`/`M3` internal IDs | Internal machinery. `"three more that can't be anchored to this diff"` → `"three findings in files this PR does not change"`. |
+| The Strengths / Positive Observations section | Internal, per `reviewer-persona.md`. Praise in a change-request comment reads as padding. |
+| Assessment of the author's other review threads (Binks, colleagues) | Not your review to give. Reply in those threads or omit. |
+| Any detail already in an inline comment | Top-level and inline render on the same page. A top-level entry is a pointer: the claim in one sentence plus `file:line`. |
+| Rejected findings and reclassification reasoning | Step 6 material. The author sees only what survived. |
+
+**Voice.** AGENTS.md Response Discipline governs the comment body — the skill sets the shape, not the voice. Apply the delete list to every drafted comment before showing it, the same as a chat message. `reviewer-persona.md`'s Finding Voice section carries the named constructions the reviewers are already held to; hold your own prose to them too.
+
+Open the top-level with the count and the claim (`Two blockers.`), not with a summary of the process.
 
 **Verify line anchors before building the payload.** Every `comments[].line` must be a line the diff actually adds or modifies, or the API rejects the whole review. Check each target against the added-line set:
 

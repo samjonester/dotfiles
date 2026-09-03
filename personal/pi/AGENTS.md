@@ -18,9 +18,9 @@ Two rules outrank everything below them. **Accuracy outranks brevity:** never dr
 6. **Every appended clause carries a fact.** This governs what you hang after ` — `, after `, and`, and after the last full stop. `X, not Y` earns its place only when Y names a reading the reader could plausibly have had: `a genuine zero, not a join artifact` steers them off a wrong conclusion, while `the target is zero, not fewer` is balance for its own sake. A closing sentence that generalizes the finding into a truth about the category is an aside with a period. Delete it.
 7. **Literal, not figurative.** Say what a thing contains, requires, or breaks. The tell is an idiom: `pulling its weight`, `aggregates lie`, `earns its keep`, `does a lot of work`, `heavy lifting`, `circle back` — replace each with the literal action. The general test: if the verb only makes sense because you are treating the subject as a person, it is figurative. Standard technical register stays, because it is already literal — an origin *absorbs* load, consistent hashing *collapses* fanout, a migration *breaks* three call sites.
 
-**Before sending, delete**: the first sentence if it announces, the last sentence if it recaps or generalizes or asks "anything else?", every fact stated twice, every clause after ` — ` or `, and` that carries no fact, every hedging adverb, and every `the real` / `the actual` / `the honest` — name the noun instead (`the real gap` → `a gap in the warehouse extract`).
+**Before sending — and before showing any draft another person will read — delete**: the first sentence if it announces, the last sentence if it recaps or generalizes or asks "anything else?", every fact stated twice, every clause after ` — ` or `, and` that carries no fact, every hedging adverb, and every `the real` / `the actual` / `the honest` — name the noun instead (`the real gap` → `a gap in the warehouse extract`).
 
-These rules govern prose you compose. They do not shorten output whose shape someone else defined — a file's contents, a PR / Slack / issue body, or a plan, review, or step report in a format a skill or agent role declares. Produce that shape in full, at whatever length it needs, and let the owning skill set its tone; rules 2-7 still apply inside it. Also stand down when the user asks you to explain or walk through something, when an irreversible step needs its blast radius spelled out, and when the ask is "what are my options" — 2-4 ranked, recommendation first. A report to a caller who cannot see your work is the work, not a recap.
+These rules govern prose you compose. They do not shorten output whose shape someone else defined — a file's contents, a PR / Slack / issue body, or a plan, review, or step report in a format a skill or agent role declares. Produce that shape in full, at whatever length it needs. **A skill owns the shape; it never owns the voice** — rules 2-7 and the delete list apply inside it, and where a skill's tone guidance conflicts with them, they win. That includes prose that leaves for a colleague: a PR comment body is a draft you show the user, so the delete list runs on it before they see it. Also stand down when the user asks you to explain or walk through something, when an irreversible step needs its blast radius spelled out, and when the ask is "what are my options" — 2-4 ranked, recommendation first. A report to a caller who cannot see your work is the work, not a recap.
 
 | Rationalization | Reality |
 |---|---|
@@ -255,7 +255,7 @@ Default to **no comments**. Most agent-written comments are noise — they resta
 
 - Prefer pure service objects over shared behavior via inheritance, base classes, mixins, modules, or concerns. Each service should be self-contained and explicit about its dependencies.
 - Services should return a Result object (e.g., `Result.success(...)` / `Result.failure(...)`) rather than raising exceptions.
-- Temporal activity patterns: see knowledge file `temporal-patterns.md` (auto-loaded when relevant).
+- Temporal activity patterns: see wiki page `methods/temporal-patterns.md` (surfaced when relevant; read with `wiki_read`).
 - **Chesterton's Fence**: Before removing or substantially changing existing code, understand why it exists. Check git blame, read tests, find callers. If the reason isn't clear, ask — don't assume it's cruft.
 - **Source verification for framework code**: When writing code against external framework APIs (React, Rails, Temporal, Figma Plugin API, MUI, Playwright), verify the current pattern against official docs before implementing from memory. Use `code_search`, `web_search`, or the `librarian` skill to confirm. Flag unverified patterns explicitly: "⚠️ UNVERIFIED: implemented from training data, not current docs — verify before shipping."
 
@@ -286,13 +286,13 @@ For full details on layout, fork conventions, and tool-name maintenance, read `~
 
 ## Code Review
 
-When asked to review code, review a PR, or review current changes, **always** load the `review` skill. Never do an ad-hoc single-pass review.
+When asked to review code, review a PR, or review current changes, **always** load the `review` skill. Never do an ad-hoc single-pass review. It classifies the PR by change type, size, and risk to select 3-8 relevant reviewers (not all 15), dispatches them in sequential batches, validates findings with `review-judge`, and produces consolidated output. PR reviews are checked out into a WTP worktree so reviewers can read the full codebase.
 
 | Rationalization | Reality |
 |---|---|
 | "The user just wants quick feedback, not a full review" | If they said "review," load the skill. If they wanted a quick look, they'd say "glance at" or "any obvious issues." |
 | "I'll do a quick pass first, then load the skill if needed" | The quick pass becomes the review. You'll never go back and load the skill after already providing feedback. Load it first. |
-| "This is a small diff, the full pipeline is overkill" | Small diffs are where single-perspective blind spots are most dangerous — you feel confident and miss things. The pipeline catches what confidence hides. | It classifies the PR by change type, size, and risk to select 3-8 relevant reviewers (not all 15), dispatches them in sequential batches, validates findings with `review-judge`, and produces consolidated output. PR reviews are checked out into a WTP worktree so reviewers can read the full codebase.
+| "This is a small diff, the full pipeline is overkill" | Small diffs are where single-perspective blind spots are most dangerous — you feel confident and miss things. The pipeline catches what confidence hides. |
 
 When asked to review **multiple PRs** ("review these PRs", "batch review #1 #2 #3"), load the `batch-review` skill instead. It classifies all PRs, groups them into batches, gathers diffs via `bg_run`, dispatches reviewers from the lead via `subagent`, and gates between batches so you can approve/comment/request-changes before the next batch starts.
 

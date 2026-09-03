@@ -121,7 +121,7 @@ Keep findings specific and actionable. Instead of "error handling could be impro
 ## Reference
 
 If you need to look up pi extension API details during your analysis, read the extension docs at:
-- `/nix/store/3q010y20inrndxjfqvydd6nhn66drfdr-pi-coding-agent-0.55.3/lib/node_modules/pi-monorepo/docs/extensions.md`
+- `~/.pi/pkg/pi-*/docs/extensions.md` — resolve the glob against the installed version (`ls -d ~/.pi/pkg/*/`); do not hardcode a version.
 
 For examples of well-written extensions:
-- `/nix/store/3q010y20inrndxjfqvydd6nhn66drfdr-pi-coding-agent-0.55.3/lib/node_modules/pi-monorepo/examples/extensions/`
+- `~/.pi/pkg/pi-*/examples/extensions/`

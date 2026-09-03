@@ -8,14 +8,26 @@
 
 ## Which CLI
 
-Every payload below works unchanged on a Meteorite PR by swapping `gh api` → `gs api`. `gs api` is a mechanical replacement: same endpoint paths, same REST shape, `{owner}`/`{repo}` filled in from the resolved World repo. Resolve which system the PR is in first — see `skills/_shared/pr-system.md`.
+Resolve which system the PR is in first — see `skills/_shared/pr-system.md`. `gs api` is a mechanical `gh api` replacement (same paths, same REST shape, `{owner}`/`{repo}` filled in from the resolved World repo), but Meteorite uses a **different review-write shape**: the single-shot `comments: [...]` array below is the GitHub path. Meteorite takes three calls.
+
+### Meteorite: pending review → anchored comments → event
+
+Verified on PR #2011335, 2026-09-01. `commit_id` must be the PR's current `headSha` or the anchor breaks.
 
 ```bash
-# GitHub PR
-gh api repos/{owner}/{repo}/pulls/{number}/reviews --input - <<'EOF'
-# Meteorite PR — identical body
-gs api repos/{owner}/{repo}/pulls/{number}/reviews --input - <<'EOF'
+pr=2011335
+head_sha=$(gs pr view "$pr" --json | jq -er '.headSha')
+review_id=$(gs api "repos/{owner}/{repo}/pulls/$pr/reviews" -f event=PENDING | jq -er '.id')
+
+jq -n --rawfile body /tmp/nit.md --arg commit_id "$head_sha" --arg path 'areas/.../Foo.tsx' \
+  '{body: $body, commit_id: $commit_id, path: $path, side: "RIGHT", line: 23}' |
+  gs api "repos/{owner}/{repo}/pulls/$pr/reviews/$review_id/comments" -X POST --input -
+
+gs api "repos/{owner}/{repo}/pulls/$pr/reviews/$review_id/events" \
+  -f event=APPROVE -F body="$(< /tmp/approval.md)"
 ```
+
+Three ids, easy to confuse: the **pending review id** (`/reviews` POST), the **root review-comment id**, and the **thread UUID** printed by `gs pr view N --comments`. Only the review id works in `/reviews/{id}/…`. Lost the create response? A retry returns 422 (one pending review per author) — recover with `gs api "repos/{owner}/{repo}/pulls/$pr/reviews" --paginate` and pick your own `state == "PENDING"`. Abandoning instead: `gs api "…/reviews/$review_id" -X DELETE`. Full reference: `//.agents/skills/gs/reference.md:199`.
 
 ## API Patterns
 
@@ -129,7 +141,9 @@ For comments spanning multiple lines, add `start_line`:
 | Mistake                                     | Result                      | Fix                                |
 | ------------------------------------------- | --------------------------- | ---------------------------------- |
 | `gh pr review --comment --body "..."`       | Posts top-level, not inline | Use `gh api` with Reviews API      |
-| `gs pr review <N> --comment`                | Posts top-level; no inline flag exists | Use `gs api` with the same Reviews payload |
+| `gs pr review <N> --comment`                | Posts top-level; no inline flag exists | Use the `gs api` pending-review flow |
+| `gs pr comment <N>` for a new inline comment | Only `--reply-to` an existing thread; no path/line flag | Use the `gs api` pending-review flow |
+| Single-shot `comments: [...]` array on Meteorite | Unverified — GitHub shape | Use the three-call pending-review flow |
 | `gh api` on a Meteorite PR (or `gs api` on a GitHub PR) | 404 Not Found | Resolve the system first — separate number namespaces |
 | Missing `"side": "RIGHT"`                   | API error                   | Always include side                |
 | Using absolute line numbers                 | Comment on wrong line       | Use diff-relative line numbers     |

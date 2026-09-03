@@ -32,7 +32,7 @@ These are worth fixing in this PR. Do NOT suggest deferring to follow-up issues 
 | "Optional / take it or leave it." | "The `titleAccess` difference is the easy one to lose in a future edit." |
 | "Nice to have, no need to change." | "The drift is invisible until someone extends the test." |
 
-For a genuine judgment call, invite pushback instead of pre-conceding: *"This one's more of a judgment call — if you read the current version as clear enough, say so and I won't push."* That keeps the author's agency without telling them to ignore you.
+For a genuine judgment call, state the tradeoff and ask a direct question: *"Is the current wording clear enough at the call site? If so, this can stay."* No first-person preference (`I'd like`, `I won't push`), no pre-concession. The question keeps the author's agency; the framing doesn't tell them to ignore you.
 
 Blocking vs. not is still a real internal distinction — it decides `APPROVE` vs `REQUEST_CHANGES`. It just doesn't belong in the comment text.
 
@@ -50,9 +50,10 @@ Blocking vs. not is still a real internal distinction — it decides `APPROVE` v
 
 ### Structure
 
-- **Top-level comment**: Executive summary, validation results, numbered one-line finding list for orientation. NO full finding details here — they go inline.
+- **Top-level comment**: open with the blocker count and the blockers themselves, then one line per remaining finding pointing at its `file:line`. NO full finding details here — they go inline. No account of how the review was produced: agent counts, finding arithmetic, and what the judge rejected are for the chat report, not the author. See the author-facing filter in the `review` skill's Step 7a.
 - **Inline comments**: Self-contained full findings (problem → impact → suggested fix). Each must stand alone — the reader may see it without the top-level context.
 - **Never duplicate content between top-level and inline.** They're visible together on the review page.
+- **Voice**: AGENTS.md Response Discipline governs the comment body. Named constructions to avoid are in `skills/review/references/reviewer-persona.md` under Finding Voice.
 
 ### Line-level comment API
 

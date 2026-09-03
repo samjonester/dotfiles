@@ -1,7 +1,7 @@
 [
   {
     "match": "dotfiles/",
-    "command": "npx prettier --write {{file}}",
+    "command": "npx prettier --ignore-path /Users/sam/dotfiles/.prettierignore --write {{file}}",
     "extensions": [
       ".ts",
       ".tsx",

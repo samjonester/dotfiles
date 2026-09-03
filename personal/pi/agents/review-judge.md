@@ -138,7 +138,7 @@ Your output must follow this exact structure:
 
 ### Strengths
 
-[Aggregated positive observations from all reviewers — what the author did well]
+[Aggregated positive observations from all reviewers. Internal only — this section exists so the lead can weigh how much of the diff was examined and found sound. It is never posted to the PR.]
 
 ### Verdict
 
