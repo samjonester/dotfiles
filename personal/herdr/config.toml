@@ -1,0 +1,140 @@
+# Herdr — terminal/agent multiplexer. Docs: https://herdr.dev/docs/
+#
+# personal/install.sh symlinks THIS FILE to ~/.config/herdr/config.toml.
+# The directory itself is not symlinked: herdr also writes session.json,
+# sessions/, plugin state, and rotating logs into ~/.config/herdr/.
+#
+# Apply edits to a running server: `herdr server reload-config`
+# Print every option with defaults: `herdr --default-config`
+
+onboarding = false
+
+[theme]
+name = "gruvbox"
+
+[theme.custom]
+# surface_dim draws the sidebar/pane rule and the Spaces/Agents rule, and nothing
+# else (pane split borders use overlay0). Herdr's gruvbox maps it to #282828,
+# which is also kitty's gruvbox background, so both rules render invisible.
+# #98971a is gruvbox green (kitty color2); #b8bb26 (color10) is the bright one.
+surface_dim = "#98971a"
+
+[update]
+# Installed via brew, so `herdr update` is the wrong upgrade path — use
+# `brew upgrade herdr`. Polling only surfaces prompts that command can't satisfy.
+version_check = false
+
+[ui]
+sidebar_width = 32
+# herdr labels a new workspace from the git worktree root basename, and every
+# world tree is <slot>/src, so unnamed workspaces all read "src". Ask instead.
+prompt_new_workspace_name = true
+# Attention queue: blocked agents sort above idle ones, across all workspaces.
+agent_panel_sort = "priority"
+show_agent_labels_on_pane_borders = true
+# What Kitty shows in its tab bar. {hostname} is noise on a laptop.
+window_title = "{workspace} · {tab}"
+
+[ui.sidebar.agents]
+# terminal_title_stripped is the row that surfaces each agent's current task.
+rows = [["state_icon", "workspace", "tab"], ["terminal_title_stripped"], ["agent"]]
+
+[ui.sidebar.agents.rows_by_agent]
+# A row is one line, truncated at the sidebar width, so `π - <five words>…` is
+# all terminal_title_stripped can show and two sessions in one repo read the
+# same. personal/pi/extensions/retitle reports the bare session name split
+# across $task1..$task3, one token per row; unset tokens collapse their row.
+# The "pi" line the default layout ends with is redundant inside a pi-only
+# override, so the space goes to the title instead.
+pi = [["state_icon", "workspace", "tab"], ["$task1"], ["$task2"], ["$task3"]]
+
+[ui.toast]
+# Desktop notification when a background agent goes blocked or done.
+delivery = "system"
+
+[ui.sound]
+enabled = false
+
+[experimental]
+# Pass the Kitty graphics protocol through to the attached client. Takes effect
+# on client reattach, not on reload-config: cell-pixel geometry is negotiated
+# once at connect time, and a client that attached with cell_width_px=0 stays
+# that way until it reconnects.
+kitty_graphics = true
+
+[advanced]
+# Matches kitty's `scrollback_lines 500000` at a measured ~200 B/line on these
+# panes. Per pane, held in the server process — 10 panes is a 1 GB ceiling.
+scrollback_limit_bytes = 100000000
+
+[keys]
+# Legacy terminals send ctrl+space and ctrl+@ as the same byte (NUL); Ghostty's
+# kitty keyboard protocol is what keeps them distinct. If the prefix ever stops
+# registering, try "ctrl+@". Unlike action bindings, prefix takes one string, so
+# it cannot carry a fallback. Costs zsh's ^@ set-mark-command inside panes.
+prefix = "ctrl+space"
+
+# Each action keeps its prefix chord and gains a prefix-free ctrl+alt one.
+# ctrl+alt is the one modifier family herdr found unclaimed across ten terminals
+# plus GNOME/KDE, and it survives macOS composing Option into glyphs.
+# https://herdr.dev/docs/keyboard/
+focus_pane_left  = ["prefix+h", "ctrl+alt+h"]
+focus_pane_down  = ["prefix+j", "ctrl+alt+j"]
+focus_pane_up    = ["prefix+k", "ctrl+alt+k"]
+focus_pane_right = ["prefix+l", "ctrl+alt+l"]
+previous_tab     = ["prefix+p", "ctrl+alt+["]
+next_tab         = ["prefix+n", "ctrl+alt+]"]
+new_tab          = ["prefix+c", "ctrl+alt+c"]
+split_vertical   = ["prefix+v", "ctrl+alt+d"]
+split_horizontal = ["prefix+minus", "ctrl+alt+shift+d"]
+zoom             = ["prefix+z", "ctrl+alt+z"]
+
+# Unbound by default. With several agents live, cycling agents beats cycling panes.
+next_agent     = "ctrl+alt+n"
+previous_agent = "ctrl+alt+p"
+
+# Taken chords, for reference when adding more. `herdr --default-config` omits
+# swap-pane and copy-mode, so this list comes from prefix+? and the docs:
+#   shift+r reload-config     shift+n new-workspace    shift+g new-worktree
+#   shift+w rename-workspace  shift+d close-workspace  shift+t rename-tab
+#   shift+x close-tab         shift+p rename-pane      shift+tab cycle-pane-prev
+#   shift+h/j/k/l swap-pane   prefix+[ copy-mode
+# switch_workspace is unbound, but its documented slot is prefix+shift+1..9.
+#
+# Avoid plain alt+ chords: macOS composes Option into special characters unless
+# the outer terminal sets option-as-alt, which kitty and Ghostty leave off by
+# default. shift+ and ctrl+alt+ transmit everywhere.
+
+# `herd` picker: choose review-a-branch or implement-on-a-new-branch.
+[[keys.command]]
+key = "prefix+a"
+type = "popup"
+command = "herd"
+description = "spawn pi agent workspace"
+width = "80%"
+height = "70%"
+
+[[keys.command]]
+key = "prefix+shift+v"
+type = "popup"
+command = "herd review"
+description = "review a branch or PR"
+width = "80%"
+height = "70%"
+
+[[keys.command]]
+key = "prefix+shift+i"
+type = "popup"
+command = "herd implement"
+description = "implement on a new branch"
+width = "80%"
+height = "70%"
+
+[[keys.command]]
+# shift+l would shadow swap-pane-right; shift+z is unclaimed.
+key = "prefix+shift+z"
+type = "popup"
+command = "lazygit"
+description = "lazygit"
+width = "90%"
+height = "90%"

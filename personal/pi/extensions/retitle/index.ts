@@ -30,12 +30,96 @@ import type {
   ExtensionAPI,
   ExtensionContext,
 } from "@mariozechner/pi-coding-agent";
-import { execFileSync } from "node:child_process";
+import { execFile, execFileSync } from "node:child_process";
+import fs from "node:fs";
+import os from "node:os";
 import path from "node:path";
 
 function sessionTitle(name?: string | null): string {
   const cwd = path.basename(process.cwd());
   return name ? `π - ${name} - ${cwd}` : `π - ${cwd}`;
+}
+
+// ── Herdr sidebar title ─────────────────────────────────────────────────────
+//
+// Herdr renders each sidebar row on one line and truncates the overflow, so
+// the built-in terminal_title token shows `π - <first few words>…` and two
+// sessions in the same repo look identical. Custom pane tokens are the only
+// multi-line escape hatch: report the name pre-wrapped as $task1..$taskN and
+// give each token its own row (see personal/herdr/config.toml). The `π - `
+// prefix and ` - <cwd>` suffix are dropped — herdr already shows the agent
+// and workspace in the same entry.
+const HERDR_SOURCE = "pi-retitle";
+const HERDR_TITLE_ROWS = 3;
+let herdrSeq = Date.now();
+
+/** Usable text width of a sidebar row: configured columns less indent and gutter. */
+function herdrRowCols(): number {
+  let width = 32;
+  try {
+    const configPath =
+      process.env.HERDR_CONFIG_PATH ||
+      path.join(os.homedir(), ".config", "herdr", "config.toml");
+    const match = fs
+      .readFileSync(configPath, "utf8")
+      .match(/^\s*sidebar_width\s*=\s*(\d+)/m);
+    if (match) width = Number(match[1]);
+  } catch {
+    // No config, unreadable, or no explicit width — the default is 26 columns.
+  }
+  return Math.max(16, Math.min(48, width - 4));
+}
+
+function wrapTitle(name: string, cols: number, maxLines: number): string[] {
+  const lines: string[] = [];
+  let line = "";
+  for (const word of name.split(/\s+/).filter(Boolean)) {
+    const candidate = line ? `${line} ${word}` : word;
+    // Overflow the last allowed line rather than dropping words; herdr
+    // truncates it with an ellipsis.
+    if (!line || candidate.length <= cols || lines.length === maxLines - 1) {
+      line = candidate;
+      continue;
+    }
+    lines.push(line);
+    line = word;
+  }
+  if (line) lines.push(line);
+  return lines;
+}
+
+function reportHerdrTitle(name?: string | null): void {
+  const paneId = process.env.HERDR_PANE_ID;
+  if (process.env.HERDR_ENV !== "1" || !paneId) return;
+
+  const lines = name ? wrapTitle(name, herdrRowCols(), HERDR_TITLE_ROWS) : [];
+  const args = [
+    "pane",
+    "report-metadata",
+    paneId,
+    "--source",
+    HERDR_SOURCE,
+    "--seq",
+    String(++herdrSeq),
+  ];
+  for (let i = 0; i < HERDR_TITLE_ROWS; i++) {
+    // An empty value clears the token, which collapses its row.
+    args.push("--token", `task${i + 1}=${lines[i] ?? ""}`);
+  }
+  execFile("herdr", args, () => {});
+}
+
+// Subagents (`pi --mode json -p`) and RPC teammates are child processes that
+// inherit HERDR_PANE_ID from the pane that spawned them, so a title they report
+// lands on that pane's sidebar row. They also have no terminal to title.
+function ownsTerminal(ctx: ExtensionContext): boolean {
+  return ctx.mode === "tui";
+}
+
+function setSessionTitle(ctx: ExtensionContext, name?: string | null): void {
+  if (!ownsTerminal(ctx)) return;
+  ctx.ui.setTitle(sessionTitle(name));
+  reportHerdrTitle(name);
 }
 
 const PROVIDER = process.env.PI_RETITLE_PROVIDER || "anthropic";
@@ -105,30 +189,33 @@ export default function (pi: ExtensionAPI) {
   // --- Lifecycle events: reset state on session transitions ---
 
   pi.on("session_start", async (_event, ctx) => {
+    if (!ownsTerminal(ctx)) return;
     const existingName = pi.getSessionName();
     resetState(!!existingName);
     // Sync terminal title on startup (pi only calls updateTerminalTitle at
     // startup before extensions load, so we may need to re-set it here).
     if (existingName) {
-      ctx.ui.setTitle(sessionTitle(existingName));
+      setSessionTitle(ctx, existingName);
     }
   });
 
   pi.on("session_switch", async (_event, ctx) => {
+    if (!ownsTerminal(ctx)) return;
     // Fires on /new (no name) and /resume (may have name)
     // Use a small delay to let the session load before checking the name
     setTimeout(() => {
       const existingName = pi.getSessionName();
       resetState(!!existingName);
       // Update tab title to reflect the newly loaded session
-      ctx.ui.setTitle(sessionTitle(existingName));
+      setSessionTitle(ctx, existingName);
     }, 50);
   });
 
   pi.on("session_fork", async (_event, ctx) => {
+    if (!ownsTerminal(ctx)) return;
     // Forks start unnamed — auto-name the new branch
     resetState(false);
-    ctx.ui.setTitle(sessionTitle());
+    setSessionTitle(ctx);
   });
 
   // --- Auto-naming on prompt submission ---
@@ -138,6 +225,7 @@ export default function (pi: ExtensionAPI) {
   // rather than on agent_end means the title lands within ~1s of submitting
   // instead of after the turn's tool calls finish.
   pi.on("before_agent_start", async (event, ctx) => {
+    if (!ownsTerminal(ctx)) return;
     if (!autoNamingActive || promptCount >= MAX_AUTO_PROMPTS) return;
 
     // Check if user manually named since our last rename
@@ -160,6 +248,7 @@ export default function (pi: ExtensionAPI) {
   // the prompt, and a vague one ("yes", "continue", "fix it") names nothing —
   // the turn that followed usually names the PR, file, or failure.
   pi.on("agent_end", async (_event, ctx) => {
+    if (!ownsTerminal(ctx)) return;
     if (!autoNamingActive || promptCount > MAX_AUTO_PROMPTS) return;
 
     // pi can run the agent more than once per prompt (auto-retry, compact and
@@ -195,7 +284,7 @@ export default function (pi: ExtensionAPI) {
       if (name) {
         pi.setSessionName(name);
         weSetTheName = true;
-        ctx.ui.setTitle(sessionTitle(name));
+        setSessionTitle(ctx, name);
         ctx.ui.notify(`Session named: ${name}`, "info");
       } else {
         ctx.ui.notify("Failed to generate name", "warning");
@@ -287,7 +376,7 @@ export default function (pi: ExtensionAPI) {
       // Also update the terminal tab title immediately — pi only calls
       // updateTerminalTitle() on startup and manual /name, not after
       // extension-driven setSessionName calls.
-      ctx.ui.setTitle(sessionTitle(name));
+      setSessionTitle(ctx, name);
     }
   }
 

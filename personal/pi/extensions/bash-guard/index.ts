@@ -76,6 +76,9 @@ import {
   Key,
   Spacer,
   Text,
+  type Component,
+  type KeybindingsManager,
+  type TUI,
 } from "@mariozechner/pi-tui";
 import { execFile } from "child_process";
 import * as fs from "fs";
@@ -149,6 +152,37 @@ function alertUser(label: string) {
     ["-e", `display notification "${label}" with title "🔒 Bash Guard"`],
     () => {},
   );
+}
+
+// ── Herdr blocked-state reporting ────────────────────────────────────────────
+//
+// Herdr's pi integration (~/.pi/agent/extensions/herdr-agent-state.ts) derives
+// working/idle from agent_start/agent_settled, so a guard dialog waiting on a
+// keypress reports "working" — indistinguishable from a running turn. It also
+// counts a `herdr:blocked` event on pi's inter-extension bus, so paired
+// active/inactive emits around a dialog are what flip the sidebar to blocked.
+// The counter tolerates nesting; unpaired `active: true` pins the pane blocked
+// for the rest of the session, so the clear must run in a finally.
+let piRef: ExtensionAPI | undefined;
+
+type DialogComponent = Component & { dispose?(): void };
+
+async function blockingCustom<T>(
+  ctx: ExtensionContext,
+  label: string,
+  factory: (
+    tui: TUI,
+    theme: Theme,
+    keybindings: KeybindingsManager,
+    done: (result: T) => void,
+  ) => DialogComponent | Promise<DialogComponent>,
+): Promise<T> {
+  piRef?.events.emit("herdr:blocked", { active: true, label });
+  try {
+    return await ctx.ui.custom<T>(factory);
+  } finally {
+    piRef?.events.emit("herdr:blocked", { active: false });
+  }
 }
 
 /**
@@ -606,9 +640,7 @@ function isDangerousPush(command: string): boolean {
  * the string branch name when an explicit target is found, or 'deletion'
  * when the refspec is a branch deletion (e.g., `git push origin :branch`).
  */
-function parsePushTargetBranch(
-  command: string,
-): string | null | "deletion" {
+function parsePushTargetBranch(command: string): string | null | "deletion" {
   const m = command.match(/\bgit\s+push\b([^|;&]*)/);
   if (!m) return null;
   const tokens = m[1]
@@ -622,9 +654,7 @@ function parsePushTargetBranch(
   const colon = refspec.indexOf(":");
   if (colon >= 0) {
     const src = refspec.slice(0, colon);
-    const dst = refspec
-      .slice(colon + 1)
-      .replace(/^refs\/heads\//, "");
+    const dst = refspec.slice(colon + 1).replace(/^refs\/heads\//, "");
     if (src === "") return "deletion"; // :branch = delete remote branch
     return dst || null;
   }
@@ -714,9 +744,7 @@ async function castTeammateVote(
  *   { block }      — block with a model-readable reason
  */
 type TeammateGateResult =
-  | "allow"
-  | "fall-through"
-  | { block: true; reason: string };
+  "allow" | "fall-through" | { block: true; reason: string };
 
 async function teammateGate(
   command: string,
@@ -824,7 +852,9 @@ async function showRemoteMutationDialog(
   command: string,
   matched: RemoteMutationPattern,
 ): Promise<{ allowed: boolean; instructions?: string }> {
-  return ctx.ui.custom<{ allowed: boolean; instructions?: string }>(
+  return blockingCustom<{ allowed: boolean; instructions?: string }>(
+    ctx,
+    `Remote mutation (${matched.label})`,
     (tui, theme, _kb, done) => {
       let mode: "decide" | "feedback" = "decide";
       let resolved = false;
@@ -972,7 +1002,9 @@ async function showCommitPolicyDialog(
   command: string,
   matched: CommitPattern,
 ): Promise<{ policy: CommitPolicy; instructions?: string }> {
-  return ctx.ui.custom<{ policy: CommitPolicy; instructions?: string }>(
+  return blockingCustom<{ policy: CommitPolicy; instructions?: string }>(
+    ctx,
+    `Commit gate (${matched.label})`,
     (tui, theme, _kb, done) => {
       let mode: "decide" | "feedback" = "decide";
       let resolved = false;
@@ -1351,7 +1383,6 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*gh\s+auth\s+(status|token|refresh|login|setup-git)\b/,
   /^\s*gh\s+run\s+(view|list|watch)\b/,
   /^\s*gh\s+workflow\s+(view|list)\b/,
-
 
   // ── GitHub CLI API (read-only by default; mutating methods caught by Stage 1,
   //    data flags caught by hasDangerousFlags) ──
@@ -2072,7 +2103,9 @@ function hasDangerousFlags(cmd: string): boolean {
       return true;
     }
     // gcloud storage: block writes/moves/removes (ls/cat/du are read-only)
-    if (/\bgcloud\s+storage\s+(cp|mv|rm|rsync|delete|create|update)\b/.test(cmd)) {
+    if (
+      /\bgcloud\s+storage\s+(cp|mv|rm|rsync|delete|create|update)\b/.test(cmd)
+    ) {
       return true;
     }
   }
@@ -2093,7 +2126,11 @@ function hasDangerousFlags(cmd: string): boolean {
       if (writesData) return true;
       return !/\b(SELECT|WITH)\b/i.test(cmd);
     }
-    if (/\bbq\s+(?:--?\S+\s+)*?(rm|mk|cp|load|insert|update|delete|extract)\b/.test(cmd)) {
+    if (
+      /\bbq\s+(?:--?\S+\s+)*?(rm|mk|cp|load|insert|update|delete|extract)\b/.test(
+        cmd,
+      )
+    ) {
       return true;
     }
   }
@@ -2400,7 +2437,6 @@ function collapseQuotedNewlines(input: string): string {
   }
   return out.join("");
 }
-
 
 /**
  * Split a command line on TOP-LEVEL separators (&&, ||, ;, newline) without
@@ -3488,14 +3524,14 @@ async function showReviewDialog(
   recastCount: number;
   autoRecast?: boolean;
 }> {
-  return ctx.ui.custom<{
+  return blockingCustom<{
     allowed: boolean;
     remember: boolean;
     explanation: string;
     instructions?: string;
     recastCount: number;
     autoRecast?: boolean;
-  }>((tui, theme, _kb, done) => {
+  }>(ctx, header, (tui, theme, _kb, done) => {
     const mdTheme = getMarkdownTheme();
     let explanationText = "";
     let recastCount = 0;
@@ -3730,6 +3766,7 @@ async function showReviewDialog(
 // ── Extension entry point ────────────────────────────────────────────────────
 
 export default function (pi: ExtensionAPI) {
+  piRef = pi;
   let guardEnabled = true;
   let debugEnabled = false;
   // Session-scoped, reset each session. Defaults to auto-allow: 14 days of
@@ -4006,10 +4043,7 @@ export default function (pi: ExtensionAPI) {
     if (remoteMutation) {
       // Push auto-allow: when commit policy is auto-allow, safe pushes to the
       // current branch are silently allowed — no dialog, no notification.
-      if (
-        commitPolicy === "auto-allow" &&
-        (await canAutoAllowPush(command))
-      ) {
+      if (commitPolicy === "auto-allow" && (await canAutoAllowPush(command))) {
         return undefined;
       }
 

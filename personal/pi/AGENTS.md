@@ -353,6 +353,8 @@ When asked to plan and build a Mozart feature end-to-end, or to "give me options
 
 ## Mozart Worktree Routing (WTP)
 
+Split on who does the work. When the user wants **an agent** to work in a worktree — "give me a worktree running pi", "spawn an agent on this", "kick this off in its own worktree" — load `herd-spawn`, which shells out to `herd`. Never build that from `herdr workspace`/`tab`/`agent` calls. When the user wants **the slot for themselves**, use the two skills below.
+
 When user asks to start fresh development in a new worktree or switch to isolated slot, load `mozart-wtp-new-worktree`.
 
 When user asks to review an existing PR by PR number or branch in an isolated slot, load `mozart-wtp-pr-review`.

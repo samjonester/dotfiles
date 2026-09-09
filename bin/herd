@@ -1,0 +1,280 @@
+#!/usr/bin/env bash
+# herd — spin up a pi agent in its own Herdr workspace.
+#
+# Usage:
+#   herd                              fzf menu
+#   herd commander                    focus, or create, the root commander workspace
+#   herd review <pr-number|branch>    review workspace on an existing branch
+#   herd implement <branch> [task]    fresh branch + implementation agent
+#   herd task <branch> [prompt]       any other work on an existing branch
+#   herd attach [name]                attach to a running agent
+#   herd ls                           list live agents
+#
+# Repo routing:
+#   shop/world      -> WTP pool slot (~/world/trees/pool-N/src/<zone>)
+#   anything else   -> `herdr worktree create` under ~/.herdr/worktrees
+#
+# Requires: herdr, pi, jq, git. Optional: fzf (menu), gh/gs (PR lookup).
+
+set -euo pipefail
+
+WTP_BIN="$HOME/src/github.com/shopify-playground/wtp/bin/_wtp"
+WORLD_POOL="$HOME/world/trees"
+DEFAULT_ZONE="areas/platforms/mozart"
+COMMANDER_LABEL="commander"
+
+die() { printf 'herd: %s\n' "$*" >&2; exit 1; }
+info() { printf '\033[2m%s\033[0m\n' "$*" >&2; }
+require() { command -v "$1" >/dev/null 2>&1 || die "$1 is required but not on PATH"; }
+
+# Prompt on a TTY; fail with a usable message when there is nothing to read from.
+ask() {
+  local prompt="$1" reply=""
+  [ -t 0 ] || die "$prompt (no TTY — pass it as an argument instead)"
+  read -r -p "$prompt" reply || true
+  printf '%s' "$reply"
+}
+
+# ── herdr CLI wrapper ────────────────────────────────────────────────────────
+# herdr reports server errors as JSON on stderr with exit 1, so `hd` merges both
+# streams to catch either. It publishes the response in $HD_OUT rather than
+# stdout so it never runs inside a command substitution — `die` there would only
+# kill the subshell.
+HD_OUT=""
+hd() {
+  local out status=0 msg
+  out=$(herdr "$@" 2>&1) || status=$?
+  if [ "$status" -ne 0 ] || printf '%s' "$out" | jq -e '.error' >/dev/null 2>&1; then
+    msg=$(printf '%s' "$out" | jq -r '.error.message // empty' 2>/dev/null || true)
+    die "herdr $1 ${2:-}: ${msg:-$out}"
+  fi
+  HD_OUT="$out"
+}
+
+hd_get() { printf '%s' "$HD_OUT" | jq -r "$1"; }
+
+# ── Naming ───────────────────────────────────────────────────────────────────
+
+# Agent names must match [a-z][a-z0-9_-]{0,31} and be unique among live agents.
+agent_name() {
+  local slug taken candidate n=2
+  slug=$(printf '%s' "$1" | tr '[:upper:]' '[:lower:]' | tr -c 'a-z0-9' '-' \
+    | sed -e 's/-\{2,\}/-/g' -e 's/^-*//' -e 's/-*$//')
+  slug="${slug:0:31}"
+  [[ "$slug" =~ ^[a-z] ]] || slug="a$slug"
+  candidate="$slug"
+  taken=$(herdr agent list 2>/dev/null | jq -r '.result.agents[]?.name // empty' || true)
+  while printf '%s\n' "$taken" | grep -qx "$candidate"; do
+    candidate="${slug:0:29}-$n"; n=$((n + 1))
+  done
+  printf '%s' "$candidate"
+}
+
+# ── Checkout routing ─────────────────────────────────────────────────────────
+
+in_world() { [[ "$PWD" == "$WORLD_POOL"/*/src/* ]]; }
+
+is_world_repo() {
+  in_world && return 0
+  local url
+  url=$(git config --get remote.origin.url 2>/dev/null) || return 1
+  [[ "$url" == *"shop/world"* ]]
+}
+
+# _wtp's detect_zone requires a cwd under <pool>/<slot>/src, so run it from the
+# current zone when already inside a world tree, else the default zone in root.
+world_zone_dir() {
+  if in_world; then printf '%s' "$PWD"; else printf '%s' "$WORLD_POOL/root/src/$DEFAULT_ZONE"; fi
+}
+
+# PR number -> head branch. shop/world PRs live in Meteorite, which `gh` cannot
+# see at all; `gs pr view --json` names the field headRef, not gh's headRefName.
+pr_branch() {
+  local ref="$1" branch
+  if is_world_repo; then
+    require gs
+    branch=$(gs pr view "$ref" --json 2>/dev/null | jq -r '.headRef // empty')
+  else
+    require gh
+    branch=$(gh pr view "$ref" --json headRefName -q .headRefName 2>/dev/null)
+  fi
+  [ -n "$branch" ] && [ "$branch" != "null" ] || return 1
+  printf '%s' "$branch"
+}
+
+# First resolvable base ref for a new branch. Non-world only: _wtp has no --base
+# and always bases a not-yet-existing branch on origin/main.
+default_base() {
+  local root="$1" ref
+  for ref in origin/HEAD origin/main origin/master HEAD; do
+    if git -C "$root" rev-parse --verify --quiet "$ref" >/dev/null 2>&1; then
+      printf '%s' "$ref"; return 0
+    fi
+  done
+  die "no base ref found in $root"
+}
+
+# prepare_workspace <branch> <label> -> sets $WS_PANE to the workspace root pane.
+WS_PANE=""
+prepare_workspace() {
+  local branch="$1" label="$2" zone_dir target root base
+  if is_world_repo; then
+    [ -x "$WTP_BIN" ] || die "wtp not installed — see https://github.com/shopify-playground/wtp"
+    zone_dir=$(world_zone_dir)
+    [ -d "$zone_dir" ] || die "no world tree at $zone_dir"
+    # _wtp prints the claimed <slot>/src/<zone> on stdout and everything else on
+    # stderr. Undocumented, and the repo has no commits since 2026-03.
+    info "claiming WTP slot for $branch..."
+    target=$(cd "$zone_dir" && "$WTP_BIN" "$branch") \
+      || die "wtp could not claim a slot for $branch"
+    [ -d "$target" ] || die "wtp returned a path that does not exist: $target"
+    hd workspace create --cwd "$target" --label "$label" --no-focus
+  else
+    root=$(git rev-parse --show-toplevel 2>/dev/null) || die "not inside a git repository"
+    git -C "$root" fetch --quiet origin "$branch" 2>/dev/null || true
+    base=$(default_base "$root")
+    info "creating worktree for $branch off $base..."
+    hd worktree create --cwd "$root" --branch "$branch" --base "$base" \
+      --label "$label" --no-focus
+  fi
+  WS_PANE=$(hd_get '.result.root_pane.pane_id')
+  [ -n "$WS_PANE" ] && [ "$WS_PANE" != "null" ] || die "herdr returned no root pane id"
+}
+
+# ── Agent bootstrap ──────────────────────────────────────────────────────────
+
+# start_agent <pane_id> <name> <prompt>
+start_agent() {
+  local pane="$1" name="$2" prompt="$3"
+  # Let the root pane's login shell reach its prompt before `agent start` types.
+  herdr pane wait-output "$pane" --regex '\S' --timeout 15000 >/dev/null 2>&1 || true
+  info "starting pi as '$name' in $pane..."
+  hd agent start "$name" --kind pi --pane "$pane" -- -n "$name"
+  [ -z "$prompt" ] || hd agent prompt "$name" "$prompt"
+  hd agent focus "$name"
+  printf '%s\n' "$name"
+}
+
+# ── Workflows ────────────────────────────────────────────────────────────────
+
+# run_task <branch> <verb> <prompt> — claim the checkout, name everything after
+# the verb, start pi on the prompt.
+run_task() {
+  local branch="$1" verb="$2" prompt="$3"
+  prepare_workspace "$branch" "$verb/$branch"
+  start_agent "$WS_PANE" "$(agent_name "$verb-$branch")" "$prompt"
+}
+
+# The commander is a single long-lived workspace on the root tree: ask questions,
+# spawn the others from it. Re-running focuses it rather than making a second one.
+cmd_commander() {
+  local ws root_dir
+  ws=$(herdr workspace list 2>/dev/null \
+    | jq -r --arg l "$COMMANDER_LABEL" \
+        '.result.workspaces[]? | select(.label == $l) | .workspace_id' \
+    | head -1)
+  if [ -n "$ws" ]; then
+    hd workspace focus "$ws"
+    info "focused $COMMANDER_LABEL ($ws)"
+    return 0
+  fi
+
+  root_dir="$WORLD_POOL/root/src/$DEFAULT_ZONE"
+  [ -d "$root_dir" ] || die "no world root tree at $root_dir"
+  info "creating $COMMANDER_LABEL workspace at $root_dir..."
+  hd workspace create --cwd "$root_dir" --label "$COMMANDER_LABEL" --focus
+  WS_PANE=$(hd_get '.result.root_pane.pane_id')
+  [ -n "$WS_PANE" ] && [ "$WS_PANE" != "null" ] || die "herdr returned no root pane id"
+  start_agent "$WS_PANE" "$(agent_name "$COMMANDER_LABEL")" ""
+}
+
+cmd_review() {
+  local ref="${1:-}" prompt branch
+  [ $# -gt 0 ] || ref=$(ask "PR number or branch: ")
+  [ -n "$ref" ] || die "no PR or branch given"
+
+  if [[ "$ref" =~ ^[0-9]+$ ]]; then
+    branch=$(pr_branch "$ref") || die "could not resolve PR #$ref"
+    prompt="review PR #$ref"
+  else
+    branch="$ref"
+    prompt="review current branch"
+  fi
+
+  run_task "$branch" "review" "$prompt"
+}
+
+cmd_implement() {
+  local branch="${1:-}" task="${2:-}"
+  [ $# -gt 0 ] || branch=$(ask "New branch name: ")
+  [ -n "$branch" ] || die "no branch given"
+  [ $# -gt 1 ] || task=$(ask "Task (blank to start pi idle): ")
+
+  run_task "$branch" "impl" "$task"
+}
+
+# Existing branch, arbitrary prompt: fix CI, address feedback, bisect.
+cmd_task() {
+  local ref="${1:-}" prompt="${2:-}" branch
+  [ $# -gt 0 ] || ref=$(ask "PR number or branch: ")
+  [ -n "$ref" ] || die "no PR or branch given"
+  [ $# -gt 1 ] || prompt=$(ask "Task (blank to start pi idle): ")
+
+  if [[ "$ref" =~ ^[0-9]+$ ]]; then
+    branch=$(pr_branch "$ref") || die "could not resolve PR #$ref"
+  else
+    branch="$ref"
+  fi
+
+  run_task "$branch" "task" "$prompt"
+}
+
+cmd_ls() {
+  herdr agent list 2>/dev/null \
+    | jq -r '.result.agents[]? | [.agent_status // "?", .name // .pane_id, .pane_id, .cwd // ""] | @tsv' \
+    | column -t -s $'\t'
+}
+
+cmd_attach() {
+  local target="${1:-}"
+  if [ -z "$target" ]; then
+    require fzf
+    target=$(cmd_ls | fzf --prompt='attach> ' --height=40% --reverse | awk '{print $2}')
+  fi
+  [ -n "$target" ] || exit 0
+  herdr agent attach "$target"
+}
+
+cmd_menu() {
+  require fzf
+  local choice
+  choice=$(printf '%s\n' \
+    "commander  focus the root commander workspace" \
+    "review     review a PR or existing branch" \
+    "implement  new branch + implementation agent" \
+    "task       any other work on an existing branch" \
+    "attach     attach to a running agent" \
+    "ls         list live agents" \
+    | fzf --prompt='herd> ' --height=40% --reverse | awk '{print $1}')
+  [ -n "$choice" ] || exit 0
+  main "$choice"
+}
+
+# ── Entry ────────────────────────────────────────────────────────────────────
+
+main() {
+  require herdr; require jq; require git
+  case "${1:-}" in
+    commander) cmd_commander ;;
+    review)    shift; cmd_review "$@" ;;
+    implement) shift; cmd_implement "$@" ;;
+    task)      shift; cmd_task "$@" ;;
+    attach)    shift; cmd_attach "$@" ;;
+    ls|list)   cmd_ls ;;
+    ""|menu)   cmd_menu ;;
+    -h|--help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//' ;;
+    *)         die "unknown command '$1' (try: commander, review, implement, task, attach, ls)" ;;
+  esac
+}
+
+main "$@"

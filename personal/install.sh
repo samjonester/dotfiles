@@ -158,6 +158,18 @@ darwin*)
   $BREW_EXECUTABLE install --cask cmux
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/cmux ~/.config/
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
+  # herdr: agent multiplexer. Only config.toml is symlinked — herdr also writes
+  # session.json, sessions/, plugin state, and rotating logs into this dir.
+  $BREW_EXECUTABLE install herdr
+  mkdir -p ~/.config/herdr
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/herdr/config.toml ~/.config/herdr/config.toml
+  # Plugins land in ~/.config/herdr/plugins, which is machine-local, so they are
+  # reinstalled here rather than symlinked. Deliberately NOT the sibling `world`
+  # plugin: its picker enumerates `dev tree list`, which includes every WTP pool
+  # slot, and its rm action runs `dev tree remove`. `wtp free` only detaches HEAD,
+  # so one wrong pick destroys a slot that WTP itself would have preserved.
+  command -v herdr >/dev/null && \
+    herdr plugin install shopify-playground/herdr-plugins/worktree-layouts --yes || true
 
   setup_pi
 
@@ -165,6 +177,17 @@ darwin*)
   # Writes ~/.pi/agent/extensions/cmux-session.ts (cmux-managed, auto-upgraded).
   # Must run AFTER setup_pi so the extensions dir exists.
   command -v cmux >/dev/null && cmux hooks pi install --yes || true
+
+  # herdr <-> pi integration (native lifecycle reports + session restore).
+  # Writes ~/.pi/agent/extensions/herdr-agent-state.ts (herdr-managed).
+  # Must run AFTER setup_pi so the extensions dir exists.
+  command -v herdr >/dev/null && herdr integration install pi || true
+  # herdr control skill for pi agents running inside herdr panes. Generated from
+  # the installed binary rather than versioned, so it never drifts from herdr.
+  if command -v herdr >/dev/null; then
+    mkdir -p ~/.pi/agent/skills/herdr
+    herdr --skill > ~/.pi/agent/skills/herdr/SKILL.md
+  fi
 
   # Terminal Tooling
   $BREW_EXECUTABLE install bat
