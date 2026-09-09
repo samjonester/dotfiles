@@ -1,6 +1,7 @@
-# Ghostty config — read by cmux for terminal behavior.
+# Ghostty config — read by Ghostty.app and by cmux's embedded Ghostty.
 # Docs: https://ghostty.org/docs/config/reference
-# Reload after editing: `cmux reload-config` (no app restart needed)
+# Reload after editing: cmd+shift+, in Ghostty, `cmux reload-config` in cmux
+# (neither needs an app restart)
 
 # --- Font ---
 # Sauce Code Pro Nerd Font = Adobe Source Code Pro patched with Nerd Font glyphs
@@ -28,8 +29,10 @@ window-padding-x = 6
 window-padding-y = 4
 
 # --- Bell ---
-# Match kitty: no audio bell. cmux's pane-flash + notifications cover the visual side.
-audio-bell-volume = 0
+# Match kitty (enable_audio_bell no): silence the audio bell, keep dock-bounce
+# and the 🔔 title marker. Flags merge with the default set, so the unnamed
+# ones (no-system, attention, title, no-border) stay as-is.
+bell-features = no-audio
 
 # --- Scrollback ---
 # NOTE: scrollback-limit is in BYTES per terminal surface, not lines.

@@ -150,11 +150,13 @@ darwin*)
   git clone --depth 1 https://github.com/dexpota/kitty-themes.git ~/.config/kitty/kitty-themes
   $BREW_EXECUTABLE install zellij
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/zellij ~/.config/
+  # Ghostty: GPU-accelerated terminal. cmux ships its own embedded Ghostty and
+  # reads the same ~/.config/ghostty/config, so this one symlink serves both.
+  $BREW_EXECUTABLE install --cask ghostty
+  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/ghostty ~/.config/
   # cmux: Ghostty-based terminal with agent-aware vertical tabs (Kepler-approved)
   $BREW_EXECUTABLE install --cask cmux
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/cmux ~/.config/
-  # cmux reads ~/.config/ghostty/config for terminal behavior (font, theme, opacity).
-  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/ghostty ~/.config/
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
 
   setup_pi
