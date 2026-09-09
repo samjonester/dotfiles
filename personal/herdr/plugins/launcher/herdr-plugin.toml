@@ -1,0 +1,43 @@
+# launcher — one fzf modal over herdr's shortcuts, its running agents, and the
+# files under a chosen root.
+#
+# Tab 1 replaces prefix+? : every effective binding, grouped, fuzzy-searchable,
+# and executed in place when herdr's API can reach it. herdr exposes no way to
+# fire a built-in keybinding, so UI-mode actions (help, settings, copy mode,
+# resize mode, goto, navigate) are listed with their chord instead of run.
+#
+# Tab 2 searches running agents by title, workspace, and tab. Tab 3 searches
+# files under a root that starts at the focused pane's cwd and can be moved to
+# any claimed wtp slot or typed path.
+#
+# Commands run with the plugin dir as cwd and invoke python3 on launcher.py
+# (pure stdlib).
+
+id = "sam.launcher"
+name = "Launcher"
+version = "0.1.0"
+min_herdr_version = "0.8.0"
+description = "fzf launcher for herdr shortcuts, running agents, and files."
+platforms = ["macos", "linux"]
+
+# `popup` is session-modal and leaves the tiled layout alone, so the pane the
+# launcher acts on keeps its focus and geometry while the modal is up. It is
+# also the surface prefix+? uses. Sized large on purpose: the whole point over
+# the native help modal is vertical room.
+[[panes]]
+id = "modal"
+title = "Launcher"
+placement = "popup"
+width = "90%"
+height = "90%"
+command = ["python3", "launcher.py", "pick"]
+
+# Keybindings can only reach a plugin through an action, so this opens the
+# popup declared above. It forwards the focused pane, tab, and workspace ids,
+# because a popup is not a pane and gets no context of its own; the modal falls
+# back to the session snapshot when they are absent.
+[[actions]]
+id = "open"
+title = "Launcher"
+contexts = ["workspace"]
+command = ["python3", "launcher.py", "open"]

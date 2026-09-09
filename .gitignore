@@ -10,3 +10,7 @@ personal/pi/skills/mozart-blog-url-generation/SKILL.md
 personal/pi/skills/mozart-be-validation/SKILL.md
 personal/pi/skills/mozart-fe-validation/SKILL.md
 personal/pi/agents/task-runner.md
+
+# Python bytecode from local plugin scripts
+__pycache__/
+*.pyc

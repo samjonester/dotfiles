@@ -164,3 +164,14 @@ key = "ctrl+alt+m"
 type = "plugin_action"
 command = "sam.tab-mover.pick"
 description = "move tab to workspace"
+
+# fzf launcher: every binding below plus this file's commands, the running
+# agents, and a file search. Supersedes prefix+? as the way to find a shortcut,
+# but help stays bound so there is a fallback when the plugin is broken.
+# Double-tap of the prefix, so the chord is ctrl+space ctrl+space.
+# Plugin source: personal/herdr/plugins/launcher.
+[[keys.command]]
+key = "prefix+space"
+type = "plugin_action"
+command = "sam.launcher.open"
+description = "launcher"
