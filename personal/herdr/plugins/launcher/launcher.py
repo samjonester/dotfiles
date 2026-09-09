@@ -40,9 +40,11 @@ import subprocess
 import sys
 import tempfile
 import time
+import traceback
 
 HERDR = os.environ.get("HERDR_BIN_PATH") or shutil.which("herdr") or "herdr"
 PLUGIN_ID = "sam.launcher"
+SOCKET_TIMEOUT = 10
 SELF = os.path.abspath(__file__)
 HOME = os.path.expanduser("~")
 # $VISUAL before $EDITOR: $EDITOR is conventionally the line editor git and
@@ -86,15 +88,21 @@ def api(method, params):
     path = os.environ.get("HERDR_SOCKET_PATH")
     if not path:
         raise Fail("HERDR_SOCKET_PATH is unset — run this inside herdr")
-    with socket.socket(socket.AF_UNIX) as sock:
-        sock.connect(path)
-        sock.sendall((json.dumps({"id": PLUGIN_ID, "method": method, "params": params}) + "\n").encode())
-        buf = b""
-        while not buf.endswith(b"\n"):
-            chunk = sock.recv(65536)
-            if not chunk:
-                raise Fail(f"{method}: socket closed early")
-            buf += chunk
+    try:
+        with socket.socket(socket.AF_UNIX) as sock:
+            sock.settimeout(SOCKET_TIMEOUT)
+            sock.connect(path)
+            sock.sendall((json.dumps({"id": PLUGIN_ID, "method": method, "params": params}) + "\n").encode())
+            buf = b""
+            while not buf.endswith(b"\n"):
+                chunk = sock.recv(65536)
+                if not chunk:
+                    raise Fail(f"{method}: socket closed early")
+                buf += chunk
+    except TimeoutError as err:
+        raise Fail(f"{method}: no reply in {SOCKET_TIMEOUT}s") from err
+    except OSError as err:
+        raise Fail(f"{method}: {err}") from err
     reply = json.loads(buf.decode().strip())
     if "error" in reply:
         raise Fail(f"{method}: {reply['error'].get('message', reply['error'])}")
@@ -1359,6 +1367,8 @@ if __name__ == "__main__":
     entry = sys.argv[1] if len(sys.argv) > 1 else "pick"
     try:
         sys.exit(main(sys.argv) or 0)
+    except KeyboardInterrupt:
+        sys.exit(130)
     except Exception as err:  # noqa: BLE001 - a UI child must not die silently
         if entry in FZF_FALLBACK:
             print(FZF_FALLBACK[entry])
@@ -1367,7 +1377,10 @@ if __name__ == "__main__":
             # stderr from a preview child paints over fzf's own output.
             print(f"{RED}launcher: {err}{RESET}")
             sys.exit(0)
-        print(f"launcher: {err}", file=sys.stderr)
+        # An unexpected type is a bug in here, so give it a traceback; a Fail
+        # is already a diagnosis written for the reader.
+        detail = err if isinstance(err, Fail) else traceback.format_exc().rstrip()
+        print(f"launcher: {detail}", file=sys.stderr)
         # A popup closes the instant its command exits, so hold the error on
         # screen long enough to read.
         if entry == "pick" and sys.stdin.isatty():
