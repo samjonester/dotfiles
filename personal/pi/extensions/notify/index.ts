@@ -8,11 +8,13 @@
  *   2. `cmux notify` when running inside cmux — fires a macOS system
  *      notification AND adds a row to cmux's notification panel; clicking it
  *      (or Cmd+Shift+U) focuses this workspace/surface (click-to-activate)
- *   3. osascript fallback (plain macOS notification, no click-to-activate)
+ *   3. Silence inside herdr — herdr owns agent-state notification routing via
+ *      [ui.toast] delivery, which this extension cannot read
+ *   4. osascript fallback (plain macOS notification, no click-to-activate)
  *
- * cmux-only: the previous tmux + terminal-notifier + OSC click-to-activate
- * machinery was removed. cmux is Ghostty-based and owns notification routing
- * + focus, so `cmux notify` supersedes per-terminal OSC sequences here.
+ * The previous tmux + terminal-notifier + OSC click-to-activate machinery was
+ * removed: cmux and herdr each own notification routing + focus for their own
+ * panes, so a per-terminal OSC sequence has no correct owner here.
  */
 
 import type { ExtensionAPI } from "@mariozechner/pi-coding-agent";
@@ -23,6 +25,9 @@ const escapeOsascript = (s: string): string =>
 
 /** True when running inside a cmux terminal surface. */
 const isInCmux = (): boolean => Boolean(process.env.CMUX_WORKSPACE_ID);
+
+/** True when running inside a herdr pane. */
+const isInHerdr = (): boolean => process.env.HERDR_ENV === "1";
 
 /**
  * Notify via cmux. Targets the current surface (CMUX_SURFACE_ID) so a click
@@ -89,6 +94,10 @@ const notifyRpcHost = (title: string, body: string): boolean => {
 const notify = (title: string, body: string): void => {
   if (notifyRpcHost(title, body)) return;
   if (notifyCmux(title, body)) return;
+  // herdr routes agent-state notifications itself via [ui.toast] delivery, and
+  // its sidebar carries done/blocked per pane. The osascript fallback below
+  // cannot see that setting, so it would reinstate banners the user turned off.
+  if (isInHerdr()) return;
   notifyOsascript(title, body);
 };
 

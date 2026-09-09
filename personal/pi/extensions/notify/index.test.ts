@@ -46,7 +46,12 @@ function createMockPi() {
 }
 
 // Save/restore env vars touched by the module
-const ENV_KEYS = ["CMUX_WORKSPACE_ID", "CMUX_SURFACE_ID", "PI_MODE"];
+const ENV_KEYS = [
+  "CMUX_WORKSPACE_ID",
+  "CMUX_SURFACE_ID",
+  "PI_MODE",
+  "HERDR_ENV",
+];
 let savedEnv: Record<string, string | undefined>;
 
 beforeEach(() => {
@@ -248,6 +253,39 @@ describe("notify extension", () => {
         (c: any[]) => c[0] === "osascript",
       );
       expect(osaCall).toBeDefined();
+
+      vi.useRealTimers();
+    });
+
+    it("stays silent inside herdr instead of falling back to osascript", async () => {
+      vi.useFakeTimers();
+      process.env.HERDR_ENV = "1";
+      mockExecFileSync.mockImplementation(() => "");
+
+      const pi = await freshInit();
+      await triggerNotification(pi);
+
+      const osaCall = mockExecFileSync.mock.calls.find(
+        (c: any[]) => c[0] === "osascript",
+      );
+      expect(osaCall).toBeUndefined();
+
+      vi.useRealTimers();
+    });
+
+    it("still prefers cmux over the herdr stand-down when both are set", async () => {
+      vi.useFakeTimers();
+      process.env.HERDR_ENV = "1";
+      process.env.CMUX_WORKSPACE_ID = "ws-uuid";
+      mockExecFileSync.mockImplementation(() => "");
+
+      const pi = await freshInit();
+      await triggerNotification(pi);
+
+      const cmuxCall = mockExecFileSync.mock.calls.find(
+        (c: any[]) => c[0] === "cmux",
+      );
+      expect(cmuxCall).toBeDefined();
 
       vi.useRealTimers();
     });
