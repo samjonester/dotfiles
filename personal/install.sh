@@ -119,6 +119,80 @@ setup_pi() {
   fi
 }
 
+# ── Herdr agent multiplexer (shared across OS) ────────────────────────────────
+#
+# Symlinks dotfiles-owned config into ~/.config/herdr, installs pinned
+# third-party plugins from a manifest, links locally-authored plugins straight
+# out of the repo, and wires the pi integration. Only config files are
+# symlinked: herdr also writes session.json, sessions/, plugin state, and
+# rotating logs into ~/.config/herdr.
+#
+# Requires herdr on PATH — the binary install is per-OS (brew on macOS,
+# herdr.dev/install.sh on linux) and happens before this is called.
+setup_herdr() {
+  local herdr_config="$HOME/.config/herdr"
+  local dotfiles_herdr="$HOME/$DOTFILES_DIRECTORY_NAME/personal/herdr"
+
+  command -v herdr >/dev/null 2>&1 || { echo "WARN: herdr not on PATH, skipping setup_herdr" >&2; return 0; }
+
+  mkdir -p "$herdr_config"
+  ln -vsfn "$dotfiles_herdr/config.toml" "$herdr_config/config.toml"
+
+  # Template config for the worktree-layouts plugin. Optional: without it the
+  # plugin's worktree.created / worktree.opened hooks no-op.
+  [ -f "$dotfiles_herdr/layouts.toml" ] && \
+    ln -vsfn "$dotfiles_herdr/layouts.toml" "$herdr_config/layouts.toml"
+
+  # Third-party plugins: pinned, one `owner/repo[/subdir]@ref` per line.
+  # The managed checkout lands under ~/.config/herdr/plugins/github, which is
+  # machine-local, so it is reinstalled here rather than symlinked.
+  if [ -f "$dotfiles_herdr/plugins.installs" ]; then
+    while IFS= read -r line; do
+      line="${line%%#*}"                          # strip comments
+      line="${line#"${line%%[![:space:]]*}"}"      # ltrim
+      line="${line%"${line##*[![:space:]]}"}"      # rtrim
+      [ -z "$line" ] && continue
+
+      local src="${line%@*}"
+      local ref="${line##*@}"
+      if [ "$src" = "$line" ] || [ -z "$ref" ]; then
+        echo "WARN: unpinned plugin '$line' in plugins.installs (want owner/repo[/subdir]@ref)" >&2
+        continue
+      fi
+
+      herdr plugin install "$src" --ref "$ref" --yes || \
+        echo "WARN: herdr plugin install $src@$ref failed" >&2
+    done < "$dotfiles_herdr/plugins.installs"
+  fi
+
+  # Locally-authored plugins: `plugin link` registers the directory in place
+  # rather than copying it, so the dotfiles checkout stays the live source and
+  # edits take effect without reinstalling.
+  # `find` rather than a glob: zsh aborts on an unmatched glob under `set -e`,
+  # and the dir is empty until the first local plugin exists.
+  find "$dotfiles_herdr/plugins" -mindepth 1 -maxdepth 1 -type d 2>/dev/null | \
+  while IFS= read -r plugin; do
+    [ -f "$plugin/herdr-plugin.toml" ] || continue
+    herdr plugin link "$plugin" || \
+      echo "WARN: herdr plugin link $plugin failed" >&2
+  done
+}
+
+# ── Herdr <-> pi wiring (must run after BOTH setup_herdr and setup_pi) ────────
+setup_herdr_pi() {
+  command -v herdr >/dev/null 2>&1 || return 0
+
+  # Native lifecycle reports + session restore. Writes
+  # ~/.pi/agent/extensions/herdr-agent-state.ts (herdr-managed).
+  herdr integration install pi || true
+
+  # herdr control skill for pi agents running inside herdr panes. Generated
+  # from the installed binary rather than versioned, so it never drifts from
+  # the herdr version actually on this machine.
+  mkdir -p "$HOME/.pi/agent/skills/herdr"
+  herdr --skill > "$HOME/.pi/agent/skills/herdr/SKILL.md"
+}
+
 # ── Shopify-specific tooling (skipped on non-Shopify machines) ────────────────
 setup_shopify_tooling() {
   # Worktree pool tooling
@@ -158,18 +232,8 @@ darwin*)
   $BREW_EXECUTABLE install --cask cmux
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/cmux ~/.config/
   ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
-  # herdr: agent multiplexer. Only config.toml is symlinked — herdr also writes
-  # session.json, sessions/, plugin state, and rotating logs into this dir.
   $BREW_EXECUTABLE install herdr
-  mkdir -p ~/.config/herdr
-  ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/herdr/config.toml ~/.config/herdr/config.toml
-  # Plugins land in ~/.config/herdr/plugins, which is machine-local, so they are
-  # reinstalled here rather than symlinked. Deliberately NOT the sibling `world`
-  # plugin: its picker enumerates `dev tree list`, which includes every WTP pool
-  # slot, and its rm action runs `dev tree remove`. `wtp free` only detaches HEAD,
-  # so one wrong pick destroys a slot that WTP itself would have preserved.
-  command -v herdr >/dev/null && \
-    herdr plugin install shopify-playground/herdr-plugins/worktree-layouts --yes || true
+  setup_herdr
 
   setup_pi
 
@@ -178,16 +242,8 @@ darwin*)
   # Must run AFTER setup_pi so the extensions dir exists.
   command -v cmux >/dev/null && cmux hooks pi install --yes || true
 
-  # herdr <-> pi integration (native lifecycle reports + session restore).
-  # Writes ~/.pi/agent/extensions/herdr-agent-state.ts (herdr-managed).
   # Must run AFTER setup_pi so the extensions dir exists.
-  command -v herdr >/dev/null && herdr integration install pi || true
-  # herdr control skill for pi agents running inside herdr panes. Generated from
-  # the installed binary rather than versioned, so it never drifts from herdr.
-  if command -v herdr >/dev/null; then
-    mkdir -p ~/.pi/agent/skills/herdr
-    herdr --skill > ~/.pi/agent/skills/herdr/SKILL.md
-  fi
+  setup_herdr_pi
 
   # Terminal Tooling
   $BREW_EXECUTABLE install bat
@@ -272,7 +328,14 @@ linux*)
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/zellij ~/.config/
     ln -vsfn ~/$DOTFILES_DIRECTORY_NAME/personal/.irbrc ~/
 
+    # herdr is not in apt; the official installer drops a binary on PATH.
+    command -v herdr >/dev/null 2>&1 || curl -fsSL https://herdr.dev/install.sh | sh
+    setup_herdr
+
     setup_pi
+
+    # Must run AFTER setup_pi so the extensions dir exists.
+    setup_herdr_pi
 
     # Terminal Tooling
     sudo apt-get install -y bat ranger

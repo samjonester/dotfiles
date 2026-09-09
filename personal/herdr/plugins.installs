@@ -1,0 +1,22 @@
+# herdr third-party plugin manifest
+# Format: <owner>/<repo>[/<subdir>]@<git-ref>
+# Blank lines and # comments are ignored by install.sh.
+#
+# The ref is required and pinned to a commit SHA. `herdr plugin install`
+# without --ref resolves whatever HEAD happens to be, so two machines set up a
+# week apart end up on different plugin code with nothing in the repo recording
+# the difference. Bump a pin deliberately; re-running install.sh replaces the
+# managed checkout.
+#
+# Locally-authored plugins do NOT belong here — they live in
+# personal/herdr/plugins/ and are wired with `herdr plugin link`.
+
+# Apply tab/pane layout templates on worktree.created / worktree.opened.
+# Templates come from ~/.config/herdr/layouts.toml (see personal/herdr/README.md).
+shopify-playground/herdr-plugins/worktree-layouts@04e318414ab58e2296b54c69e615b68496f750c3
+
+# Deliberately NOT the sibling `world` plugin: its picker enumerates
+# `dev tree list`, which includes every WTP pool slot, and its rm action runs
+# `dev tree remove`. `wtp free` only detaches HEAD, so one wrong pick destroys a
+# slot that WTP itself would have preserved.
+# shopify-playground/herdr-plugins/world@<sha>
