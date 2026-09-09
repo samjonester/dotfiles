@@ -10,8 +10,7 @@ personal/herdr/
 ├── layouts.toml       → ~/.config/herdr/layouts.toml   worktree-layouts templates (optional)
 ├── plugins.installs   Pinned third-party plugins: owner/repo[/subdir]@<sha>
 └── plugins/           Locally-authored plugins, registered with `herdr plugin link`
-    ├── launcher/      fzf modal over shortcuts, running agents, and files
-    └── tab-mover/     Move the active tab to another open workspace
+    └── launcher/      fzf modal over shortcuts, running agents, and files
 ```
 
 Applied by `setup_herdr()` in `personal/install.sh`. `setup_herdr_pi()` runs separately, after `setup_pi()`, because it writes into `~/.pi/agent/`.
@@ -91,11 +90,11 @@ Debug with `herdr plugin action list`, `herdr plugin action invoke <plugin.id>.<
 
 `prefix+space` opens one fzf modal with four tabs, cycled with `tab` / `shift-tab` or by clicking the header strip. `?` shows the key list for whichever tab is current — which also means `?` cannot be typed into the query. The right pane previews whatever row is under the cursor.
 
-| Tab     | Rows                                                                         | Preview                                                     | Enter                                             | Other keys                                                                            |
-| ------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------- | ------------------------------------------------- | ------------------------------------------------------------------------------------- |
-| Actions | Every effective binding, grouped, with a description — no chords in the list | The chord to press, and whether Enter can run it            | Runs it; inert on a dimmed row                    | —                                                                                     |
-| Agents  | Running agents, searchable by task, workspace, and tab                       | Status, place, cwd, session id, and the live screen         | Focus that pane                                   | `ctrl-y` copy session id                                                              |
-| Spaces  | Workspaces, then the tabs of the one you pick                                | The workspace's tabs; then that tab's panes and live screen | Opens the space, then focuses the tab             | `esc` back out, `ctrl-n` new workspace / new tab                                      |
+| Tab     | Rows                                                                         | Preview                                                     | Enter                                                | Other keys                                                                            |
+| ------- | ---------------------------------------------------------------------------- | ----------------------------------------------------------- | ---------------------------------------------------- | ------------------------------------------------------------------------------------- |
+| Actions | Every effective binding, grouped, with a description — no chords in the list | The chord to press, and whether Enter can run it            | Runs it; inert on a dimmed row                       | —                                                                                     |
+| Agents  | Running agents, searchable by task, workspace, and tab                       | Status, place, cwd, session id, and the live screen         | Focus that pane                                      | `ctrl-y` copy session id                                                              |
+| Spaces  | Workspaces, then the tabs of the one you pick                                | The workspace's tabs; then that tab's panes and live screen | Opens the space, then focuses the tab                | `esc` back out, `ctrl-n` new workspace / new tab                                      |
 | Files   | `fd` under a root that starts at the focused pane's cwd                      | `bat`                                                       | Open in `$VISUAL` in a pane split off the active one | `ctrl-y` copy path, `ctrl-r` change root, `ctrl-h` include dotfiles and ignored files |
 
 Spaces is two levels deep in one tab. Enter on a workspace swaps the left pane for that workspace's tabs and the preview for the tab detail; Enter again focuses the tab, and its workspace with it. `esc` unwinds a level before it closes the modal, so from the tab list it takes two presses to get out. `ctrl-n` creates whatever the level is listing and focuses it, matching what `prefix+shift+n` and `prefix+c` already do.
@@ -110,11 +109,13 @@ Previews of a live pane are hard-truncated to the preview width rather than wrap
 
 `prefix+?` stays bound. It is the fallback when the plugin is broken, and the launcher's Actions tab is built from `herdr --default-config` merged with this `config.toml`, so a herdr upgrade that adds a binding surfaces it automatically — ungrouped and display-only, but present.
 
-A popup is a singleton, so a row that opens another popup (`sam.tab-mover.pick`) is dispatched by a double-forked child that retries past `ui_busy` once this popup is gone. Rows that are themselves a command (`herd`, `lazygit`) `exec` in place instead, which is why they inherit the launcher's 90% geometry rather than the size set on their own binding.
+A popup is a singleton, so a row that opens another popup (`tab-mover.pick`) is dispatched by a double-forked child that retries past `ui_busy` once this popup is gone. Rows that are themselves a command (`herd`, `lazygit`) `exec` in place instead, which is why they inherit the launcher's 90% geometry rather than the size set on their own binding.
 
 Needs `fzf`; uses `fd` and `bat` when present and degrades to `find` and plain text without them.
 
 ### `tab-mover`
+
+No longer local: authored here, then upstreamed as [shopify-playground/herdr-plugins#7](https://github.com/shopify-playground/herdr-plugins/pull/7) and now installed from that repo, pinned in `plugins.installs`. Its id lost the `sam.` prefix on the way, because the id is the first half of the keybinding string every consumer types into their own config.
 
 Moves the active tab, panes and split layout intact, into another open workspace. `prefix+m` or `ctrl+alt+m` opens a modal picker listing the other open workspaces.
 

@@ -94,7 +94,7 @@ zoom             = ["prefix+z", "ctrl+alt+z"]
 # Reorder the active tab within its workspace. Built in but unset by default.
 # Paired with the navigation chords above: ctrl+alt+[ / ] move between tabs,
 # adding shift moves the tab itself. Moving a tab to a *different* workspace is
-# not a built-in — see the sam.tab-mover binding below.
+# not a built-in — see the tab-mover binding below.
 # shift+comma / shift+period are `<` and `>`, matching tmux swap-window.
 move_tab_previous = ["prefix+shift+comma", "ctrl+alt+shift+["]
 move_tab_next     = ["prefix+shift+period", "ctrl+alt+shift+]"]
@@ -152,17 +152,17 @@ height = "90%"
 # Move the active tab, panes and split layout intact, into another open
 # workspace. Two bindings for one action: keybindings can only reach a plugin
 # through plugin_action, and the action opens the popup declared in the
-# manifest. Plugin source: personal/herdr/plugins/tab-mover.
+# manifest. Plugin source: shopify-playground/herdr-plugins/tab-mover.
 [[keys.command]]
 key = "prefix+m"
 type = "plugin_action"
-command = "sam.tab-mover.pick"
+command = "tab-mover.pick"
 description = "move tab to workspace"
 
 [[keys.command]]
 key = "ctrl+alt+m"
 type = "plugin_action"
-command = "sam.tab-mover.pick"
+command = "tab-mover.pick"
 description = "move tab to workspace"
 
 # fzf launcher: every binding below plus this file's commands, the running
