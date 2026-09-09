@@ -10,7 +10,7 @@ personal/herdr/
 ├── layouts.toml       → ~/.config/herdr/layouts.toml   worktree-layouts templates (optional)
 ├── plugins.installs   Pinned third-party plugins: owner/repo[/subdir]@<sha>
 └── plugins/           Locally-authored plugins, registered with `herdr plugin link`
-    └── <name>/herdr-plugin.toml
+    └── tab-mover/     Move the active tab to another open workspace
 ```
 
 Applied by `setup_herdr()` in `personal/install.sh`. `setup_herdr_pi()` runs separately, after `setup_pi()`, because it writes into `~/.pi/agent/`.
@@ -86,7 +86,19 @@ command = "sam.example.run"
 
 Debug with `herdr plugin action list`, `herdr plugin action invoke <plugin.id>.<action>`, `herdr plugin log list --plugin <id>`.
 
-### `bin/herd` is the obvious first conversion
+### `tab-mover`
+
+Moves the active tab, panes and split layout intact, into another open workspace. `prefix+m` or `ctrl+alt+m` opens a modal picker listing the other open workspaces.
+
+herdr has no cross-workspace tab move — `tab.move` only reorders tabs inside one workspace. The plugin rebuilds it from `pane.move`, the only call that relocates a live terminal, replaying the split tree from `layout.export` so directions and ratios survive. The source tab closes when its last pane leaves, and the source workspace closes with it if that was its only tab. Live agents keep running: a cross-workspace move reassigns the public pane id but the terminal and the agent name follow it.
+
+Reordering a tab _within_ its workspace is not part of the plugin — herdr's built-in `keys.move_tab_previous` / `keys.move_tab_next` do it, bound in `config.toml` to `prefix+shift+comma` / `prefix+shift+period` and `ctrl+alt+shift+[` / `ctrl+alt+shift+]`.
+
+No right-click entry: plugin v1 has no hook into herdr's native context menus, and `[[link_handlers]]` only fires on ctrl+click of a URL in terminal output. Asked for four times upstream and closed every time — herdrdev/herdr#1776 (closed `not_planned` by the author), #1671, #1830, #1511, and #3533. The feature as a _builtin_ is #3008 → discussion #3013. `osamahbeig/herdr-pane-mover` hit the same wall and ships the same action-opens-a-picker workaround.
+
+**Known risk — herdrdev/herdr#3329 (open, reproduced on 0.8.2).** A cross-workspace `pane.move` resizes the terminal, and an alternate-screen app can end up with a permanently corrupt server-side grid: the process stays alive and accepts input, but the display never repaints and neither `ctrl+l` nor a forced SIGWINCH recovers it. #3686 is that report, closed as a duplicate of #3329, which is still open after 0.9.0. Moving a tab is N pane moves, so this applies here. A single-pane tab moving between same-width workspaces triggers no resize and is safe; a multi-pane tab resizes every pane during layout reconstruction even between identical workspaces. The `ui.pane_scrollbars = false` workaround in that thread targets a different trigger and does not help.
+
+### `bin/herd` is the obvious next conversion
 
 `bin/herd` is a herdr-only workflow already launched from three `type = "popup"` keybindings in `config.toml`. As a plugin it would get real `[[panes]]` entrypoints, `[[events]]` hooks, and a config dir, and drop out of `$PATH` where it does not belong.
 
