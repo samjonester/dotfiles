@@ -19,6 +19,28 @@ Use exactly these labels — no others:
 - **MEDIUM** — Suboptimal patterns, missing tests, minor security concerns. Fix or acknowledge with plan.
 - **LOW** — Style issues, minor improvements, nice-to-have. Fix now unless truly outside the PR's scope.
 
+### Severity keys to what this diff changed, not to what is wrong with the area
+
+Before assigning a severity, answer: **does the mechanism exist on the base branch?** Check it —
+`git show <base>:<path>`, or read the other callers of the same service. Then:
+
+- **The diff introduces the mechanism** → severity as written above.
+- **The mechanism predates the diff and the diff widens it** → cap at MEDIUM, and state the widening
+  as a delta, not as an end state: "1 record per request → 200 per request," not "any employee can
+  rewrite any record." The end-state phrasing describes `main`, and it will read as though this PR
+  caused it.
+- **The mechanism predates the diff and the diff does not widen it** → do not file it. This is
+  "Fix Now, Not Later" applied to blast radius: a pre-existing hole in a file the diff renames is
+  still pre-existing.
+
+The common failure is a one-line rename that pulls a whole subsystem into scope. A CRITICAL on a
+line the diff did not write is a claim that the author caused something they inherited.
+
+### Do not adjust severity for convergence
+
+You cannot see the other reviewers. If a finding feels obvious, that is not evidence it is severe —
+it is evidence it is easy to find. Rate on mechanism and blast radius only.
+
 ## Finding Voice
 
 Direct and literal. State the mechanism, not your relationship to it.

@@ -243,6 +243,45 @@ Source: [PR #N / uncommitted changes / branch: feature-xyz]
 </code-changes>
 ```
 
+**Those four blocks are the whole task. Do not add a fifth.**
+
+You will have read the diff by now and formed suspicions. Keep them. Naming a suspected defect in
+the task — "check whether X has an ownership gap," "pay attention to Y," "the lead wants Z
+scrutinized" — converts N independent reviewers into N confirmations of one hypothesis, and the
+judge reads that manufactured convergence as confidence.
+
+Measured on PR #2046843: a `<context-that-matters>` block named one suspected gap. Seven of nine
+agents returned CRITICAL on it. `devx pair-review`, which receives only the PR and never sees your
+task, rated the same finding MEDIUM. The judge settled on HIGH and made it a blocker; the PR was
+already sound enough that the human reviewer approved it as-is. The severity gap was the brief,
+not the code.
+
+Banned in a reviewer task, by shape:
+
+- A list of things to look at, check, verify, or scrutinize
+- Any sentence naming a specific file, symbol, or line as suspicious
+- "The lead wants…", "Worth checking…", "Does X actually hold?", "Was Y considered?"
+- Framing that presupposes a defect ("the deny test *could* pass for an unrelated reason")
+- A severity hint of any kind, including "this is security-sensitive"
+
+Allowed, and only these:
+
+- Which paths in the repo are relevant, stated neutrally, when the diff alone is not navigable
+  ("the two entry points are `app/controllers/mcp_controller.rb` and `tool_gateway_mcp_controller.rb`")
+- The `cwd` and how to read the diff if it is passed by path rather than inline
+- One sentence of domain orientation a newcomer to the zone would not have
+- For a reviewer whose agent file is narrow, a restatement of *its own* domain — never a target
+
+The classification in Step 3 is where your read of the diff belongs. It selects who runs. It does
+not tell them what to find.
+
+| Rationalization | Reality |
+|---|---|
+| "I already spotted the bug, telling them saves a round trip" | It does not save a round trip — it replaces N independent searches with N confirmations, and you lose the finding you had not thought of. File your own observation in Step 6 if the pipeline misses it. |
+| "The diff is unnavigable without pointers" | Neutral path orientation is allowed. "Check whether `foo` is authorized" is not orientation. |
+| "This PR really is security-sensitive, they should know" | `risk:auth` already put the security reviewer on the roster. Saying it twice biases the other eight. |
+| "Convergence across 9 agents proves it's real" | Only if the 9 searched independently. If you told them where to look, convergence measures your prompt. |
+
 **Set reviewer working directory:** If `REVIEW_CWD` was set in Step 1a (WTP worktree checkout), pass it as `cwd` on every reviewer subagent task. This gives reviewers access to the full codebase via `read`, `grep`, and `find`:
 
 ```json
@@ -434,6 +473,50 @@ single-source — convergence raises confidence but you must still verify.
 
 Then replace `<reviewer-findings>` with a `<findings>` block organized by convergence bucket. For CONVERGENT items, record each side's severity (e.g. `[security=HIGH; pair-review=MEDIUM]`) so the judge reconciles the disagreement. Keep pair-review findings in the same compact format as the compressed agent findings (title + severity + conf + `file:line` + one-line body).
 
+**A wide agent/pair-review severity split is a signal about the agents, not about the code.** The
+agents share your task; pair-review does not. When they diverge by two or more levels on the same
+finding, pair-review is the unbiased estimate. Say so in the judge task so it does not read the
+agent stack as a majority:
+
+```
+The [N] agents received an identical task from the lead; treat their agreement as one
+source, not [N]. `devx pair-review` received only the PR. Where the two sources split by
+two or more severity levels, start from pair-review's rating and justify any move up
+against the code.
+```
+
+#### Append the diff-attribution gate to every judge task
+
+Paraphrasing this weakens it. Paste it verbatim, after the `<findings>` block:
+
+```
+<diff-attribution-gate>
+Before rating any finding, establish whether its mechanism exists on the base branch
+([baseSha]). Verify with `git show [baseSha]:<path>`, or by reading the other callers of
+the same service, model, or endpoint. Record the answer for every finding.
+
+- Mechanism introduced by this diff -> rate on merit, no cap.
+- Mechanism predates the diff and the diff widens the exposure -> cap at MEDIUM and route
+  to COMMENT, not REQUEST CHANGES. Restate it as a delta ("1 record per request -> 200"),
+  never as an end state ("any employee can rewrite any record") -- the end state describes
+  the base branch and reads as though this PR caused it. Recommend a separate issue.
+- Mechanism predates the diff and the diff does not widen it -> reject the finding.
+
+A one-line rename does not make the renamed subsystem in scope. If the only line this diff
+contributes to a finding is an import, an include, or an identifier change, the finding is
+about the base branch.
+
+The verdict may only be REQUEST CHANGES on findings that survive the first bullet. State
+the attribution verdict inline on every blocking finding, in this form:
+  Attribution: introduced here | pre-existing, widened <delta> | pre-existing, unchanged
+</diff-attribution-gate>
+```
+
+This gate is the difference between "this PR is unsafe" and "this area is unsafe and this PR
+touched it." The second is worth saying and is not worth blocking on — the author cannot fix the
+zone's authorization model in a flag-retirement PR, and asking them to is how a sound PR collects
+a REQUEST CHANGES.
+
 ### 5c. Dispatch the judge
 
 ```json
@@ -536,6 +619,11 @@ That makes the leak impossible rather than forbidden: counts, reviewer names, se
 | `Verified strengths` | Praise inside a change request reads as padding. Per `reviewer-persona.md`, strengths are internal. |
 | `Keep as written` | The author already wrote it that way. Telling them to keep it is noise unless another comment threatens it. |
 
+One string is **added** rather than copied: on any finding whose `Attribution:` line reads
+`pre-existing`, prepend `Pre-existing on main; this PR widens it to <delta>.` The author's first
+question on a security finding is "did I cause this," and the copy rule strips the answer out of
+the `Problem` sentence. Omitting it turns an accurate finding into an accusation.
+
 Two structural rules on top of the copy:
 
 - **A top-level entry is a pointer, never a duplicate.** Top-level and inline render on the same page. If a finding gets an inline comment, its top-level line is the `Problem` sentence plus `file:line` and nothing more.
@@ -633,6 +721,10 @@ Check yourself against these before taking shortcuts:
 | "A git command failed, I'll work around it" | Stop. Diagnose. Ask the user. Don't improvise with alternative git commands, temp branches, or manual patches. |
 | "This could be exploited, so it's CRITICAL" | "Could be" ≠ "is reachable in production." Check the actual call path. If the input is already validated upstream, the severity drops. |
 | "No tests were added, so this needs REQUEST_CHANGES" | Missing tests are a valid observation but not always blocking. If the code is well-tested indirectly or the PR is a config change, tests may be unnecessary. Calibrate severity to actual risk. |
+| "I'll flag what I noticed in the reviewer task so nobody misses it" | That is the Step 4a ban. Nine agents told where to look return nine confirmations, and you never learn what an unprompted reviewer would have found. Keep the observation; file it yourself in Step 6 if the pipeline misses it. |
+| "Seven reviewers called it CRITICAL, it's a blocker" | Only if they searched independently. Agents share your task; `devx pair-review` does not. Check the split before you trust the stack. |
+| "The exposure is real, so it blocks — who introduced it doesn't matter" | It matters to the author, who cannot fix the zone's authorization model inside a flag-retirement PR. Run the Step 5b attribution gate: pre-existing and widened is COMMENT plus an issue. |
+| "The PR touches the file, so the file's problems are in scope" | An import, an include, or an identifier rename does not put a subsystem in scope. If the diff's only contribution to the finding is the rename, the finding is about the base branch. |
 
 ## Constraints
 
