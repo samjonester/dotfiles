@@ -28,7 +28,10 @@ The `herdr` skill is for reading and driving panes that already exist — use it
 | New work, no branch yet | `herd implement <new-branch> "<prompt>"` |
 | Review a PR or existing branch | `herd review <pr-number\|branch>` |
 | Anything else on an existing branch — fix CI, address feedback, bisect | `herd task <pr-number\|branch> "<prompt>"` |
+| Work that belongs in the current checkout, not its own branch | `herd tab <label> "<prompt>"` |
 | Return to the originating workspace | `herd commander` |
+
+`herd tab` is the one verb that claims no slot and creates no worktree: a tab beside the caller, same `$PWD`, fresh pi. Reach for it when the ask has no branch in it — research, a long triage, a second opinion on the tree as it stands. Everything below about writing the prompt applies to it unchanged, though the `/tt` prompt template hands that writing to the `tt-prompt-writer` subagent.
 
 `review` and `task` accept a bare PR number and resolve it themselves (`gs` for shop/world, `gh` elsewhere). Pass the number, not a branch you looked up.
 

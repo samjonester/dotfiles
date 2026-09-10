@@ -7,6 +7,7 @@
 #   herd review <pr-number|branch>    review workspace on an existing branch
 #   herd implement <branch> [task]    fresh branch + implementation agent
 #   herd task <branch> [prompt]       any other work on an existing branch
+#   herd tab <label> [prompt]         tab beside this one, same checkout, fresh pi
 #   herd attach [name]                attach to a running agent
 #   herd ls                           list live agents
 #
@@ -250,6 +251,26 @@ cmd_task() {
   run_task "$branch" "task" "$prompt"
 }
 
+# A tab in the current workspace on the current checkout: no branch, no WTP slot,
+# no worktree. For work that belongs in this tree but not in this session.
+cmd_tab() {
+  local label="${1:-}" prompt="${2:-}" ws
+  [ $# -gt 0 ] || label=$(ask "Tab label: ")
+  [ -n "$label" ] || die "no label given"
+  [ $# -gt 1 ] || prompt=$(ask "Task (blank to start pi idle): ")
+
+  [ "${HERDR_ENV:-}" = 1 ] && [ -n "${HERDR_PANE_ID:-}" ] \
+    || die "not inside a herdr pane — use 'herd implement' or 'herd task' instead"
+  # Target this pane's workspace rather than whatever the server has focused,
+  # so a spawn from an unfocused pane still lands beside its caller.
+  ws="${HERDR_PANE_ID%%:*}"
+
+  hd tab create --workspace "$ws" --cwd "$PWD" --label "$label" --no-focus
+  WS_PANE=$(hd_get '.result.root_pane.pane_id')
+  [ -n "$WS_PANE" ] && [ "$WS_PANE" != "null" ] || die "herdr returned no root pane id"
+  start_agent "$WS_PANE" "$(agent_name "$label")" "$prompt"
+}
+
 cmd_ls() {
   herdr agent list 2>/dev/null \
     | jq -r '.result.agents[]? | [.agent_status // "?", .name // .pane_id, .pane_id, .cwd // ""] | @tsv' \
@@ -274,6 +295,7 @@ cmd_menu() {
     "review     review a PR or existing branch" \
     "implement  new branch + implementation agent" \
     "task       any other work on an existing branch" \
+    "tab        tab beside this one, same checkout, fresh pi" \
     "attach     attach to a running agent" \
     "ls         list live agents" \
     | fzf --prompt='herd> ' --height=40% --reverse | awk '{print $1}')
@@ -290,11 +312,12 @@ main() {
     review)    shift; cmd_review "$@" ;;
     implement) shift; cmd_implement "$@" ;;
     task)      shift; cmd_task "$@" ;;
+    tab)       shift; cmd_tab "$@" ;;
     attach)    shift; cmd_attach "$@" ;;
     ls|list)   cmd_ls ;;
     ""|menu)   cmd_menu ;;
     -h|--help) sed -n '2,18p' "$0" | sed 's/^# \{0,1\}//' ;;
-    *)         die "unknown command '$1' (try: commander, review, implement, task, attach, ls)" ;;
+    *)         die "unknown command '$1' (try: commander, review, implement, task, tab, attach, ls)" ;;
   esac
 }
 
