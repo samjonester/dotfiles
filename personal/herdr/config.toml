@@ -169,9 +169,9 @@ description = "move tab to workspace"
 # agents, and a file search. Supersedes prefix+? as the way to find a shortcut,
 # but help stays bound so there is a fallback when the plugin is broken.
 # Double-tap of the prefix, so the chord is ctrl+space ctrl+space.
-# Plugin source: personal/herdr/plugins/launcher.
+# Plugin source: shopify-playground/herdr-plugins/launcher.
 [[keys.command]]
 key = "prefix+space"
 type = "plugin_action"
-command = "sam.launcher.open"
+command = "launcher.open"
 description = "launcher"

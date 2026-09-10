@@ -10,7 +10,7 @@ personal/herdr/
 ├── layouts.toml       → ~/.config/herdr/layouts.toml   worktree-layouts templates (optional)
 ├── plugins.installs   Pinned third-party plugins: owner/repo[/subdir]@<sha>
 └── plugins/           Locally-authored plugins, registered with `herdr plugin link`
-    └── launcher/      fzf modal over shortcuts, running agents, and files
+    └── wtp/           pool-slot state on the Spaces rows, and a picker
 ```
 
 Applied by `setup_herdr()` in `personal/install.sh`. `setup_herdr_pi()` runs separately, after `setup_pi()`, because it writes into `~/.pi/agent/`.
@@ -87,6 +87,8 @@ command = "sam.example.run"
 Debug with `herdr plugin action list`, `herdr plugin action invoke <plugin.id>.<action>`, `herdr plugin log list --plugin <id>`.
 
 ### `launcher`
+
+No longer local: authored here, then upstreamed as [shopify-playground/herdr-plugins#8](https://github.com/shopify-playground/herdr-plugins/pull/8) and now installed from that repo, pinned in `plugins.installs`. Its id lost the `sam.` prefix on the way, for the same reason `tab-mover`'s did.
 
 `prefix+space` opens one fzf modal with four tabs, cycled with `tab` / `shift-tab` or by clicking the header strip. `?` shows the key list for whichever tab is current — which also means `?` cannot be typed into the query. The right pane previews whatever row is under the cursor.
 
