@@ -22,7 +22,7 @@ Auto-route based on these signals. Don't ask the user unless genuinely ambiguous
 - Task references a known skill that runs in its own session (`review`, `slack-triage`, `mozart-validate`, `mozart-plan-and-implement`, `binks-review`, `pr-ci-autofix`, `autoresearch-create`, ...)
 - Task needs a different working directory (worktree, separate repo)
 - Task needs a non-default preset (`triage`, `investigate`, `workspace`, `code+`, `experiment`, `all`)
-- User says "as a teammate", "spawn", "in cmux", "background", or similar
+- User says "as a teammate", "spawn", "in a pane", "background", or similar
 
 **Choose subagent when ANY of:**
 - Verb implies a single-shot artifact: `draft`, `summarize`, `extract`, `format`, `translate`, `analyze`, `propose`, `compare`, `lookup`, `cite`
@@ -62,7 +62,7 @@ Don't pass `model` unless the user requested one.
 
 After spawning, print one line:
 
-> @<name> spawned. Monitor: `C-Space <n>` · `team_status` · `team_message <name> ...`
+> @<name> spawned in a herdr pane split. Monitor: `ctrl+alt+l` · `team_status` · `team_message <name> ...`
 
 ### Step 4: Don't pollute the lead
 

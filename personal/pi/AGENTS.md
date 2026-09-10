@@ -231,8 +231,8 @@ For plans without the Implementation Steps section (legacy plans or external doc
   - The user asks "should I compact?" or "fresh session?" — evaluate honestly; fresh often beats compact when the handoff is a single file path
   - A subagent or skill just ran and produced a finalized artifact (plan, review, finalized patch)
     When suggesting, the handoff prompt should be ONE line pointing at the artifact (file path, PR number, or skill) plus any critical state the doc doesn't capture (branch name, working tree status, user preferences confirmed in the current session).
-- When spawning a new cmux workspace, always give it a short descriptive name (e.g., `cmux new-workspace --name 'dev-server' --focus true`)
-- When spawning a task into a separate cmux workspace (e.g., planning, investigation), treat that workspace as the user's workspace for that task. Don't pull results back into the parent session — it duplicates context and pollutes history, making it hard to scroll back to the original work (like a triage) that triggered the spawn. Just confirm the workspace is open and let the user work there directly.
+- The terminal multiplexer is **herdr**, not cmux. Never invoke `cmux`. Spawning goes through `herd` (see the `herd-spawn` skill); reading and driving existing panes goes through `herdr` (see the `herdr` skill).
+- When spawning a task into a separate herdr workspace or tab (e.g., planning, investigation), treat it as the user's workspace for that task. Don't pull results back into the parent session — it duplicates context and pollutes history, making it hard to scroll back to the original work (like a triage) that triggered the spawn. Just confirm the workspace is open and let the user work there directly.
 - When spawning teammates via `team_spawn`, consider whether the task needs tools outside the default `code` preset. The tool auto-infers from keywords, but pass `preset` explicitly when the task domain is clear: `triage` (Slack/calendar/email), `investigate` (Observe/vault/data), `workspace` (Docs/Sheets/Slides), `code+` (browser/Figma), `experiment` (feature flags/grokt), `all` (cross-domain). If the default preset lacks a required tool, the teammate will fail silently.
 
 ## Code Comments
@@ -302,7 +302,7 @@ When asked to review **multiple PRs** ("review these PRs", "batch review #1 #2 #
 **Rules:**
 
 - Never dispatch the review skill from inside a teammate — always from the lead or via `batch-review`
-- Never use `team_spawn` for diff gathering — use `bg_run` (no cmux pane, no context overhead)
+- Never use `team_spawn` for diff gathering — use `bg_run` (no pane, no context overhead)
 - Never use cron polling for review progress — `subagent` calls are blocking and return results directly
 
 ### Submitting review comments

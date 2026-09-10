@@ -121,7 +121,7 @@ For each wave:
 
 After the last item / wave:
 
-> Monitor: `C-Space <n>` · `team_status` · `team_message <name> ...`
+> Monitor: `ctrl+alt+l` (focus pane right) · `team_status` · `team_message <name> ...`
 
 Summarize completed inline items briefly (`✓ pr668312_review · ✓ pr44522_review · ...`).
 
