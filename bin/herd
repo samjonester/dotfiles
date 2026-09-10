@@ -143,13 +143,34 @@ prepare_workspace() {
 
 # ── Agent bootstrap ──────────────────────────────────────────────────────────
 
+# A freshly created pane can emit output before the server will accept an agent
+# on it, so `pane wait-output` is not a sufficient gate: `agent start` fails with
+# "is not an available shell" and succeeds on the same pane a moment later. That
+# one error is transient and retried; every other error fails immediately.
+agent_start_pi() {
+  local pane="$1" name="$2" out status attempt=0
+  while :; do
+    status=0
+    out=$(herdr agent start "$name" --kind pi --pane "$pane" -- -n "$name" 2>&1) || status=$?
+    if [ "$status" -eq 0 ] && ! printf '%s' "$out" | jq -e '.error' >/dev/null 2>&1; then
+      HD_OUT="$out"
+      return 0
+    fi
+    printf '%s' "$out" | grep -q 'not an available shell' || break
+    attempt=$((attempt + 1))
+    [ "$attempt" -lt 20 ] || break
+    sleep 0.5
+  done
+  die "herdr agent start: $(printf '%s' "$out" | jq -r '.error.message // empty' 2>/dev/null || printf '%s' "$out")"
+}
+
 # start_agent <pane_id> <name> <prompt>
 start_agent() {
   local pane="$1" name="$2" prompt="$3"
   # Let the root pane's login shell reach its prompt before `agent start` types.
   herdr pane wait-output "$pane" --regex '\S' --timeout 15000 >/dev/null 2>&1 || true
   info "starting pi as '$name' in $pane..."
-  hd agent start "$name" --kind pi --pane "$pane" -- -n "$name"
+  agent_start_pi "$pane" "$name"
   [ -z "$prompt" ] || hd agent prompt "$name" "$prompt"
   hd agent focus "$name"
   printf '%s\n' "$name"
