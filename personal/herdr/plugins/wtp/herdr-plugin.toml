@@ -21,15 +21,18 @@ min_herdr_version = "0.8.0"
 description = "Pool-slot state on the Spaces rows, and a picker with a safe free."
 platforms = ["macos", "linux"]
 
-# workspace.created never fires for a workspace that predates this plugin, and
-# every workspace predates a server restart. Backfilling all of them once per
-# server start is the same code path the event uses, over `workspace list`.
+# workspace.created only covers workspaces created after this plugin was
+# linked, and a restored session re-opens every workspace without one. This is
+# the same code path the event uses, over the whole `workspace list`. It is
+# also the only part of this manifest that waits for a server restart —
+# actions, panes, and events all register the moment `herdr plugin link` runs.
 [[startup]]
 command = ["python3", "wtp.py", "refresh"]
 
-# `herd` opens a slot with `workspace create --cwd`, so the slot is knowable
-# from the workspace's panes as soon as one reports a cwd. The handler polls
-# for that, because the event can arrive before the first shell registers.
+# The payload is flat and carries workspace_id plus workspace_cwd, which is
+# enough on its own; wtp.py keeps a copy of the last one in its state dir. A
+# workspace announced before its first shell reports a cwd falls back to
+# polling the snapshot.
 [[events]]
 on = "workspace.created"
 command = ["python3", "wtp.py", "on-workspace-created"]

@@ -230,7 +230,6 @@ def unpushed_verdict(src, branch):
     """
     lines = []
     _, head = git(src, "rev-parse", "HEAD")
-    _, upstream = git(src, "rev-parse", "--abbrev-ref", f"{branch}@{{upstream}}")
     _, merge = git(src, "config", "--get", f"branch.{branch}.merge")
     if merge and merge != f"refs/heads/{branch}":
         lines.append(f"branch.{branch}.merge is {merge} — wtp measured against the wrong ref")
@@ -404,10 +403,11 @@ def cmd_refresh(argv):
 def cmd_on_workspace_created():
     """Resolve the new workspace's slot and write its token.
 
-    The event payload is undocumented, so the raw context is kept for the next
-    time this needs debugging and the workspace id is dug out of whatever shape
-    it arrives in. A workspace can also be announced before its first shell
-    reports a cwd, so the slot is polled for rather than read once.
+    The payload is undocumented. Measured on 0.8.2 it is flat —
+    workspace_id, workspace_label, workspace_cwd, tab_id, focused_pane_id,
+    focused_pane_cwd, invocation_source, correlation_id — but the id is dug out
+    of whatever shape arrives and the raw context is kept for the next time this
+    needs debugging.
     """
     raw = os.environ.get("HERDR_PLUGIN_CONTEXT_JSON") or ""
     state_dir = os.environ.get("HERDR_PLUGIN_STATE_DIR")

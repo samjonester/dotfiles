@@ -52,6 +52,9 @@ HOME = os.path.expanduser("~")
 EDITOR = (os.environ.get("LAUNCHER_EDITOR") or os.environ.get("VISUAL")
           or os.environ.get("EDITOR") or "nvim")
 
+SCROLLBACK_LINES = 5000
+FOCUS_TRAIL = 8
+
 RESET = "\x1b[0m"
 DIM = "\x1b[38;5;245m"
 FAINT = "\x1b[38;5;240m"
@@ -210,8 +213,10 @@ def rule(title, width):
 # Enter is inert.
 BUILTINS = {
     "help": ("Session", "Keybinding help",
-             "herdr's own modal — the fallback when this launcher is broken", None),
-    "settings": ("Session", "Settings", "herdr's settings UI", None),
+             "herdr's own modal — the fallback when this launcher is broken",
+                        "goto:actions"),
+    "settings": ("Session", "Settings", "herdr's settings UI",
+                        "settings"),
     "detach": ("Session", "Detach",
                "leave the session running and drop back to the shell", None),
     "reload_config": ("Session", "Reload config.toml",
@@ -219,11 +224,13 @@ BUILTINS = {
     "open_notification_target": ("Session", "Open notification target",
                                  "jump to the pane that raised the last notification", None),
     "goto": ("Session", "Navigate mode",
-             "move between workspaces and panes with hjkl until esc", None),
+             "move between workspaces and panes with hjkl until esc",
+                        "goto:spaces"),
     "toggle_sidebar": ("Session", "Toggle sidebar",
                        "show or hide the workspace and agent rail", None),
     "workspace_picker": ("Workspace", "Workspace picker",
-                         "herdr's built-in workspace list", None),
+                         "herdr's built-in workspace list",
+                        "goto:spaces"),
     "new_workspace": ("Workspace", "New workspace",
                       "create a workspace and focus it; prompts for a name", "new_workspace"),
     "rename_workspace": ("Workspace", "Rename workspace",
@@ -235,13 +242,15 @@ BUILTINS = {
     "next_workspace": ("Workspace", "Next workspace",
                        "focus the workspace after this one", "next_workspace"),
     "switch_workspace": ("Workspace", "Switch to workspace 1..9",
-                         "focus a workspace by its sidebar number", None),
+                         "focus a workspace by its sidebar number",
+                        "goto:spaces"),
     "new_worktree": ("Worktree", "New worktree",
                      "create a git worktree and open it as a workspace", "new_worktree"),
     "open_worktree": ("Worktree", "Open existing worktree",
                       "open a worktree that already exists on disk", "open_worktree"),
     "remove_worktree": ("Worktree", "Remove worktree",
-                        "delete a worktree and its workspace — wtp slots use `wtp free`", None),
+                        "delete a worktree and its workspace — wtp slots use `wtp free`",
+                        "remove_worktree"),
     "new_tab": ("Tab", "New tab",
                 "create a tab in the focused workspace; prompts for a name", "new_tab"),
     "rename_tab": ("Tab", "Rename tab", "relabel the focused tab", "rename_tab"),
@@ -252,7 +261,8 @@ BUILTINS = {
                           "reorder the focused tab within its workspace", "move_tab_prev"),
     "move_tab_next": ("Tab", "Move tab toward back",
                       "reorder the focused tab within its workspace", "move_tab_next"),
-    "switch_tab": ("Tab", "Switch to tab 1..9", "focus a tab by its number", None),
+    "switch_tab": ("Tab", "Switch to tab 1..9", "focus a tab by its number",
+                        "goto:tabs"),
     "split_vertical": ("Pane", "Split right", "split the focused pane side by side", "split_right"),
     "split_horizontal": ("Pane", "Split down",
                          "split the focused pane top and bottom", "split_down"),
@@ -269,7 +279,8 @@ BUILTINS = {
                         "focus the next pane in this tab", "cycle_next"),
     "cycle_pane_previous": ("Pane", "Cycle to previous pane",
                             "focus the previous pane in this tab", "cycle_prev"),
-    "last_pane": ("Pane", "Last pane", "jump back to the previously focused pane", None),
+    "last_pane": ("Pane", "Last pane", "jump back to the previously focused pane",
+                        "last_pane"),
     "resize_mode": ("Pane", "Resize mode", "hjkl resizes the focused pane until esc", None),
     "resize_pane_left": ("Pane", "Resize pane left",
                          "move the focused pane's edge one step left", "resize_left"),
@@ -280,13 +291,15 @@ BUILTINS = {
     "resize_pane_right": ("Pane", "Resize pane right",
                           "move the focused pane's edge one step right", "resize_right"),
     "edit_scrollback": ("Pane", "Edit scrollback",
-                        "open the focused pane's scrollback in $EDITOR", None),
+                        "open the focused pane's scrollback in $EDITOR",
+                        "edit_scrollback"),
     "previous_agent": ("Agent", "Previous agent",
                        "focus the previous agent across all workspaces", "prev_agent"),
     "next_agent": ("Agent", "Next agent",
                    "focus the next agent across all workspaces", "next_agent"),
     "focus_agent": ("Agent", "Focus agent 1..9",
-                    "focus an agent by its row in the sidebar", None),
+                    "focus an agent by its row in the sidebar",
+                        "goto:agents"),
 }
 
 # `herdr --default-config` omits both of these, so they would otherwise be
@@ -400,6 +413,26 @@ def keymap():
     return rows
 
 
+def focus_trail_path():
+    state_dir = os.environ.get("HERDR_PLUGIN_STATE_DIR")
+    return os.path.join(state_dir, "focus-trail") if state_dir else None
+
+
+def read_focus_trail():
+    path = focus_trail_path()
+    if not path or not os.path.exists(path):
+        return []
+    with open(path) as handle:
+        return [line.strip() for line in handle if line.strip()]
+
+
+def goto_target(row):
+    """A row herdr answers with a modal this launcher already replaces. Enter
+    moves to that tab instead of claiming to run something."""
+    route = row.get("r")
+    return route[5:] if isinstance(route, str) and route.startswith("goto:") else None
+
+
 def runnable(row):
     return bool(row.get("r")) or row["k"] in ("cmd", "plugin")
 
@@ -479,6 +512,10 @@ RUNNERS = {
     "resize_right":     lambda c: _resize(c, "right"),
     "prev_agent":       lambda c: _cycle_agent(c, -1),
     "next_agent":       lambda c: _cycle_agent(c, 1),
+    "settings":         lambda c: _edit_config(c),
+    "edit_scrollback":  lambda c: _edit_scrollback(c),
+    "remove_worktree":  lambda c: _remove_worktree(c),
+    "last_pane":        lambda c: _last_pane(c),
 }
 
 
@@ -512,6 +549,65 @@ def _open_worktree(ctx):
     return f"opened {tilde(chosen)} in {cli('worktree', 'open', '--path', chosen, '--focus')['workspace']['workspace_id']}"
 
 
+def _open_in_split(ctx, path, cwd=None):
+    pane = cli("pane", "split", ctx["pane"], "--direction", "right",
+               "--cwd", cwd or os.path.dirname(path) or "/", "--focus")["pane"]
+    wait_for_shell(pane["pane_id"])
+    api("pane.send_input", {"pane_id": pane["pane_id"],
+                            "text": f"{EDITOR} {shlex.quote(path)}", "keys": ["enter"]})
+    api("pane.focus", {"pane_id": pane["pane_id"]})
+    return pane["pane_id"]
+
+
+def _edit_config(ctx):
+    """herdr's settings UI is client-only. Editing the file it writes and
+    reloading is the same outcome by a different door, so the row runs rather
+    than sending you off to a chord."""
+    path = os.environ.get("HERDR_CONFIG_PATH") or os.path.expanduser(
+        "~/.config/herdr/config.toml")
+    if not os.path.exists(path):
+        raise Fail(f"no config at {tilde(path)}")
+    _open_in_split(ctx, path, cwd=os.path.dirname(path))
+    return f"editing {tilde(path)} — run `herdr server reload-config` to apply"
+
+
+def _edit_scrollback(ctx):
+    lines = api("pane.read", {"pane_id": ctx["pane"], "source": "recent_unwrapped",
+                              "lines": SCROLLBACK_LINES})["read"]["text"]
+    handle, path = tempfile.mkstemp(prefix="herdr-scrollback-", suffix=".log")
+    with os.fdopen(handle, "w") as out:
+        out.write(lines)
+    _open_in_split(ctx, path, cwd=tempfile.gettempdir())
+    return f"{len(lines.splitlines())} lines in {tilde(path)}"
+
+
+def _remove_worktree(ctx):
+    """Destructive and not undoable from here, so it asks twice: once for the
+    tree, once for the deletion."""
+    trees = [t for t in cli("worktree", "list")["worktrees"] if not t.get("is_bare")]
+    if not trees:
+        raise Fail("no worktrees to remove")
+    chosen = pick_line([(t["path"], f"{t['label']}  {DIM}{tilde(t['path'])}{RESET}") for t in trees],
+                       "remove worktree> ")
+    if not chosen:
+        return "cancelled"
+    if not confirm(f"Remove {tilde(chosen)} and its workspace?"):
+        return "cancelled"
+    cli("worktree", "remove", "--path", chosen)
+    return f"removed {tilde(chosen)}"
+
+
+def _last_pane(ctx):
+    """herdr tracks this in client state the API cannot read, so the plugin
+    keeps its own trail from a pane.focused hook. Ids that no longer resolve
+    are closed panes and this modal's own popup, which is gone by now."""
+    live = {p["pane_id"] for p in ctx["snap"]["panes"]}
+    trail = [pid for pid in read_focus_trail() if pid in live and pid != ctx["pane"]]
+    if not trail:
+        raise Fail("no previous pane recorded yet")
+    return _focus(ctx, "pane", trail[-1])
+
+
 def _rename(ctx, kind, target):
     name = ask(f"New {kind} name: ", required=True)
     cli(kind, "rename", target, name)
@@ -526,7 +622,12 @@ def _close(ctx, kind, target):
 
 
 def _focus(ctx, kind, target):
-    cli(kind, "focus", target)
+    # `herdr pane focus` is the directional verb and takes no id, so panes go
+    # over the socket. Workspaces and tabs do take one.
+    if kind == "pane":
+        api("pane.focus", {"pane_id": target})
+    else:
+        cli(kind, "focus", target)
     return f"focused {target}"
 
 
@@ -595,8 +696,8 @@ def feed_actions(state):
     width = max(len(row["t"]) for row in rows) + 2
     lines = []
     for row in rows:
-        # Chords live in the preview only. A dimmed row is one Enter cannot
-        # run, so the eye can skip the whole block rather than read a marker.
+        # Chords live in the preview only. A dimmed row is one nothing here can
+        # perform, so the eye can skip it rather than read a marker.
         if runnable(row):
             body = f"{GRN}{row['g']:<9}{RESET} {row['t']:<{width}}{DIM}{row['d']}{RESET}"
         else:
@@ -694,7 +795,7 @@ FEEDS = {"actions": feed_actions, "agents": feed_agents, "spaces": feed_spaces,
 # ---------------------------------------------------------------- fzf chrome
 
 HINTS = {
-    "actions": "enter runs · dimmed rows have no API · ? keys",
+    "actions": "enter runs · dimmed rows hand back the chord · ? keys",
     "agents": "enter focus · ctrl-y session id · ? keys",
     "spaces": "enter opens the space · ctrl-n new space · ? keys",
     "files": "enter opens in a split · ctrl-y path · ctrl-r root · ctrl-h hidden · ? keys",
@@ -705,7 +806,7 @@ def space_label(state):
     return (state.get("space_label") or state.get("space") or "") if state.get("space") else ""
 
 
-def build_header(state):
+def build_header(state, right=None):
     """One line, no parentheses: it is passed inside fzf's change-header()."""
     cells, ranges, column = [], {}, 1
     for index, tab in enumerate(TABS):
@@ -717,6 +818,9 @@ def build_header(state):
         cells.append((INV + BOLD if tab == state["tab"] else DIM) + text + RESET)
         column += len(text)
     state["ranges"] = ranges
+
+    if right:
+        return "".join(cells) + f"   {right}"
 
     right = HINTS[state["tab"]]
     if state["tab"] == "files":
@@ -746,8 +850,8 @@ def actions_for(state):
 
 CHEATS = {
     "actions": [
-        ("enter", "run the action; inert on a dimmed row, which herdr's API cannot reach"),
-        ("preview", "shows the chord to press, and what the action will do"),
+        ("enter", "run it, jump to the tab that supersedes it, or hand back its chord"),
+        ("preview", "shows the chord to press, and which of those three Enter does"),
     ],
     "agents": [
         ("enter", "focus that agent's pane"),
@@ -812,12 +916,17 @@ def preview_action(payload):
     if row.get("d"):
         print(f"{row['d']}\n")
     print(rule("enter", width))
-    if row["k"] == "builtin" and row["r"]:
+    target = goto_target(row)
+    if target:
+        print(f"{GRN}Opens the {TAB_LABEL[target if target != 'tabs' else 'spaces']} tab,{RESET}"
+              f"{GRN} which does this job here.{RESET}  {DIM}keys.{row['n']}{RESET}")
+    elif row["k"] == "builtin" and row["r"]:
         print(f"{GRN}Runs here.{RESET}  {DIM}keys.{row['n']}{RESET}")
     elif row["k"] == "builtin":
-        print(f"{FAINT}Inert. This is a UI-mode action and herdr exposes no API for a\n"
-              f"plugin to fire it, so press the chord above once the modal closes.\n"
-              f"keys.{row['n']}{RESET}")
+        print(f"{FAINT}herdr decodes this one in the client and exposes no API for a\n"
+              f"plugin to fire it. Enter raises the chord as a toast and closes,\n"
+              f"or holds the modal open with the chord in the header when toasts\n"
+              f"are off. keys.{row['n']}{RESET}")
     elif row["k"] == "cmd":
         print(f"{GRN}Runs in this popup.{RESET}  {DIM}keys.command, type = {row['kind']}{RESET}")
     else:
@@ -1075,6 +1184,10 @@ def run_action(state, payload):
         os.execvp(shell, [shell, "-lc", row["cmd"]])
 
     if not row["r"]:
+        # cmd_enter already raised the toast; accept only closed the modal so
+        # the chord can be pressed against the session, not against fzf.
+        return chord_hint(row)
+    if goto_target(row):
         return None
     return RUNNERS[row["r"]](focused(state))
 
@@ -1236,9 +1349,13 @@ def cmd_click(column):
 
 
 def cmd_enter(tab, payload):
-    if tab == "actions" and payload and not runnable(decode(payload)):
-        print("ignore")
-        return 0
+    if tab == "actions" and payload:
+        row = decode(payload)
+        target = goto_target(row)
+        if target:
+            return enter_goto(target)
+        if row["k"] == "builtin" and not row["r"]:
+            return enter_chord(row)
     if tab == "spaces" and payload:
         row = decode(payload)
         if row.get("kind") == "space":
@@ -1249,6 +1366,53 @@ def cmd_enter(tab, payload):
             save(state)
             return 0
     print("accept")
+    return 0
+
+
+def chord_hint(row):
+    chord = ", ".join(row["c"]) if row["c"] else ""
+    return f"{row['t']} — press {chord}" if chord else f"{row['t']} is unbound"
+
+
+def enter_goto(target):
+    """switch_tab lands on the current workspace's tabs, not the workspace list,
+    because the row promised a tab."""
+    state = load()
+    state["help"] = False
+    if target == "tabs":
+        workspace = state.get("src_workspace")
+        labels = {w["workspace_id"]: w["label"] for w in snapshot()["workspaces"]}
+        state["tab"] = "spaces"
+        state["space"] = workspace
+        state["space_label"] = labels.get(workspace, workspace)
+    else:
+        state["tab"] = target
+        state["space"] = None
+        state["space_label"] = None
+    print(actions_for(state))
+    save(state)
+    return 0
+
+
+def enter_chord(row):
+    """Nothing here can fire it, so hand back the chord. A toast survives the
+    modal closing, which is what you want, because pressing the chord is the
+    next thing you do. When toasts are off, herdr answers `shown: false`; the
+    modal then stays up and puts the chord in the header rather than closing
+    on a keypress that produced nothing."""
+    hint = chord_hint(row)
+    shown = False
+    if row["c"]:
+        try:
+            reply = cli("notification", "show", row["t"],
+                        "--body", f"press {', '.join(row['c'])}")
+            shown = bool(reply.get("shown"))
+        except Fail:
+            shown = False
+    if shown:
+        print("accept")
+    else:
+        print(f"change-header({build_header(load(), YEL + hint + RESET)})")
     return 0
 
 

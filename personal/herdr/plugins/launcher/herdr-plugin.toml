@@ -41,3 +41,11 @@ id = "open"
 title = "Launcher"
 contexts = ["workspace"]
 command = ["python3", "launcher.py", "open"]
+
+# herdr tracks "last pane" in client state no API can read, so the Files and
+# Actions tabs keep their own trail. One shell builtin per focus change, and
+# only when the pane actually changed; HERDR_PANE_ID is the event's pane here,
+# not the invoking one.
+[[events]]
+on = "pane.focused"
+command = ["sh", "-c", 'f="$HERDR_PLUGIN_STATE_DIR/focus-trail"; [ "$(tail -n1 "$f" 2>/dev/null)" = "$HERDR_PANE_ID" ] || { printf "%s\n" "$HERDR_PANE_ID" >>"$f"; tail -n 8 "$f" >"$f.new" && mv "$f.new" "$f"; }']
