@@ -36,8 +36,19 @@ show_agent_labels_on_pane_borders = true
 window_title = "{workspace} · {tab}"
 
 [ui.sidebar.agents]
+# `tab` renders with the sidebar's secondary (dimmed) style while `workspace`
+# gets the full-opacity one, so the tab name — the only token that separates two
+# agents in the same repo — is the hardest thing on the row to read. An inline
+# style table overrides that per occurrence: dim = false restores full opacity,
+# fg picks gruvbox bright orange (#fe8019), which herdr's gruvbox theme uses
+# nowhere else. Its yellow (#fabd2f), accent (#d79921), green, and red are all
+# spoken for by state_icon and the active-row accent.
 # terminal_title_stripped is the row that surfaces each agent's current task.
-rows = [["state_icon", "workspace", "tab"], ["terminal_title_stripped"], ["agent"]]
+rows = [
+  ["state_icon", "workspace", { token = "tab", fg = "#fe8019", dim = false }],
+  ["terminal_title_stripped"],
+  ["agent"],
+]
 
 [ui.sidebar.agents.rows_by_agent]
 # A row is one line, truncated at the sidebar width, so `π - <five words>…` is
@@ -46,7 +57,12 @@ rows = [["state_icon", "workspace", "tab"], ["terminal_title_stripped"], ["agent
 # across $task1..$task3, one token per row; unset tokens collapse their row.
 # The "pi" line the default layout ends with is redundant inside a pi-only
 # override, so the space goes to the title instead.
-pi = [["state_icon", "workspace", "tab"], ["$task1"], ["$task2"], ["$task3"]]
+pi = [
+  ["state_icon", "workspace", { token = "tab", fg = "#fe8019", dim = false }],
+  ["$task1"],
+  ["$task2"],
+  ["$task3"],
+]
 
 [ui.toast]
 # No popups. delivery has no per-state filter — one setting covers both "finished"
