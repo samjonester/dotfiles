@@ -119,7 +119,7 @@
 [http "https://*.quick.shopify.io/"]
 	extraHeader = X-Requested-With: XMLHttpRequest
 [shop-world "stale-pr-cutoff"]
-	main = 1788921991
+	main = 1788998452
 [filter "lfs"]
 	clean = git-lfs clean -- %f
 	smudge = git-lfs smudge -- %f
