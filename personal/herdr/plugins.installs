@@ -23,7 +23,7 @@ shopify-playground/herdr-plugins/tab-mover@c8ff889f6e6a568cbcf0a6a1e3eeb8e8ddd76
 # One fzf modal over every keybinding, running agent, workspace, and file.
 # Bound to prefix+space in config.toml. Authored here, upstreamed in
 # shopify-playground/herdr-plugins#8 — so it is pinned rather than linked.
-shopify-playground/herdr-plugins/launcher@005f458f284c2dd60130efc619df567ba1369609
+shopify-playground/herdr-plugins/launcher@9566d817294aae25804505ee827c0956580afbee
 
 # Deliberately NOT the sibling `world` plugin: its picker enumerates
 # `dev tree list`, which includes every WTP pool slot, and its rm action runs
