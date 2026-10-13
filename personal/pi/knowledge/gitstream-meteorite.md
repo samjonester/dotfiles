@@ -71,6 +71,14 @@ to fall back to GitHub — push and use `gs pr create` instead:
 - `gs: no stacks tracked in this repo`
 - `read …/.git/.gs/state.json: not a directory` (Worldtree checkouts — `.git` is a stub file)
 
+A WTP branch cut from `origin/main` is untracked: `gs submit` refuses (`current branch '<b>' is
+not tracked`). Run `gs track --parent main`, then `gs submit --dry-run`, then submit. Local
+`main` is a shared ref that the root tree has checked out, so it can be months stale (2026-09-28:
+`c6404990`, 235,264 commits behind); track then records that stale fork point and prints
+`needs a restack`. That is advisory: submit works and the server diff is only the branch's commits
+(verified on #2110501 with `gs pr diff --name-only`). Never run `gs restack` there, because it would
+rebase onto the stale local `main`.
+
 On an untracked stack, restack the child by hand and force-push; the PR retargets itself
 because its base is a branch name, not a SHA:
 
