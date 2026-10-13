@@ -156,7 +156,7 @@ On a Meteorite PR these are first-class `gs` verbs rather than raw API calls:
 ```bash
 gs pr view <N> --comments                       # thread UUIDs + comment ids
 gs pr comment <N> --reply-to <id> --body-file f  # in-thread reply
-gs pr react <N> <comment-id> --thumbs-up        # or --thumbs-down
+gs pr react <comment-id> --thumbs-up            # or --thumbs-down; takes no PR number
 gs pr resolve <N> <thread-uuid>                  # UUID, not a PRRT_ node id
 ```
 

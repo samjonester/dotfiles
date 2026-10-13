@@ -107,10 +107,10 @@ gh api repos/{owner}/{repo}/pulls/comments/{comment_id}/reactions -f content='-1
 
 ```bash
 # thumbs up (valid finding)
-gs pr react <number> <comment_id> --thumbs-up
+gs pr react <comment_id> --thumbs-up
 
 # thumbs down (invalid or not worth fixing)
-gs pr react <number> <comment_id> --thumbs-down
+gs pr react <comment_id> --thumbs-down
 ```
 
 ### 5. Reply with feedback

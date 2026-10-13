@@ -78,7 +78,7 @@ through `jq`.
 | Comment | `gh pr comment <N> --body-file f` | `gs pr comment <N> --body-file f` |
 | Reply to thread | `gh api …/comments/<id>/replies` | `gs pr comment <N> --reply-to <id> --body-file f` |
 | Resolve thread | `gh api graphql resolveReviewThread` | `gs pr resolve <N> <thread-uuid>` |
-| React | `gh api …/comments/<id>/reactions -f content='+1'` | `gs pr react <N> <comment-id> --thumbs-up` |
+| React | `gh api …/comments/<id>/reactions -f content='+1'` | `gs pr react <comment-id> --thumbs-up` (no PR number) |
 | Review verdict | `gh pr review <N> --approve` | `gs pr review <N> --approve` |
 | Inline review | `gh api …/pulls/<N>/reviews --input -` | `gs api …/pulls/<N>/reviews --input -` (same payload) |
 | Edit | `gh pr edit <N> --title …` | `gs pr edit <N> --title …` (assignees/reviewers are **Shopify emails**, not handles) |
