@@ -98,6 +98,50 @@ EOF
 | `comments[].side` | Yes      | `RIGHT` (new code) or `LEFT` (old code) |
 | `comments[].body` | Yes      | Inline comment body (markdown)          |
 
+## Capturing Your Own Inline Comments with Diffnote
+
+Reading a PR diff in the terminal and then hand-transcribing `path` / `line` / `side` into an API payload is the error-prone part. Diffnote emits those fields directly. In the worktree that has the PR checked out:
+
+```bash
+diffnote --format json origin/main...HEAD > /tmp/rv<N>/human.json
+```
+
+Blocking GUI, no tool timeout. Output shape (from the binary's serde metadata — `ReviewOutput`, `ReviewComment`, `LineRange`, `CommentContext`):
+
+```json
+{
+  "status": "comment",
+  "message": "top-level review body",
+  "comments": [
+    {
+      "path": "areas/.../Foo.tsx",
+      "side": "after",
+      "lineRange": { "start": 45, "end": 50 },
+      "body": "inline comment body",
+      "context": { "selectedText": "…", "contextBefore": "…", "contextAfter": "…", "diffHunk": "…" }
+    }
+  ]
+}
+```
+
+`status` is one of `comment` / `approved` / `request_changes` / `rejected`. Inline and whole-file comments are variants of one internally-tagged enum — a file comment carries only `path` and `body`, and the discriminator key is **unverified**; read one real payload before writing a parser that branches on it.
+
+Mapping to the Reviews API:
+
+| Diffnote            | Reviews API                                |
+| ------------------- | ------------------------------------------ |
+| `status: approved`  | `event=APPROVE`                            |
+| `status: request_changes` / `rejected` | `event=REQUEST_CHANGES` |
+| `status: comment`   | `event=COMMENT`                            |
+| `message`           | top-level `body`                           |
+| `side: after`       | `side: "RIGHT"`                            |
+| `side: before`      | `side: "LEFT"`                             |
+| `lineRange.end`     | `line`                                     |
+| `lineRange.start`   | `start_line` — omit when it equals `end`   |
+| `body`              | `comments[].body`                          |
+
+The review-skill findings and a Diffnote pass are different inputs, not substitutes: specialist reviewers cover what a read-through misses, Diffnote covers what only a human notices. Merge both into one review; the content rules below still apply to the merged set.
+
 ## Content Rules
 
 1. **Top-level body**: Executive summary + numbered finding list (one line each) for orientation. Include validation results if you ran manual testing.

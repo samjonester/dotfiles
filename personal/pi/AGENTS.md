@@ -287,6 +287,31 @@ All pi configuration is versioned in `~/dotfiles/personal/pi/`. The dotfiles dir
 
 For full details on layout, fork conventions, and tool-name maintenance, read `~/dotfiles/personal/pi/README.md`.
 
+## Diffnote — Local Human Review
+
+`diffnote` opens a blocking macOS GUI over a diff and writes Sam's submitted review to **stdout**. It is the channel for handing work back to him at a point where a prose summary would lose the line anchors. Installed via `dev tools install diffnote`; the bundled agent skill lives at `~/.agents/skills/diffnote/SKILL.md` and diffnote refreshes it on upgrade — read it for the full contract.
+
+Launch it when Sam says "show me with diffnote", and when a rule below routes to it. Do not launch it speculatively; it takes over his screen.
+
+```bash
+diffnote                                  # uncommitted working tree
+diffnote --cached                         # staged
+diffnote main...HEAD                      # branch or commit range
+diffnote --format json origin/main...HEAD # structured: path, side, lineRange, body, context
+diffnote --tour /tmp/tour.json main...HEAD  # ordered agent guide notes; --tour-spec prints the schema
+```
+
+**Rules:**
+
+- Never set a tool timeout. Human review outlasts every default.
+- Lead session only — one GUI, one human. Never from a teammate, a parallel `subagent`, `/loop`, `CronCreate`, or a Binks watcher; a blocked `diffnote` in a background pane is an agent hung with no visible cause.
+- Run `git add -N <path>` first when new files must appear. Diffnote does not discover untracked files.
+- Exit 0 = approve or comment; non-zero with output = request changes or reject; non-zero with empty stdout = cancelled. Read stdout immediately and act on it — do not ask whether to act first.
+- Answer every reviewer question, in chat or in a follow-up tour targeting the same path/side/lines, even when you also change the code. A new diff is not an answer.
+- A tour is the right handoff when the agent has something to point at — why a file changed, where a tradeoff sits, what needs a closer look. Tour notes are read-only and never appear in the submitted review.
+
+Per-flow routing: pre-commit gate under Git Safety; capturing review comments in `pr-review-posting.md`; per-step checkpoints in the `implement` skill.
+
 ## Code Review
 
 When asked to review code, review a PR, or review current changes, **always** load the `review` skill. Never do an ad-hoc single-pass review. It classifies the PR by change type, size, and risk to select 3-8 relevant reviewers (not all 15), dispatches them in sequential batches, validates findings with `review-judge`, and produces consolidated output. PR reviews are checked out into a WTP worktree so reviewers can read the full codebase.
@@ -396,9 +421,10 @@ Suggest autoresearch (`/skill:autoresearch-create`) for iterative optimization l
 - Use `git commit` for new commits, `git commit --amend` for amendments, and `git push -u origin <branch>` for initial push. For PR creation: `gs pr create` in `shop/world` (draft by default), `gh pr create --draft` everywhere else.
 - Never `git init` inside an existing git repository (creates nested repos). If a new standalone repo is needed, create it outside the current project tree first (e.g., `~/src/github.com/...`), then work there.
 - Commit commands (`git commit`, `git commit --amend`) are gated by the bash-guard commit gate (Stage 1.5). On first commit in a session, you'll be prompted for a session-scoped policy: auto-allow all, confirm each, or deny. Change mid-session with `/guard commits auto|confirm|reset`.
-- The commit gate listens for natural-language policy signals in user messages. Saying "allow commits", "auto-allow commits", or "commits are fine" at any point sets the policy to auto-allow. Saying "confirm commits" or "I want to approve each commit" sets it to confirm-each. You can also use `/guard commits auto|confirm|reset` directly.
+- The commit gate listens for natural-language policy signals in user messages. Saying "allow commits", "auto-allow commits", or "commits are fine" at any point sets the policy to auto-allow. Saying "confirm commits" or "I want to approve each commit" sets it to confirm-each. You can also use `/guard commits auto|confirm|diffnote|reset` directly.
+- `/guard commits diffnote` makes every commit this session open a Diffnote review first (`--cached`, or `HEAD` for `commit -a`). Approve and the commit runs with the review appended to its output; request changes and the commit is blocked with the review as the reason. Suggest it when starting feature work on a new branch.
 - **Publishing PRs for review**: `gh pr ready <N>`, or `gs pr ready <N>` for a Meteorite PR. Resolve the system first.
-- **New branch work requires explicit approval before commit and submit.** When implementing new features or changes on a new branch, always pause and present the completed work for review **while changes are still unstaged**. Do not run `git add`, `git commit`, or `git push` until the user approves. Present a summary of changes (files modified, key decisions, anything noteworthy) and wait for explicit greenlight. This does not apply to amendments on existing branches where the user has already reviewed the direction (e.g., CI fixes, review feedback).
+- **New branch work requires explicit approval before commit and submit.** When implementing new features or changes on a new branch, always pause and present the completed work for review **while changes are still unstaged**. Do not run `git add`, `git commit`, or `git push` until the user approves. Present the diff in Diffnote — `git add -N .` then `diffnote` — and treat its stdout as the verdict: exit 0 is the greenlight, non-zero is a change request with line-anchored feedback. State any key decision or caveat the diff does not show in chat alongside it. When Diffnote is unavailable, fall back to a written summary (files modified, key decisions, anything noteworthy) and wait for explicit greenlight. This does not apply to amendments on existing branches where the user has already reviewed the direction (e.g., CI fixes, review feedback).
 
 | Rationalization | Reality |
 |---|---|

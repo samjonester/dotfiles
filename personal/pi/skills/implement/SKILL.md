@@ -133,6 +133,19 @@ The implementer returns:
 
 Store the summary for passing to subsequent steps (via the "Context from Previous Steps" section).
 
+### 2c-review: Optional Diffnote checkpoint
+
+Skip this unless the user asked for step-by-step review, or the step is marked high-risk in the plan. When it applies, show them the step's diff before dispatching the next implementer:
+
+```bash
+git add -N .          # Diffnote does not discover untracked files
+diffnote              # blocking GUI; stdout is the review
+```
+
+Run it from the lead, never from a teammate or a parallel subagent — it is one GUI window and one human. Do not set a tool timeout; review outlasts any default.
+
+Exit 0 means approve or comment: fold any comments into the next step's "Context from Previous Steps". Non-zero means changes requested — stdout carries path- and line-anchored feedback; re-dispatch the same step with that review appended to the task before moving on.
+
 ### 2d: Handle failures
 
 **Verification fails:**

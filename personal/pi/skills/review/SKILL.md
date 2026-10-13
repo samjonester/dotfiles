@@ -642,6 +642,8 @@ git diff -U0 origin/main...HEAD -- "$FILE" \
 
 **Build the payload programmatically.** Hand-escaping markdown into JSON breaks on backticks, code fences, and quotes. Write a small script that `json.dump`s a dict, then post with `gh api ... --input`. For a Meteorite PR (`PR_SYS=gs`) the payload is identical — post it with `gs api repos/{owner}/{repo}/pulls/<number>/reviews --input -`. See `pr-review-posting.md` for the API shape.
 
+**When the user wants to read the diff themselves**, run `diffnote --format json origin/main...HEAD` in the worktree (blocking, no tool timeout) and merge their comments with the reviewer findings into one payload. `pr-review-posting.md` carries the field mapping. Their pass and the reviewers' pass are different inputs — do not drop either.
+
 If the user says yes, format:
 
 **Top-level comment style guard:**

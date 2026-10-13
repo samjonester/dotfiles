@@ -17,10 +17,13 @@
  *   On first encounter in a session, shows a policy dialog:
  *     a = auto-allow all commits this session
  *     c = confirm each commit individually (y/n per command)
+ *     d = review each commit in Diffnote before it runs
  *     n = deny (with optional redirect instructions)
  *   Policy persists for the session; resets on new session. Change mid-session
- *   with `/guard commits auto|confirm|reset`. When auto-allow is active, push
- *   commands targeting the current branch are also silently allowed (Stage 1).
+ *   with `/guard commits auto|confirm|diffnote|reset`. When auto-allow is
+ *   active, push commands targeting the current branch are also silently
+ *   allowed (Stage 1). Under `diffnote`, every commit opens a blocking local
+ *   review whose verdict decides the commit — see reviewCommitWithDiffnote.
  *
  * Stage 2 — Adversarial security review (LLM voters):
  *   Runs 3 parallel security reviews using fast models. Based on vote consensus:
@@ -609,10 +612,105 @@ const COMMIT_PATTERNS: CommitPattern[] = [
   { pattern: /\bgs\s+modify\b/, label: "gs modify (amend + restack)" },
 ];
 
-type CommitPolicy = "unset" | "auto-allow" | "confirm-each";
+type CommitPolicy = "unset" | "auto-allow" | "confirm-each" | "diffnote";
 
 function matchCommitCommand(command: string): CommitPattern | undefined {
   return COMMIT_PATTERNS.find(({ pattern }) => pattern.test(command));
+}
+
+// ── Diffnote review gate (Stage 1.5 policy "diffnote") ──────────────────────
+//
+// Diffnote opens a blocking local GUI over a diff and writes the submitted
+// review to stdout. Its exit code carries the verdict: approve and comment
+// exit 0, request-changes and reject exit non-zero, cancel exits non-zero with
+// empty stdout. That maps onto the commit as:
+//   pass  → the commit runs, and the review rides along on its tool result so
+//           comments submitted with an approval still reach the model
+//   block → the review Markdown becomes the block reason, so the model gets
+//           path- and line-anchored feedback instead of a bare refusal
+
+const DIFFNOTE_TEC_BIN = path.join(
+  os.homedir(),
+  ".local/state/tec/toolchain/user_profile/bin/diffnote",
+);
+
+/**
+ * Locate the diffnote binary. Sessions launched before `dev tools install
+ * diffnote` ran do not have it on PATH, so fall back to tec's profile symlink,
+ * which is stable across upgrades unlike the /nix/store path it points at.
+ */
+async function resolveDiffnoteBin(): Promise<string | null> {
+  const found = (await runProcess("/usr/bin/which", ["diffnote"]))
+    ?.split("\n")[0]
+    ?.trim();
+  if (found) return found;
+  return fs.existsSync(DIFFNOTE_TEC_BIN) ? DIFFNOTE_TEC_BIN : null;
+}
+
+/**
+ * Pick the diff Diffnote should show for a commit command. `git commit -a`
+ * sweeps in unstaged edits to tracked files, so the commit is the whole
+ * working tree against HEAD; every other form commits exactly the index.
+ * Untracked files are invisible either way — Diffnote does not discover them,
+ * so a new file needs `git add` (or `git add -N`) to appear.
+ */
+function diffnoteArgsForCommit(command: string): string[] {
+  // Only scan up to the first quote so an `-m "fix -a bug"` message cannot
+  // read as a flag.
+  const flags = command.match(/\bcommit\b([^|;&"']*)/)?.[1] ?? "";
+  return /\s-[a-zA-Z]*a/.test(flags) ? ["HEAD"] : ["--cached"];
+}
+
+interface DiffnoteOutcome {
+  /** Whether the commit may proceed. */
+  pass: boolean;
+  /** Submitted review Markdown. Empty when cancelled or nothing was staged. */
+  review: string;
+  /** Short status for notifications and block reasons. */
+  label: string;
+}
+
+/**
+ * Run a blocking Diffnote review. Deliberately has no timeout — human review
+ * outlasts any tool limit, and runProcess's 2s cap would kill the GUI
+ * mid-review.
+ */
+function reviewCommitWithDiffnote(
+  bin: string,
+  cwd: string,
+  args: string[],
+): Promise<DiffnoteOutcome> {
+  return new Promise((resolve) => {
+    execFile(
+      bin,
+      args,
+      { cwd, maxBuffer: 16 * 1024 * 1024 },
+      (err, stdout, stderr) => {
+        const review = stdout.toString().trim();
+        const errText = stderr.toString().trim();
+        if (review) {
+          return resolve(
+            err
+              ? { pass: false, review, label: "changes requested" }
+              : { pass: true, review, label: "approved" },
+          );
+        }
+        // Empty stdout: nothing to review, cancelled, or not a repository.
+        if (/no changes to review/i.test(errText)) {
+          return resolve({
+            pass: true,
+            review: "",
+            label: "nothing to review",
+          });
+        }
+        resolve({
+          pass: false,
+          review: "",
+          label: errText || "Diffnote exited without a submitted review",
+        });
+      },
+    );
+  });
 }
 
 // ── Push auto-allow helpers (Stage 1 × Stage 1.5 bridge) ─────────────────────────────────
@@ -1064,6 +1162,8 @@ async function showCommitPolicyDialog(
           theme.fg("muted", " auto-allow all  ") +
           theme.fg("dim", "c") +
           theme.fg("muted", " confirm each  ") +
+          theme.fg("dim", "d") +
+          theme.fg("muted", " review in Diffnote  ") +
           theme.fg("dim", "n") +
           theme.fg("muted", " deny"),
         1,
@@ -1133,6 +1233,9 @@ async function showCommitPolicyDialog(
           } else if (data === "c" || data === "C") {
             resolved = true;
             done({ policy: "confirm-each" });
+          } else if (data === "d" || data === "D") {
+            resolved = true;
+            done({ policy: "diffnote" });
           } else if (data === "n" || data === "N") {
             enterFeedbackMode();
           } else if (matchesKey(data, Key.escape)) {
@@ -1413,6 +1516,13 @@ const SAFE_COMMAND_PATTERNS: RegExp[] = [
   /^\s*\$\{?WTP_BIN\}?\b/, // variable-expanded WTP invocations
   /^\s*\$\{?HOME\}?\/src\/.*\/wtp\/bin\/_wtp\b/, // full-path WTP invocations
   /^\s*devx\s+(ci|pi|skill|config)\b/,
+  /^\s*(\/opt\/dev\/bin\/dev|dev)\s+tools\s+(list|info|status|search)\b/,
+  // Diffnote renders a local diff in a GUI and prints the human's review. It
+  // touches no remote and no repository state; the only reason it would ever
+  // reach a voter is `/guard strict on`, where the latency lands in front of a
+  // window the user is waiting on.
+  /^\s*diffnote\b/,
+  /^\s*\$\{?HOME\}?\/\.local\/state\/tec\/.*\/diffnote\b/,
 
   // ── Local build / test / lint toolchain ──
   // These run project code that is already on disk. They reach the network
@@ -3778,6 +3888,11 @@ export default function (pi: ExtensionAPI) {
   // `/guard commits confirm` restores per-commit confirmation.
   let commitPolicy: CommitPolicy = "auto-allow";
 
+  // Diffnote reviews that approved a commit, keyed by the commit's tool call.
+  // Drained by the tool_result handler, which is the only place an allowed
+  // call can still hand text to the model.
+  const pendingDiffnoteReviews = new Map<string, string>();
+
   // Durable exact-match allows, survives restarts (see persistRememberedAllow).
   let rememberedAllows = loadRememberedAllows();
 
@@ -3886,6 +4001,14 @@ export default function (pi: ExtensionAPI) {
         );
         return;
       }
+      if (arg === "commits diffnote" || arg === "commits review") {
+        commitPolicy = "diffnote";
+        ctx.ui.notify(
+          "🔍 Every commit this session opens a Diffnote review first",
+          "info",
+        );
+        return;
+      }
       if (arg === "commits reset") {
         commitPolicy = "auto-allow";
         ctx.ui.notify(
@@ -3908,7 +4031,9 @@ export default function (pi: ExtensionAPI) {
             ? "auto-allow"
             : commitPolicy === "confirm-each"
               ? "confirm each"
-              : "unset (will ask on first commit)";
+              : commitPolicy === "diffnote"
+                ? "review each commit in Diffnote"
+                : "unset (will ask on first commit)";
         ctx.ui.notify(`📝 Commit policy: ${policyLabel}`, "info");
         return;
       }
@@ -3952,6 +4077,25 @@ export default function (pi: ExtensionAPI) {
       if (commitPolicy !== "auto-allow") {
         commitPolicy = "auto-allow";
         ctx.ui.notify("📝 Commits auto-allowed for this session", "info");
+      }
+      return;
+    }
+
+    // Diffnote-review signals. Checked before confirm-each, whose
+    // "review each commit" pattern would otherwise swallow these.
+    if (
+      /\b(review|gate|check)\s+(each\s+|every\s+|all\s+)?commits?\b[^.]{0,40}\bdiffnote\b/.test(
+        lower,
+      ) ||
+      /\bdiffnote\b[^.]{0,40}\b(each|every|before)\s+commit/.test(lower) ||
+      /\bcommits?\s+in\s+diffnote\b/.test(lower)
+    ) {
+      if (commitPolicy !== "diffnote") {
+        commitPolicy = "diffnote";
+        ctx.ui.notify(
+          "🔍 Every commit this session opens a Diffnote review first",
+          "info",
+        );
       }
       return;
     }
@@ -4093,6 +4237,52 @@ export default function (pi: ExtensionAPI) {
           return { block: true, reason };
         }
         return undefined; // allowed this one
+      }
+
+      if (commitPolicy === "diffnote") {
+        // Session policy: the human reviews every commit in Diffnote first.
+        // Teammates and non-TUI hosts have nobody at the GUI, so they fall
+        // back to a block rather than hanging on a window nobody will submit.
+        if (!canPrompt) {
+          return {
+            block: true,
+            reason: `Commit blocked in non-interactive mode (${commitMatch.label}). Session policy: diffnote review.`,
+          };
+        }
+        const bin = await resolveDiffnoteBin();
+        if (!bin) {
+          return {
+            block: true,
+            reason:
+              `Commit blocked (${commitMatch.label}). Session policy is 'diffnote' but the diffnote CLI is not installed. ` +
+              "Install it with `dev tools install diffnote`, or change policy with `/guard commits auto`.",
+          };
+        }
+        const cwd = extractEffectiveCwd(command, process.cwd());
+        const args = diffnoteArgsForCommit(command);
+        alertUser(`Diffnote review: ${commitMatch.label}`);
+        if (ctx.hasUI) {
+          ctx.ui.notify(
+            `🔍 Diffnote open on \`${args.join(" ")}\` — the commit waits for your review`,
+            "info",
+          );
+        }
+        const outcome = await reviewCommitWithDiffnote(bin, cwd, args);
+        if (!outcome.pass) {
+          return {
+            block: true,
+            reason:
+              `Commit held by Diffnote (${outcome.label}). Address the review below, answer every reviewer question in chat ` +
+              `even where you also change the code, then run the commit again — Diffnote reopens on the updated diff.` +
+              (outcome.review ? `\n\n${outcome.review}` : ""),
+          };
+        }
+        if (outcome.review) {
+          // Approvals can carry comments. The tool_call hook has no channel for
+          // text on an allow, so hand the review to the tool_result handler.
+          pendingDiffnoteReviews.set(event.toolCallId, outcome.review);
+        }
+        return undefined;
       }
 
       // commitPolicy === "unset" — first commit in session, ask for policy
@@ -4397,5 +4587,30 @@ export default function (pi: ExtensionAPI) {
         `Security review: ${voteBreakdown}. User declined.${feedbackNote}` +
         (explanation ? ` Explanation: ${explanation}` : ""),
     };
+  });
+
+  // A Diffnote approval can still carry comments. Stage 1.5 lets the commit
+  // run and parks the review here, because a tool_call hook can only return
+  // text when it blocks. Append it to the commit's output so the model reads
+  // the comments in the same turn the commit lands.
+  pi.on("tool_result", async (event) => {
+    const review = pendingDiffnoteReviews.get(event.toolCallId);
+    if (!review) return;
+    pendingDiffnoteReviews.delete(event.toolCallId);
+
+    const note =
+      `\n\n---\nDiffnote review submitted before this commit ran:\n\n${review}\n\n` +
+      "Answer every reviewer question, and land any requested change as a follow-up commit.";
+
+    const content = (event as { content?: unknown }).content;
+    if (typeof content === "string") {
+      return { content: (content + note) as never };
+    }
+    if (Array.isArray(content)) {
+      return {
+        content: [...content, { type: "text", text: note }] as never,
+      };
+    }
+    return undefined;
   });
 }
