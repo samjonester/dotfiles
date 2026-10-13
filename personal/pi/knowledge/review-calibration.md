@@ -21,6 +21,7 @@
 - Minor naming improvements
 - Small code organization suggestions
 - Missing docs that aren't on critical paths
+- PR-description inaccuracies, including a Risks section that misstates failure behavior, when the config is correct and the fix is a wording change (Sam, 2026-10-07, Shopify/infrastructure#79434: "the blocker is just a small docs change not actually a blocker")
 
 These are worth fixing in this PR.
 
@@ -50,7 +51,7 @@ Blocking vs. not is still a real internal distinction — it decides `APPROVE` v
 
 ### Structure
 
-- **Top-level comment**: open with the blocker count and the blockers themselves, then one line per remaining finding pointing at its `file:line`. NO full finding details here — they go inline. No account of how the review was produced: agent counts, finding arithmetic, and what the judge rejected are for the chat report, not the author. See the author-facing filter in the `review` skill's Step 7a.
+- **Top-level comment**: open with the blocker count and the blockers themselves, plus any finding that has no line anchor (e.g. PR-description wording). Do not list or point at inline findings — they render on the same page (Sam, 2026-10-07, #79434: "don't need to duplicate inlines in the top level"). NO full finding details here — they go inline. No account of how the review was produced: agent counts, finding arithmetic, and what the judge rejected are for the chat report, not the author. See the author-facing filter in the `review` skill's Step 7a.
 - **Inline comments**: Self-contained full findings (problem → impact → suggested fix). Each must stand alone — the reader may see it without the top-level context.
 - **Never duplicate content between top-level and inline.** They're visible together on the review page.
 - **Voice**: AGENTS.md Response Discipline governs the comment body. Named constructions to avoid are in `skills/review/references/reviewer-persona.md` under Finding Voice.
@@ -108,6 +109,10 @@ When the review skill produces findings, expect to calibrate:
 3. **Downgrade** findings from REQUEST_CHANGES to nit if the impact is cosmetic or follow-up quality
 4. **Merge** findings that describe the same root issue in different locations
 5. **Verify claims** — the review skill sometimes flags things that are actually correct. Check the code before posting.
+
+### Comment hygiene defaults to delete
+
+A comment that restates the code below it, the name, the signature, or a test helper's body gets a **delete** recommendation, not a reword. Reword only when a WHY remains, and give the replacement text. Sweep every added comment in the diff, not just the ones the judge surfaced. (Sam, 2026-10-06, #2123193 Diffnote round 1: "default to deleting them when they restate the body.")
 
 ### Present findings as a list, not a pipeline narrative
 
