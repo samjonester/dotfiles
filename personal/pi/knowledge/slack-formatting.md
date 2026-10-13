@@ -9,7 +9,7 @@ User has "Format messages with markup" enabled — use standard markdown, not Sl
 - **Strikethrough**: `~text~`
 - **Inline code**: `` `code` ``
 - **Code blocks**: ` ```language\ncode\n``` `
-- **Links**: `[text](url)` — Slack renders as clickable
+- **Links**: paste bare URLs (Slack autolinks them). `[text](url)` came through broken when pasted (Sam, 2026-10-08, session stapling PR list); never put backticks in link text.
 - **Bullet lists**: `- item` or `• item`
 - **Numbered lists**: `1. item`
 - **Blockquotes**: `> text`
