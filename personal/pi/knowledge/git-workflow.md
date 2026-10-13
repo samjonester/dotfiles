@@ -4,7 +4,7 @@ GitStream-centric workflow integrating GitStream, Meteorite, and Merge Garden. T
 
 ## Core Principles
 
-- **Push to GitStream (`origin`), never directly to GitHub.** `origin` = `https://gitstream.shopify.io/shop/world.git`. CI/WCB/Bitrise/merge automation treat GitStream as source of truth — commits only on GitHub may be invisible to them.
+- **Never push directly to GitHub.** Since 2026-09-29 `origin` = Delta (`https://delta.shopify.io/shop/world.git`), which forwards feature branches to Gitstream asynchronously; see `delta-transition.md`. Before that, `origin` = `https://gitstream.shopify.io/shop/world.git`. CI/WCB/Bitrise/merge automation treat GitStream as source of truth — commits only on GitHub may be invisible to them.
 - **Use plain `git`** for branching, syncing, rebasing, pushing. `gt`/Graphite is fully superseded by `gs`.
 - **Open new PRs with `gs pr create`** (Meteorite is the default as of 2026-08-17; draft by default). Supersedes `dev open pr` and `gh pr create`. See `gitstream-meteorite.md`.
 - **Acting on an existing PR? Resolve the system first** — GitHub and Meteorite have separate number namespaces. See `skills/_shared/pr-system.md`.
@@ -61,9 +61,11 @@ gs pr comment <PR> --body "/merge"   # gh pr comment for a GitHub PR
 ## Sam's Rules (preserved)
 
 - New branch work: present changes for review **before** committing. Amendments on existing branches (CI fixes, review feedback): commit freely.
+- "Push" includes the PR title and description: update both in the same step as the push. Only review replies and comments wait as drafts for Sam.
 
 ## Source
 - "Current shop/world Git workflow best practices" — Tom Spencer, Vault post 385386, published 2026-06-01 (last updated 2026-06-02): https://vault.shopify.io/posts/385386-Current-shop-world-Git-workflow-best-practices
 - Canonical: https://vault.shopify.io/docs/craft/2200-Engineering/development_handbook/keytech/github/shop_world_git_workflow
 - Captured 2026-06-02 by Sam (prior content: graphite-workflow.md migration, Sam Jones 2026-05-26).
 - Meteorite/`gs` PR defaults added 2026-08-24 — see `gitstream-meteorite.md` for sources.
+- Push-includes-title/description rule: Sam, 2026-09-29, after #2110501 and infra#77813 were pushed with bodies held as drafts ("missed PR descriptions and titles").
