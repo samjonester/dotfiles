@@ -85,6 +85,13 @@ kitty_graphics = true
 # panes. Per pane, held in the server process — 10 panes is a 1 GB ceiling.
 scrollback_limit_bytes = 100000000
 
+[session]
+# Relaunch supported agent panes into their previous conversation after a server
+# restart, using the session ref the integration reports. Already the 0.8.2
+# default (it flipped on in 0.6.x); pinned here so a future default flip or a
+# `--default-config` diff doesn't silently drop pi panes back to cold starts.
+resume_agents_on_restore = true
+
 [keys]
 # Legacy terminals send ctrl+space and ctrl+@ as the same byte (NUL); Ghostty's
 # kitty keyboard protocol is what keeps them distinct. If the prefix ever stops
